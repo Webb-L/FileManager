@@ -29,7 +29,7 @@ fun AppDrawer() {
             }
             item { Divider() }
             item {
-                AppDrawerItem("挂载") {
+                AppDrawerItem("设备") {
                 }
             }
             item { Divider() }
@@ -50,13 +50,10 @@ private fun AppDrawerItem(title: String, content: @Composable () -> Unit) {
 
 @Composable
 private fun AppDrawerMount() {
-    AppDrawerHeader("挂载")
-
 }
 
 @Composable
 private fun AppDrawerNetwork() {
-    AppDrawerHeader("网络")
 }
 
 @Composable
