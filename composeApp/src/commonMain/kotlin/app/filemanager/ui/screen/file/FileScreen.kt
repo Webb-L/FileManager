@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import app.filemanager.extensions.getAllFilesInDirectory
 import app.filemanager.ui.components.FileCard
 import app.filemanager.ui.state.file.FileState
+import app.filemanager.utils.FileUtils
 import app.filemanager.utils.WindowSizeClass
 import app.filemanager.utils.calculateWindowSizeClass
 
@@ -36,7 +37,13 @@ fun FileScreen(path: String, fileState: FileState, updatePath: (String) -> Unit)
             items(path.getAllFilesInDirectory().filter { !it.isHidden }.sortedBy { it.name }) {
                 FileCard(
                     file = it,
-                    onClick = { updatePath(it.path) },
+                    onClick = {
+                        if (it.isDirectory) {
+                            updatePath(it.path)
+                        } else {
+                            FileUtils.openFile(it.path)
+                        }
+                    },
                     onRemove = {}
                 )
             }

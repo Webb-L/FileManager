@@ -1,7 +1,7 @@
 package app.filemanager.ui.state.main
 
-import app.filemanager.utils.getHomePath
-import app.filemanager.utils.getRootPaths
+import app.filemanager.utils.PathUtils.getHomePath
+import app.filemanager.utils.PathUtils.getRootPaths
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 

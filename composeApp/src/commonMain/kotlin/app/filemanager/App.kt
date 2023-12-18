@@ -18,7 +18,6 @@ internal fun App() = FileManagerTheme {
         modules(appModule())
     }
     val mainState = MainState()
-    println("asfdsfasfsdfs")
     BoxWithConstraints(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
         MainScreen(mainState, calculateWindowSizeClass(maxWidth, maxHeight))
     }

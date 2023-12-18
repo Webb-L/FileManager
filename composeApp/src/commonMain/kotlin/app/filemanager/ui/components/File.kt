@@ -3,9 +3,7 @@ package app.filemanager.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Note
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -14,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.FileInfo
+import app.filemanager.data.file.FileExtensions
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
 
@@ -51,22 +50,58 @@ fun FileCard(
             }
         },
         leadingContent = {
-            if (file.isDirectory) {
-                Icon(
-                    imageVector = Icons.Default.Folder,
-                    contentDescription = file.name,
-                )
-            } else {
-                Icon(
-                    Icons.Filled.Note,
-                    contentDescription = file.name,
-                )
-            }
+            FileIcon(file)
         },
         trailingContent = {
             FileCardMenu()
         },
         modifier = Modifier.clickable(onClick = onClick)
+    )
+}
+
+@Composable
+private fun FileIcon(file: FileInfo) {
+    if (file.isDirectory) {
+        Icon(
+            imageVector = Icons.Default.Folder,
+            contentDescription = file.name,
+        )
+        return
+    }
+
+    if (FileExtensions.Images.contains(file.mineType)) {
+        Icon(
+            Icons.Default.Image,
+            contentDescription = file.name,
+        )
+        return
+    }
+    if (FileExtensions.Audios.contains(file.mineType)) {
+        Icon(
+            Icons.Default.Headphones,
+            contentDescription = file.name,
+        )
+        return
+    }
+    if (FileExtensions.Videos.contains(file.mineType)) {
+        Icon(
+            Icons.Default.Videocam,
+            contentDescription = file.name,
+        )
+        return
+    }
+
+    if (FileExtensions.Descriptions.contains(file.mineType)) {
+        Icon(
+            Icons.Default.Description,
+            contentDescription = file.name,
+        )
+        return
+    }
+
+    Icon(
+        Icons.Default.Note,
+        contentDescription = file.name,
     )
 }
 

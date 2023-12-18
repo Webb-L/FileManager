@@ -18,9 +18,9 @@ import app.filemanager.ui.components.AppDrawer
 import app.filemanager.ui.screen.file.FileScreen
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.MainState
+import app.filemanager.utils.PathUtils.getPathSeparator
+import app.filemanager.utils.PathUtils.getRootPaths
 import app.filemanager.utils.WindowSizeClass
-import app.filemanager.utils.getPathSeparator
-import app.filemanager.utils.getRootPaths
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +35,7 @@ fun MainScreen(mainState: MainState, screenType: WindowSizeClass) {
     Row {
         val expandDrawer by mainState.isExpandDrawer.collectAsState()
         if (listOf(WindowSizeClass.Medium, WindowSizeClass.Expanded).contains(screenType) && expandDrawer) {
-            AppDrawer()
+            AppDrawer(mainState)
         }
 
         Column {
