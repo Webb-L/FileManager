@@ -15,10 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.AppDrawer
+import app.filemanager.ui.components.SortButton
 import app.filemanager.ui.screen.file.FileScreen
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.MainState
-import app.filemanager.utils.PathUtils.getPathSeparator
+import app.filemanager.utils.PathUtils
 import app.filemanager.utils.PathUtils.getRootPaths
 import app.filemanager.utils.WindowSizeClass
 
@@ -27,10 +28,11 @@ import app.filemanager.utils.WindowSizeClass
 fun MainScreen(mainState: MainState, screenType: WindowSizeClass) {
     val path by mainState.path.collectAsState()
     val rootPath by mainState.rootPath.collectAsState()
-    val isSearchText by mainState.isSearchText.collectAsState()
-    val searchText by mainState.searchText.collectAsState()
 
     val fileState = FileState()
+    val isSearchText by fileState.isSearchText.collectAsState()
+    val searchText by fileState.searchText.collectAsState()
+
 
     Row {
         val expandDrawer by mainState.isExpandDrawer.collectAsState()
@@ -38,51 +40,81 @@ fun MainScreen(mainState: MainState, screenType: WindowSizeClass) {
             AppDrawer(mainState)
         }
 
-        Column {
-            val paths = path.parsePath()
-            val listState = rememberLazyListState(initialFirstVisibleItemIndex = paths.size - 1)
-            TopAppBar(
-                title = {
-                    LazyRow(state = listState) {
-                        item {
-                            RootPathSwitch(mainState)
+        val paths = path.parsePath()
+        val listState = rememberLazyListState(initialFirstVisibleItemIndex = paths.size - 1)
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        LazyRow(state = listState) {
+                            item {
+                                RootPathSwitch(mainState)
+                            }
+                            itemsIndexed(paths) { index, text ->
+                                FilterChip(selected = false,
+                                    label = { Text(text) },
+                                    border = null,
+                                    shape = RoundedCornerShape(25.dp),
+                                    onClick = {
+                                        val newPath = rootPath + paths.subList(0, index + 1)
+                                            .joinToString(PathUtils.getPathSeparator())
+                                        mainState.updatePath(newPath)
+                                    })
+                            }
                         }
-                        itemsIndexed(paths) { index, text ->
-                            FilterChip(selected = false,
-                                label = { Text(text) },
-                                border = null,
-                                shape = RoundedCornerShape(25.dp),
-                                onClick = {
-                                    val newPath = rootPath + paths.subList(0, index + 1)
-                                        .joinToString(getPathSeparator())
-                                    mainState.updatePath(newPath)
-                                })
+                    },
+                    navigationIcon = {
+                        IconButton({
+                            mainState.updateExpandDrawer(!expandDrawer)
+                        }) {
+                            Icon(if (expandDrawer) Icons.Default.Close else Icons.Default.Menu, null)
+                        }
+                    },
+                    actions = {
+                        IconButton({ fileState.updateSearch(!isSearchText) }) {
+                            Icon(Icons.Default.Search, null)
+                        }
+                        SortButton()
+                    }
+                )
+            },
+            bottomBar = {
+                BottomAppBar(
+                    actions = {
+                        IconButton(onClick = { /* doSomething() */ }) {
+                            Icon(Icons.Filled.Check, contentDescription = "Localized description")
+                        }
+                        IconButton(onClick = { /* doSomething() */ }) {
+                            Icon(
+                                Icons.Filled.Edit,
+                                contentDescription = "Localized description",
+                            )
+                        }
+                    },
+                    floatingActionButton = {
+                        FloatingActionButton(
+                            onClick = { /* do something */ },
+                            containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
+                            elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
+                        ) {
+                            Icon(Icons.Filled.Add, "Localized description")
                         }
                     }
-                },
-                navigationIcon = {
-                    IconButton({
-                        mainState.updateExpandDrawer(!expandDrawer)
-                    }) {
-                        Icon(if (expandDrawer) Icons.Default.Close else Icons.Default.Menu, null)
-                    }
-                },
-                actions = {
-                    IconButton({ mainState.updateSearch(!isSearchText) }) {
-                        Icon(Icons.Default.Search, null)
-                    }
-                    IconButton({}) {
-                        Icon(Icons.Default.Sort, null)
+                )
+            },
+        ) {
+            Column(Modifier.padding(it)) {
+                if (isSearchText) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextField(searchText, label = { Text("搜索") }, onValueChange = fileState::updateSearchText)
                     }
                 }
-            )
-            if (isSearchText) {
-                Row(modifier = Modifier.fillMaxWidth().padding(end = 16.dp), horizontalArrangement = Arrangement.End) {
-                    TextField(searchText, label = { Text("搜索") }, onValueChange = mainState::updateSearchText)
+                FileScreen(path, fileState) {
+                    mainState.updatePath(it)
                 }
-            }
-            FileScreen(path, fileState) {
-                mainState.updatePath(it)
             }
         }
     }

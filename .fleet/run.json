@@ -17,6 +17,16 @@
             "initScripts": {
                 "flmapper": "ext.mapPath = { path -> null }"
             }
+        },
+        {
+            "name": "composeApp (1)",
+            "type": "gradle",
+            "workingDir": "/home/webb/IdeaProjects/FileManager",
+            "tasks": ["jvmRun"],
+            "args": ["-DmainClass=MainKt", "--quiet", "-p", "/home/webb/IdeaProjects/FileManager/composeApp"],
+            "initScripts": {
+                "flmapper": "ext.mapPath = { path -> null }"
+            }
         }
     ]
 }

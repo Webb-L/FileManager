@@ -23,16 +23,4 @@ class MainState {
     fun updatePath(value: String) {
         _path.value = value
     }
-
-    private val _isSearchText: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isSearchText: StateFlow<Boolean> = _isSearchText
-    fun updateSearch(value: Boolean) {
-        _isSearchText.value = value
-    }
-
-    private val _searchText: MutableStateFlow<String> = MutableStateFlow("")
-    val searchText: StateFlow<String> = _searchText
-    fun updateSearchText(value: String) {
-        _searchText.value = value
-    }
 }

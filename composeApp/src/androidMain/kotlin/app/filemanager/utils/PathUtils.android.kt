@@ -2,15 +2,15 @@ package app.filemanager.utils
 
 internal actual object PathUtils {
     actual fun getHomePath(): String {
-        TODO("Not yet implemented")
+        return "/"
     }
 
     actual fun getPathSeparator(): String {
-        TODO("Not yet implemented")
+        return "/"
     }
 
     actual fun getRootPaths(): List<String> {
-        TODO("Not yet implemented")
+        return listOf("/")
     }
 
 }

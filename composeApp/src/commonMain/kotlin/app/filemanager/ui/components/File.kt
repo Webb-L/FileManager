@@ -91,7 +91,7 @@ private fun FileIcon(file: FileInfo) {
         return
     }
 
-    if (FileExtensions.Descriptions.contains(file.mineType)) {
+    if (FileExtensions.Documents.contains(file.mineType)) {
         Icon(
             Icons.Default.Description,
             contentDescription = file.name,
