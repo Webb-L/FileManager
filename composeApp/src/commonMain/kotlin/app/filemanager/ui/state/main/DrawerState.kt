@@ -28,7 +28,7 @@ class DrawerState() {
                 DrawerBookmark(name = "主目录", path = homePath, iconType = DrawerBookmarkIcon.Home),
                 DrawerBookmark(
                     name = "图片",
-                    path = "$homePath${separator}Images",
+                    path = "$homePath${separator}Pictures",
                     iconType = DrawerBookmarkIcon.Image
                 ),
                 DrawerBookmark(name = "音乐", path = "$homePath${separator}Music", iconType = DrawerBookmarkIcon.Audio),
@@ -44,7 +44,7 @@ class DrawerState() {
                 ),
                 DrawerBookmark(
                     name = "下载",
-                    path = "$homePath${separator}Download",
+                    path = "$homePath${separator}Downloads",
                     iconType = DrawerBookmarkIcon.Download
                 ),
             )

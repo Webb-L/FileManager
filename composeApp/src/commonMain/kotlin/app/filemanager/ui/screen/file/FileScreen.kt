@@ -34,7 +34,12 @@ fun FileScreen(path: String, fileState: FileState, updatePath: (String) -> Unit)
             WindowSizeClass.Expanded -> 3
         }
         LazyVerticalGrid(columns = GridCells.Fixed(columnCount)) {
-            items(path.getAllFilesInDirectory().filter { !it.isHidden }.sortedBy { it.name }) {
+            items(
+                path.getAllFilesInDirectory()
+                    .filter { !it.isHidden }
+                    .sortedBy { it.isDirectory }
+                    .sortedBy { it.name }
+            ) {
                 FileCard(
                     file = it,
                     onClick = {
