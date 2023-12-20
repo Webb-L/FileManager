@@ -39,7 +39,6 @@ fun MainScreen(mainState: MainState, screenType: WindowSizeClass) {
         if (listOf(WindowSizeClass.Medium, WindowSizeClass.Expanded).contains(screenType) && expandDrawer) {
             AppDrawer(mainState)
         }
-
         val paths = path.parsePath()
         val listState = rememberLazyListState(initialFirstVisibleItemIndex = paths.size - 1)
         Scaffold(

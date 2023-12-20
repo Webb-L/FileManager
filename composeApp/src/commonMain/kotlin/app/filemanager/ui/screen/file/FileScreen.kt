@@ -8,14 +8,14 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import app.filemanager.data.file.FileFilterIcon.*
+import app.filemanager.data.file.getFileFilterIcon
 import app.filemanager.extensions.getAllFilesInDirectory
 import app.filemanager.ui.components.FileCard
 import app.filemanager.ui.state.file.FileState
@@ -69,18 +69,7 @@ fun FileFilter(fileState: FileState) {
                 val isSelected = fileState.filterFileExtensions.contains(fileFilter.iconType)
                 FilterChip(selected = isSelected,
                     label = { Text(fileFilter.name) },
-                    leadingIcon = {
-                        when (fileFilter.iconType) {
-                            Image -> Icon(Icons.Default.Image, null)
-                            ImageRaw -> Icon(Icons.Default.RawOn, null)
-                            ImageVector -> Icon(Icons.Default.Landscape, null)
-                            Image3D -> Icon(Icons.Default.ViewInAr, null)
-                            Audio -> Icon(Icons.Default.Headphones, null)
-                            Video -> Icon(Icons.Default.Videocam, null)
-                            Document -> Icon(Icons.Default.Description, null)
-                            Custom -> Icon(Icons.Default.Filter, null)
-                        }
-                    },
+                    leadingIcon = { getFileFilterIcon(fileFilter.iconType) },
                     shape = RoundedCornerShape(25.dp),
                     onClick = {
                         if (isSelected) {

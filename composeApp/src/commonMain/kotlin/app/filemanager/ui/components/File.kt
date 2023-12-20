@@ -3,7 +3,9 @@ package app.filemanager.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Note
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,6 +15,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.FileInfo
 import app.filemanager.data.file.FileExtensions
+import app.filemanager.data.file.FileFilterIcon
+import app.filemanager.data.file.getFileFilterIcon
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
 
@@ -29,11 +33,7 @@ fun FileCard(
         } else {
             null
         },
-        headlineContent = {
-            if (file.name.isNotEmpty()) {
-                Text(file.name)
-            }
-        },
+        headlineContent = { if (file.name.isNotEmpty()) Text(file.name) },
         supportingContent = {
             Row {
 //                Text(file.user, style = MaterialTheme.typography.bodySmall)
@@ -49,12 +49,8 @@ fun FileCard(
                 Text(file.createdDate.timestampToSyncDate(), style = MaterialTheme.typography.bodySmall)
             }
         },
-        leadingContent = {
-            FileIcon(file)
-        },
-        trailingContent = {
-            FileCardMenu()
-        },
+        leadingContent = { FileIcon(file) },
+        trailingContent = { FileCardMenu() },
         modifier = Modifier.clickable(onClick = onClick)
     )
 }
@@ -69,40 +65,16 @@ private fun FileIcon(file: FileInfo) {
         return
     }
 
-    if (FileExtensions.Images.contains(file.mineType)) {
+    val fileExtension = FileExtensions.getExtensionTypeByFileExtension(file.mineType)
+    if (fileExtension.isEmpty()) {
         Icon(
-            Icons.Default.Image,
+            Icons.Default.Note,
             contentDescription = file.name,
         )
         return
     }
-    if (FileExtensions.Audios.contains(file.mineType)) {
-        Icon(
-            Icons.Default.Headphones,
-            contentDescription = file.name,
-        )
-        return
-    }
-    if (FileExtensions.Videos.contains(file.mineType)) {
-        Icon(
-            Icons.Default.Videocam,
-            contentDescription = file.name,
-        )
-        return
-    }
-
-    if (FileExtensions.Documents.contains(file.mineType)) {
-        Icon(
-            Icons.Default.Description,
-            contentDescription = file.name,
-        )
-        return
-    }
-
-    Icon(
-        Icons.Default.Note,
-        contentDescription = file.name,
-    )
+    val fileFilterIcon = FileFilterIcon.valueOf(fileExtension)
+    getFileFilterIcon(fileFilterIcon)
 }
 
 @Composable

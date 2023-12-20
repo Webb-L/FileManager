@@ -1,5 +1,7 @@
 package app.filemanager.extensions
 
+import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.toLowerCase
 import app.filemanager.data.FileInfo
 import java.io.File
 import java.nio.file.Files
@@ -13,13 +15,17 @@ internal actual fun String.getAllFilesInDirectory(): List<FileInfo> =
         val path = Paths.get(absolutePath)
         val attrs = Files.readAttributes(path, BasicFileAttributes::class.java)
         // TODO Windows 有问题。
+        var mineType = ""
+        if (file.isFile) {
+            mineType = file.extension.toLowerCase(Locale.current)
+        }
         FileInfo(
             name = file.name,
             description = "",
             isDirectory = file.isDirectory,
             isHidden = file.isHidden,
             path = absolutePath,
-            mineType = file.extension,
+            mineType = mineType,
             size = if (file.isDirectory) (file.listFiles() ?: emptyArray<File>()).size.toLong() else file.length(),
             permissions = 0,
             user = "Files.getOwner(path).name",

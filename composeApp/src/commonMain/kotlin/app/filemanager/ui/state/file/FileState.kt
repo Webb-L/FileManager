@@ -1,7 +1,6 @@
 package app.filemanager.ui.state.file
 
 import androidx.compose.runtime.mutableStateListOf
-import app.filemanager.data.file.FileExtensions
 import app.filemanager.data.file.FileFilter
 import app.filemanager.data.file.FileFilterIcon
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,23 +32,19 @@ class FileState() {
     val filterFileTypes = listOf(
         FileFilter(
             name = "图片",
-            extensions = FileExtensions.Images,
             iconType = FileFilterIcon.Image,
         ),
         FileFilter(
             name = "音乐",
-            extensions = FileExtensions.Audios,
             iconType = FileFilterIcon.Audio,
         ),
         FileFilter(
             name = "视频",
-            extensions = FileExtensions.Videos,
             iconType = FileFilterIcon.Video,
         ),
         FileFilter(
             name = "文档",
-            extensions = FileExtensions.Documents,
-            iconType = FileFilterIcon.Document,
+            iconType = FileFilterIcon.Text,
         ),
     )
 }
