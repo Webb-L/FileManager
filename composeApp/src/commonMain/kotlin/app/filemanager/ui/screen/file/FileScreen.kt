@@ -72,10 +72,13 @@ fun FileFilter(fileState: FileState) {
                     leadingIcon = {
                         when (fileFilter.iconType) {
                             Image -> Icon(Icons.Default.Image, null)
-                            Audio -> Icon(Icons.Default.Headphones, contentDescription = null)
-                            Video -> Icon(Icons.Default.Videocam, contentDescription = null)
-                            Document -> Icon(Icons.Default.Description, contentDescription = null)
-                            Custom -> Icon(Icons.Default.Filter, contentDescription = null)
+                            ImageRaw -> Icon(Icons.Default.RawOn, null)
+                            ImageVector -> Icon(Icons.Default.Landscape, null)
+                            Image3D -> Icon(Icons.Default.ViewInAr, null)
+                            Audio -> Icon(Icons.Default.Headphones, null)
+                            Video -> Icon(Icons.Default.Videocam, null)
+                            Document -> Icon(Icons.Default.Description, null)
+                            Custom -> Icon(Icons.Default.Filter, null)
                         }
                     },
                     shape = RoundedCornerShape(25.dp),
