@@ -6,7 +6,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 
 enum class FileFilterIcon(type: String) {
-    Text("text"),
+    Text("Text"),
     Audio("Audio"),
     Video("Video"),
     Image("Image"),

@@ -46,5 +46,45 @@ class FileState() {
             name = "文档",
             iconType = FileFilterIcon.Text,
         ),
+        FileFilter(
+            name = "游戏",
+            iconType = FileFilterIcon.Game,
+        ),
+        FileFilter(
+            name = "3D",
+            iconType = FileFilterIcon.Image3D,
+        ),
+        FileFilter(
+            name = "网页",
+            iconType = FileFilterIcon.Web,
+        ),
+        FileFilter(
+            name = "数据库",
+            iconType = FileFilterIcon.Database,
+        ),
+        FileFilter(
+            name = "字体",
+            iconType = FileFilterIcon.Font,
+        ),
+        FileFilter(
+            name = "系统",
+            iconType = FileFilterIcon.System,
+        ),
+        FileFilter(
+            name = "设置",
+            iconType = FileFilterIcon.Settings,
+        ),
+        FileFilter(
+            name = "压缩",
+            iconType = FileFilterIcon.Compressed,
+        ),
+        FileFilter(
+            name = "加密",
+            iconType = FileFilterIcon.Backup,
+        ),
+        FileFilter(
+            name = "位置",
+            iconType = FileFilterIcon.GIS,
+        ),
     )
 }
