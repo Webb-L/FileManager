@@ -47,6 +47,22 @@ class FileState() {
             iconType = FileFilterIcon.Text,
         ),
         FileFilter(
+            name = "可执行",
+            iconType = FileFilterIcon.Executable,
+        ),
+        FileFilter(
+            name = "压缩",
+            iconType = FileFilterIcon.Compressed,
+        ),
+        FileFilter(
+            name = "原始图像",
+            iconType = FileFilterIcon.ImageRaw,
+        ),
+        FileFilter(
+            name = "矢量图",
+            iconType = FileFilterIcon.ImageVector,
+        ),
+        FileFilter(
             name = "游戏",
             iconType = FileFilterIcon.Game,
         ),
@@ -59,8 +75,20 @@ class FileState() {
             iconType = FileFilterIcon.Web,
         ),
         FileFilter(
+            name = "页面布局",
+            iconType = FileFilterIcon.PageLayout,
+        ),
+        FileFilter(
+            name = "CAD",
+            iconType = FileFilterIcon.CAD,
+        ),
+        FileFilter(
             name = "数据库",
             iconType = FileFilterIcon.Database,
+        ),
+        FileFilter(
+            name = "插件",
+            iconType = FileFilterIcon.Plugin,
         ),
         FileFilter(
             name = "字体",
@@ -75,16 +103,28 @@ class FileState() {
             iconType = FileFilterIcon.Settings,
         ),
         FileFilter(
-            name = "压缩",
-            iconType = FileFilterIcon.Compressed,
-        ),
-        FileFilter(
             name = "加密",
-            iconType = FileFilterIcon.Backup,
+            iconType = FileFilterIcon.Encoded,
         ),
         FileFilter(
             name = "位置",
             iconType = FileFilterIcon.GIS,
+        ),
+        FileFilter(
+            name = "磁盘映像",
+            iconType = FileFilterIcon.Disk,
+        ),
+        FileFilter(
+            name = "开发",
+            iconType = FileFilterIcon.Developer,
+        ),
+        FileFilter(
+            name = "备份",
+            iconType = FileFilterIcon.Backup,
+        ),
+        FileFilter(
+            name = "杂项",
+            iconType = FileFilterIcon.Misc,
         ),
     )
 }

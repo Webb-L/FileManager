@@ -52,7 +52,7 @@ fun getFileFilterIcon(type: FileFilterIcon) {
         FileFilterIcon.GIS -> Icon(Icons.Default.Map, null)
         FileFilterIcon.Web -> Icon(Icons.Default.Web, null)
         FileFilterIcon.Plugin -> Icon(Icons.Default.Extension, null)
-        FileFilterIcon.Font -> Icon(Icons.Default.FamilyRestroom, null)
+        FileFilterIcon.Font -> Icon(Icons.Default.FontDownload, null)
         FileFilterIcon.System -> Icon(Icons.Default.Build, null)
         FileFilterIcon.Settings -> Icon(Icons.Default.SettingsEthernet, null)
         FileFilterIcon.Encoded -> Icon(Icons.Default.Lock, null)
