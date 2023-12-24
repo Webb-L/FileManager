@@ -35,7 +35,6 @@ enum class FileFilterIcon(type: String) {
 
 @Composable
 fun getFileFilterIcon(type: FileFilterIcon) {
-    println(type)
     when (type) {
         FileFilterIcon.Text -> Icon(Icons.Default.Description, null)
         FileFilterIcon.Audio -> Icon(Icons.Default.Headphones, null)

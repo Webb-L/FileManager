@@ -7,11 +7,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.main.DrawerBookmarkIcon
+import app.filemanager.service.WebSocketService
 import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.ui.state.main.MainState
 
@@ -22,6 +24,7 @@ fun AppDrawer(mainState: MainState) {
     val isExpandBookmark by drawerState.isExpandBookmark.collectAsState()
     val isExpandDevice by drawerState.isExpandDevice.collectAsState()
     val isExpandNetwork by drawerState.isExpandNetwork.collectAsState()
+
     ModalDrawerSheet {
         LazyColumn {
             item {
@@ -71,6 +74,10 @@ fun AppDrawer(mainState: MainState) {
                 }
             }
         }
+    }
+
+    LaunchedEffect(Unit) {
+        println(WebSocketService().scanService())
     }
 }
 

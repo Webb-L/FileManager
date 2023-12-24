@@ -13,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.getFileFilterIcon
@@ -22,10 +23,17 @@ import app.filemanager.ui.state.file.FileState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.WindowSizeClass
 import app.filemanager.utils.calculateWindowSizeClass
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FileScreen(path: String, fileState: FileState, updatePath: (String) -> Unit) {
+fun FileScreen(
+    path: String,
+    fileState: FileState,
+    snackbarHostState: SnackbarHostState,
+    updatePath: (String) -> Unit
+) {
+    val scope = rememberCoroutineScope()
     FileFilter(fileState)
     BoxWithConstraints {
         val columnCount = when (calculateWindowSizeClass(maxWidth, maxHeight)) {
@@ -42,6 +50,7 @@ fun FileScreen(path: String, fileState: FileState, updatePath: (String) -> Unit)
             ) {
                 FileCard(
                     file = it,
+                    fileState = fileState,
                     onClick = {
                         if (it.isDirectory) {
                             updatePath(it.path)
@@ -49,7 +58,20 @@ fun FileScreen(path: String, fileState: FileState, updatePath: (String) -> Unit)
                             FileUtils.openFile(it.path)
                         }
                     },
-                    onRemove = {}
+                    onRemove = { deletePath ->
+                        scope.launch {
+                            val showSnackbar = snackbarHostState.showSnackbar(
+                                message = deletePath,
+                                actionLabel = "删除",
+                                withDismissAction = true,
+                                duration = SnackbarDuration.Short
+                            )
+                            when (showSnackbar) {
+                                SnackbarResult.Dismissed -> {}
+                                SnackbarResult.ActionPerformed -> fileState.deleteFile(path)
+                            }
+                        }
+                    }
                 )
             }
         }

@@ -127,4 +127,37 @@ class FileState() {
             iconType = FileFilterIcon.Misc,
         ),
     )
+
+    var dstPath = ""
+    // 是否在复制文件
+    private val _isPasteCopyFile: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isPasteCopyFile: StateFlow<Boolean> = _isPasteCopyFile
+    fun copyFile(path: String) {
+        _isPasteCopyFile.value = true
+        dstPath = path
+    }
+    fun pasteCopyFile(path: String) {
+        println(dstPath)
+        println(path)
+        _isPasteCopyFile.value = false
+        dstPath = ""
+    }
+
+    // 是否在移动文件
+    private val _isPasteMoveFile: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isPasteMoveFile: StateFlow<Boolean> = _isPasteMoveFile
+    fun moveFile(path: String) {
+        _isPasteMoveFile.value = true
+        dstPath = path
+    }
+    fun pasteMoveFile(path: String) {
+        println(dstPath)
+        println(path)
+        _isPasteMoveFile.value = false
+        dstPath = ""
+    }
+
+    fun deleteFile(path: String) {
+
+    }
 }

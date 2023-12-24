@@ -19,13 +19,15 @@ import app.filemanager.data.file.FileFilterIcon
 import app.filemanager.data.file.getFileFilterIcon
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
+import app.filemanager.ui.state.file.FileState
 
 
 @Composable
 fun FileCard(
     file: FileInfo,
+    fileState: FileState,
     onClick: () -> Unit,
-    onRemove: () -> Unit,
+    onRemove: (String) -> Unit,
 ) {
     ListItem(
         overlineContent = if (file.description.isNotEmpty()) {
@@ -50,7 +52,7 @@ fun FileCard(
             }
         },
         leadingContent = { FileIcon(file) },
-        trailingContent = { FileCardMenu() },
+        trailingContent = { FileCardMenu(file, fileState, onRemove) },
         modifier = Modifier.clickable(onClick = onClick)
     )
 }
@@ -78,15 +80,19 @@ private fun FileIcon(file: FileInfo) {
 }
 
 @Composable
-private fun FileCardMenu() {
+private fun FileCardMenu(
+    file: FileInfo,
+    fileState: FileState,
+    onRemove: (String) -> Unit
+) {
+    val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
+    val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
     var expanded by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = Modifier.wrapContentSize(Alignment.TopStart)
-    ) {
+    Box(Modifier.wrapContentSize(Alignment.TopStart)) {
         Icon(
             Icons.Filled.MoreVert,
-            contentDescription = "Localized description",
+            null,
             modifier = Modifier.clickable {
                 expanded = true
             }
@@ -95,9 +101,28 @@ private fun FileCardMenu() {
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
+            // 粘贴文件
+            if ((isPasteCopyFile || isPasteMoveFile) && file.isDirectory) {
+                DropdownMenuItem(
+                    text = { Text("粘贴") },
+                    onClick = {
+                        fileState.pasteCopyFile(file.path)
+                        expanded = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Outlined.ContentPaste,
+                            contentDescription = null
+                        )
+                    })
+                Divider()
+            }
             DropdownMenuItem(
                 text = { Text("复制") },
-                onClick = { /* Handle edit! */ },
+                onClick = {
+                    fileState.copyFile(file.path)
+                    expanded = false
+                },
                 leadingIcon = {
                     Icon(
                         Icons.Outlined.FileCopy,
@@ -106,7 +131,10 @@ private fun FileCardMenu() {
                 })
             DropdownMenuItem(
                 text = { Text("移动") },
-                onClick = { /* Handle edit! */ },
+                onClick = {
+                    fileState.moveFile(file.path)
+                    expanded = false
+                },
                 leadingIcon = {
                     Icon(
                         Icons.Outlined.ContentCut,
@@ -115,7 +143,10 @@ private fun FileCardMenu() {
                 })
             DropdownMenuItem(
                 text = { Text("删除") },
-                onClick = { /* Handle settings! */ },
+                onClick = {
+                    onRemove(file.path)
+                    expanded = false
+                },
                 leadingIcon = {
                     Icon(
                         Icons.Outlined.Delete,

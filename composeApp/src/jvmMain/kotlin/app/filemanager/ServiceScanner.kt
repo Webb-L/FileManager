@@ -1,8 +1,6 @@
 package app.filemanager
 
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -22,20 +20,20 @@ class ServiceScanner {
     }
 }
 
-suspend fun main() {
-    val scanner = ServiceScanner()
-    val privateIPs = generatePrivateIPs()
-    val port = 5173
-    println(privateIPs.size)
-    privateIPs.forEach { ip ->
-        MainScope().launch {
-            val isOpen = scanner.scanPort(ip, port)
-            if (isOpen) {
-                println("Port $port is open on $ip")
-            }
-        }
-    }
-}
+//suspend fun main() {
+//    val scanner = ServiceScanner()
+//    val privateIPs = generatePrivateIPs()
+//    val port = 5173
+//    println(privateIPs.size)
+//    privateIPs.forEach { ip ->
+//        MainScope().launch {
+//            val isOpen = scanner.scanPort(ip, port)
+//            if (isOpen) {
+//                println("Port $port is open on $ip")
+//            }
+//        }
+//    }
+//}
 
 fun generatePrivateIPs(): List<String> {
     val ips = mutableListOf<String>()

@@ -32,6 +32,8 @@ fun MainScreen(mainState: MainState, screenType: WindowSizeClass) {
     val fileState = FileState()
     val isSearchText by fileState.isSearchText.collectAsState()
     val searchText by fileState.searchText.collectAsState()
+    val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
+    val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
 
 
     Row {
@@ -41,6 +43,8 @@ fun MainScreen(mainState: MainState, screenType: WindowSizeClass) {
         }
         val paths = path.parsePath()
         val listState = rememberLazyListState(initialFirstVisibleItemIndex = paths.size - 1)
+
+        val snackbarHostState = remember { SnackbarHostState() }
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -77,30 +81,41 @@ fun MainScreen(mainState: MainState, screenType: WindowSizeClass) {
                     }
                 )
             },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
-                BottomAppBar(
-                    actions = {
-                        IconButton(onClick = { /* doSomething() */ }) {
-                            Icon(Icons.Filled.Check, contentDescription = "Localized description")
+                if (isPasteCopyFile || isPasteMoveFile) {
+                    BottomAppBar(
+                        actions = {
+                            if (isPasteCopyFile || isPasteMoveFile) {
+                                IconButton({
+                                    if (isPasteCopyFile) fileState.pasteCopyFile(path)
+                                    if (isPasteMoveFile) fileState.pasteMoveFile(path)
+                                }) {
+                                    Icon(Icons.Filled.ContentPaste, null)
+                                }
+                            }
+                        },
+                        floatingActionButton = {
+                            FloatingActionButton(
+                                onClick = { fileState.pasteCopyFile(path) },
+                                containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
+                                elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
+                            ) {
+                                Icon(Icons.Filled.Add, "Localized description")
+                            }
                         }
-                        IconButton(onClick = { /* doSomething() */ }) {
-                            Icon(
-                                Icons.Filled.Edit,
-                                contentDescription = "Localized description",
-                            )
-                        }
-                    },
-                    floatingActionButton = {
-                        FloatingActionButton(
-                            onClick = { /* do something */ },
-                            containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
-                            elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
-                        ) {
-                            Icon(Icons.Filled.Add, "Localized description")
-                        }
-                    }
-                )
+                    )
+                }
             },
+            floatingActionButton = {
+                if (!isPasteCopyFile && !isPasteMoveFile) {
+                    ExtendedFloatingActionButton({ }) {
+                        Icon(Icons.Filled.Add, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("新增")
+                    }
+                }
+            }
         ) {
             Column(Modifier.padding(it)) {
                 if (isSearchText) {
@@ -111,7 +126,7 @@ fun MainScreen(mainState: MainState, screenType: WindowSizeClass) {
                         TextField(searchText, label = { Text("搜索") }, onValueChange = fileState::updateSearchText)
                     }
                 }
-                FileScreen(path, fileState) {
+                FileScreen(path, fileState,snackbarHostState) {
                     mainState.updatePath(it)
                 }
             }
