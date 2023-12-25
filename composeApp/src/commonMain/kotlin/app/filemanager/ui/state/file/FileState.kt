@@ -1,12 +1,13 @@
 package app.filemanager.ui.state.file
 
 import androidx.compose.runtime.mutableStateListOf
+import app.filemanager.data.FileInfo
 import app.filemanager.data.file.FileFilter
 import app.filemanager.data.file.FileFilterIcon
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-class FileState() {
+class FileState {
     private val _isSearchText: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isSearchText: StateFlow<Boolean> = _isSearchText
     fun updateSearch(value: Boolean) {
@@ -129,6 +130,7 @@ class FileState() {
     )
 
     var dstPath = ""
+
     // 是否在复制文件
     private val _isPasteCopyFile: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isPasteCopyFile: StateFlow<Boolean> = _isPasteCopyFile
@@ -136,6 +138,7 @@ class FileState() {
         _isPasteCopyFile.value = true
         dstPath = path
     }
+
     fun pasteCopyFile(path: String) {
         println(dstPath)
         println(path)
@@ -150,6 +153,7 @@ class FileState() {
         _isPasteMoveFile.value = true
         dstPath = path
     }
+
     fun pasteMoveFile(path: String) {
         println(dstPath)
         println(path)
@@ -157,7 +161,27 @@ class FileState() {
         dstPath = ""
     }
 
+    private val _isRenameFile: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isRenameFile: StateFlow<Boolean> = _isRenameFile
+    fun updateRenameFile(status: Boolean) {
+        _isRenameFile.value = status
+    }
+
+    private val _renameText: MutableStateFlow<String> = MutableStateFlow("")
+    val renameText: StateFlow<String> = _renameText
+    fun updateRenameText(text: String) {
+        _renameText.value = text
+    }
+
+
+    // 删除文件
     fun deleteFile(path: String) {
 
+    }
+
+    private val _fileInfo: MutableStateFlow<FileInfo?> = MutableStateFlow(null)
+    val fileInfo: StateFlow<FileInfo?> = _fileInfo
+    fun updateFileInfo(data: FileInfo?) {
+        _fileInfo.value = data
     }
 }

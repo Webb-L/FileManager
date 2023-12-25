@@ -19,7 +19,8 @@ import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.getFileFilterIcon
 import app.filemanager.extensions.getAllFilesInDirectory
 import app.filemanager.ui.components.FileCard
-import app.filemanager.ui.components.FileIcon
+import app.filemanager.ui.components.FileInfoDialog
+import app.filemanager.ui.components.FileRenameDialog
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.WindowSizeClass
@@ -30,10 +31,15 @@ import kotlinx.coroutines.launch
 @Composable
 fun FileScreen(
     path: String,
+    rootPath: String,
     fileState: FileState,
     snackbarHostState: SnackbarHostState,
     updatePath: (String) -> Unit
 ) {
+    val fileInfo by fileState.fileInfo.collectAsState()
+    val isRenameFile by fileState.isRenameFile.collectAsState()
+    val renameText by fileState.renameText.collectAsState()
+
     val scope = rememberCoroutineScope()
     FileFilter(fileState)
     BoxWithConstraints {
@@ -78,75 +84,13 @@ fun FileScreen(
         }
     }
 
-    val fileInfo = path.getAllFilesInDirectory().first()
-    AlertDialog(
-        icon = { FileIcon(fileInfo) },
-        title = { Text(fileInfo.name) },
-        text = {
-            Column {
-                Row(Modifier.fillMaxWidth().padding(4.dp)) {
-                    Text("位置", Modifier.weight(0.3f))
-                    Spacer(Modifier.width(8.dp))
-                    Text(fileInfo.path, Modifier.weight(0.7f))
-                }
-                Row(Modifier.fillMaxWidth().padding(4.dp)) {
-                    Text("类型", Modifier.weight(0.3f))
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (fileInfo.isDirectory) "文件夹" else "文件", Modifier.weight(0.7f))
-                }
-                Row(Modifier.fillMaxWidth().padding(4.dp)) {
-                    Text("权限", Modifier.weight(0.3f))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Column 2", Modifier.weight(0.7f))
-                }
-                Row(Modifier.fillMaxWidth().padding(4.dp)) {
-                    Text("所属者", Modifier.weight(0.3f))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Column 2", Modifier.weight(0.7f))
-                }
-                Row(Modifier.fillMaxWidth().padding(4.dp)) {
-                    Text("所属组", Modifier.weight(0.3f))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Column 2", Modifier.weight(0.7f))
-                }
-                Row(Modifier.fillMaxWidth().padding(4.dp)) {
-                    Text("文件大小", Modifier.weight(0.3f))
-                    Spacer(Modifier.width(8.dp))
-                    Text("100KB/100GB", Modifier.weight(0.7f))
-                }
-                Row(Modifier.fillMaxWidth().padding(4.dp)) {
-                    Text("创建时间", Modifier.weight(0.3f))
-                    Spacer(Modifier.width(8.dp))
-                    Text("更新时间", Modifier.weight(0.7f))
-                }
-                Row(Modifier.fillMaxWidth().padding(4.dp)) {
-                    Text("更新时间", Modifier.weight(0.3f))
-                    Spacer(Modifier.width(8.dp))
-                    Text("更新时间", Modifier.weight(0.7f))
-                }
-            }
-        },
-        onDismissRequest = {
-
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-
-                }
-            ) {
-                Text("Confirm")
-            }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = {
-                }
-            ) {
-                Text("Dismiss")
-            }
+    if (isRenameFile && fileInfo != null) {
+        FileRenameDialog(fileInfo!!)
+    } else if (fileInfo != null) {
+        FileInfoDialog(fileInfo!!) {
+            fileState.updateFileInfo(null)
         }
-    )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

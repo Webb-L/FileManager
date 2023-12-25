@@ -10,4 +10,6 @@ internal actual object FileUtils {
 
     actual fun copyFile(dst: String, src: String) {
     }
+
+    actual fun totalSpace(path: String): Long = File(path).totalSpace
 }

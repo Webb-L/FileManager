@@ -11,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.FileInfo
 import app.filemanager.data.file.FileExtensions
@@ -156,7 +155,11 @@ private fun FileCardMenu(
             Divider()
             DropdownMenuItem(
                 text = { Text("重命名") },
-                onClick = { /* Handle settings! */ },
+                onClick = {
+                    fileState.updateFileInfo(file)
+                    fileState.updateRenameFile(true)
+                    expanded = false
+                },
                 leadingIcon = {
                     Icon(
                         Icons.Outlined.Edit,
@@ -174,25 +177,30 @@ private fun FileCardMenu(
                 })
             Divider()
             DropdownMenuItem(
+                text = { Text("收藏") },
+                onClick = {
+                    expanded = false
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Outlined.FavoriteBorder,
+                        contentDescription = null
+                    )
+                },
+                trailingIcon = { })
+            DropdownMenuItem(
                 text = { Text("属性") },
-                onClick = { /* Handle send feedback! */ },
+                onClick = {
+                    fileState.updateFileInfo(file)
+                    expanded = false
+                },
                 leadingIcon = {
                     Icon(
                         Icons.Outlined.Info,
                         contentDescription = null
                     )
                 },
-                trailingIcon = { Text("F11", textAlign = TextAlign.Center) })
-            DropdownMenuItem(
-                text = { Text("Send Feedback") },
-                onClick = { /* Handle send feedback! */ },
-                leadingIcon = {
-                    Icon(
-                        Icons.Outlined.Email,
-                        contentDescription = null
-                    )
-                },
-                trailingIcon = { Text("F11", textAlign = TextAlign.Center) })
+                trailingIcon = { })
         }
     }
 }

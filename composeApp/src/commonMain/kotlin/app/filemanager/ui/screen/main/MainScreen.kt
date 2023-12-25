@@ -126,7 +126,7 @@ fun MainScreen(mainState: MainState, screenType: WindowSizeClass) {
                         TextField(searchText, label = { Text("搜索") }, onValueChange = fileState::updateSearchText)
                     }
                 }
-                FileScreen(path, fileState,snackbarHostState) {
+                FileScreen(path, rootPath, fileState, snackbarHostState) {
                     mainState.updatePath(it)
                 }
             }
