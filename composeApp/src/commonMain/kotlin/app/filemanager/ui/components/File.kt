@@ -58,7 +58,7 @@ fun FileCard(
 }
 
 @Composable
-private fun FileIcon(file: FileInfo) {
+fun FileIcon(file: FileInfo) {
     if (file.isDirectory) {
         Icon(
             imageVector = Icons.Default.Folder,
