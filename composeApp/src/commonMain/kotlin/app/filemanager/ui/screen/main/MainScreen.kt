@@ -17,6 +17,7 @@ import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.AppDrawer
 import app.filemanager.ui.components.SortButton
 import app.filemanager.ui.screen.file.FileScreen
+import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.MainState
 import app.filemanager.utils.PathUtils
@@ -29,9 +30,11 @@ fun MainScreen(mainState: MainState, screenType: WindowSizeClass) {
     val path by mainState.path.collectAsState()
     val rootPath by mainState.rootPath.collectAsState()
 
+    val fileFilterState = FileFilterState()
+    val isSearchText by fileFilterState.isSearchText.collectAsState()
+    val searchText by fileFilterState.searchText.collectAsState()
+
     val fileState = FileState()
-    val isSearchText by fileState.isSearchText.collectAsState()
-    val searchText by fileState.searchText.collectAsState()
     val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
     val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
 
@@ -67,14 +70,12 @@ fun MainScreen(mainState: MainState, screenType: WindowSizeClass) {
                         }
                     },
                     navigationIcon = {
-                        IconButton({
-                            mainState.updateExpandDrawer(!expandDrawer)
-                        }) {
+                        IconButton({ mainState.updateExpandDrawer(!expandDrawer) }) {
                             Icon(if (expandDrawer) Icons.Default.Close else Icons.Default.Menu, null)
                         }
                     },
                     actions = {
-                        IconButton({ fileState.updateSearch(!isSearchText) }) {
+                        IconButton({ fileFilterState.updateSearch(!isSearchText) }) {
                             Icon(Icons.Default.Search, null)
                         }
                         SortButton()
@@ -123,7 +124,11 @@ fun MainScreen(mainState: MainState, screenType: WindowSizeClass) {
                         modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
                         horizontalArrangement = Arrangement.End
                     ) {
-                        TextField(searchText, label = { Text("搜索") }, onValueChange = fileState::updateSearchText)
+                        TextField(
+                            searchText,
+                            label = { Text("搜索") },
+                            onValueChange = fileFilterState::updateSearchText
+                        )
                     }
                 }
                 FileScreen(path, rootPath, fileState, snackbarHostState) {

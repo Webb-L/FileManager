@@ -21,6 +21,7 @@ import app.filemanager.extensions.getAllFilesInDirectory
 import app.filemanager.ui.components.FileCard
 import app.filemanager.ui.components.FileInfoDialog
 import app.filemanager.ui.components.FileRenameDialog
+import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.WindowSizeClass
@@ -41,7 +42,7 @@ fun FileScreen(
     val renameText by fileState.renameText.collectAsState()
 
     val scope = rememberCoroutineScope()
-    FileFilter(fileState)
+    FileFilter(FileFilterState())
     BoxWithConstraints {
         val columnCount = when (calculateWindowSizeClass(maxWidth, maxHeight)) {
             WindowSizeClass.Compact -> 1
@@ -85,14 +86,14 @@ fun FileScreen(
     }
 
     if (isRenameFile && fileInfo != null) {
-        FileRenameDialog(fileInfo!!){
+        FileRenameDialog(fileInfo!!) {
             fileState.updateRenameFile(false)
             fileState.updateFileInfo(null)
             if (it.isEmpty()) return@FileRenameDialog
             fileState.updateRenameText(it)
         }
     } else if (fileInfo != null) {
-        FileInfoDialog(fileInfo!!,rootPath) {
+        FileInfoDialog(fileInfo!!, rootPath) {
             fileState.updateFileInfo(null)
         }
     }
@@ -100,35 +101,35 @@ fun FileScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FileFilter(fileState: FileState) {
+fun FileFilter(fileFilterState: FileFilterState) {
     Row {
         Spacer(Modifier.width(4.dp))
         IconButton({}) {
             Icon(Icons.Default.GridView, null, tint = MaterialTheme.colorScheme.primary)
         }
         Row(Modifier.horizontalScroll(rememberScrollState()).weight(1f)) {
-            fileState.filterFileTypes.forEachIndexed { index, fileFilter ->
-                val isSelected = fileState.filterFileExtensions.contains(fileFilter.iconType)
+            fileFilterState.filterFileTypes.forEachIndexed { index, fileFilter ->
+                val isSelected = fileFilterState.filterFileExtensions.contains(fileFilter.iconType)
                 FilterChip(selected = isSelected,
                     label = { Text(fileFilter.name) },
                     leadingIcon = { getFileFilterIcon(fileFilter.iconType) },
                     shape = RoundedCornerShape(25.dp),
                     onClick = {
                         if (isSelected) {
-                            fileState.filterFileExtensions.remove(fileFilter.iconType)
+                            fileFilterState.filterFileExtensions.remove(fileFilter.iconType)
                         } else {
-                            fileState.filterFileExtensions.add(fileFilter.iconType)
+                            fileFilterState.filterFileExtensions.add(fileFilter.iconType)
                         }
                     })
                 Spacer(Modifier.width(8.dp))
             }
         }
         Row(Modifier.padding(start = 16.dp, end = 12.dp)) {
-            val isHideFile by fileState.isHideFile.collectAsState()
+            val isHideFile by fileFilterState.isHideFile.collectAsState()
             FilterChip(selected = isHideFile,
                 label = { Text("隐藏文件") },
                 shape = RoundedCornerShape(25.dp),
-                onClick = { fileState.updateHideFile(!isHideFile) })
+                onClick = { fileFilterState.updateHideFile(!isHideFile) })
         }
     }
 }

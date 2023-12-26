@@ -70,3 +70,16 @@ data class FileFilter(
     val isEnable: Boolean = true,
     val iconPath: String = ""
 )
+
+enum class FileFilterSort(type: Int) {
+    NameAsc(0),
+    NameDesc(1),
+    SizeAsc(2),
+    SizeDesc(3),
+    TypeAsc(4),
+    TypeDesc(5),
+    CreatedDateAsc(6),
+    CreatedDateDesc(7),
+    UpdatedDateAsc(8),
+    UpdatedDateDesc(9),
+}
