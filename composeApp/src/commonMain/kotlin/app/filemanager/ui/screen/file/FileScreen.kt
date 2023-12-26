@@ -85,9 +85,14 @@ fun FileScreen(
     }
 
     if (isRenameFile && fileInfo != null) {
-        FileRenameDialog(fileInfo!!)
+        FileRenameDialog(fileInfo!!){
+            fileState.updateRenameFile(false)
+            fileState.updateFileInfo(null)
+            if (it.isEmpty()) return@FileRenameDialog
+            fileState.updateRenameText(it)
+        }
     } else if (fileInfo != null) {
-        FileInfoDialog(fileInfo!!) {
+        FileInfoDialog(fileInfo!!,rootPath) {
             fileState.updateFileInfo(null)
         }
     }

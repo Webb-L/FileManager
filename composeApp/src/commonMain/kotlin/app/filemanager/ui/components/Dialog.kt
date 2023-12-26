@@ -9,39 +9,71 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.FileInfo
+import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
+import app.filemanager.utils.FileUtils
+import app.filemanager.utils.PathUtils
 
 
 @Composable
-fun FileInfoDialog(fileInfo: FileInfo, onCancel: () -> Unit) {
+fun FileInfoDialog(fileInfo: FileInfo, rootPath: String, onCancel: () -> Unit) {
+    val rootPathTotalSpace = FileUtils.totalSpace(rootPath)
+    val rootPathFreeSpace = FileUtils.freeSpace(rootPath)
+
+    var fileCount by remember {
+        mutableStateOf(0)
+    }
+    var folderCount by remember {
+        mutableStateOf(0)
+    }
+    var size by remember {
+        mutableStateOf(-1L)
+    }
+    LaunchedEffect(Unit) {
+        size = if (fileInfo.isDirectory) {
+            PathUtils.traverse(fileInfo.path).sumOf {
+                if (it.isDirectory) {
+                    folderCount++
+                    0
+                } else {
+                    fileCount++
+                    it.size
+                }
+            }
+        } else {
+            fileInfo.size
+        }
+    }
     AlertDialog(
         icon = { FileIcon(fileInfo) },
         title = { SelectionContainer { Text(fileInfo.name) } },
         text = {
             SelectionContainer {
+                println(rootPathTotalSpace)
                 Column {
-                    LinearProgressIndicator(progress = (100 / 1232).toFloat(), Modifier.fillMaxWidth().height(4.dp))
+                    LinearProgressIndicator(
+                        progress = (size.toFloat() / rootPathTotalSpace.toFloat()),
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .height(10.dp)
+                    )
                     Spacer(Modifier.height(4.dp))
                     DisableSelection {
                         Row(
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("100GB 总计")
+                            Text("${rootPathTotalSpace.formatFileSize()} 总计")
                             Spacer(Modifier.width(8.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Spacer(
                                     Modifier
                                         .size(10.dp)
@@ -49,12 +81,14 @@ fun FileInfoDialog(fileInfo: FileInfo, onCancel: () -> Unit) {
                                         .background(ProgressIndicatorDefaults.linearColor)
                                 )
                                 Spacer(Modifier.width(4.dp))
-                                Text("100GB 已用")
+                                if (size < 0) {
+                                    Text("计算中 已用")
+                                } else {
+                                    Text("${size.formatFileSize()} 已用")
+                                }
                             }
                             Spacer(Modifier.width(8.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Spacer(
                                     Modifier
                                         .size(10.dp)
@@ -62,7 +96,7 @@ fun FileInfoDialog(fileInfo: FileInfo, onCancel: () -> Unit) {
                                         .background(ProgressIndicatorDefaults.linearTrackColor)
                                 )
                                 Spacer(Modifier.width(4.dp))
-                                Text("100GB 剩余")
+                                Text("${rootPathFreeSpace.formatFileSize()} 剩余")
                             }
                         }
                     }
@@ -90,6 +124,24 @@ fun FileInfoDialog(fileInfo: FileInfo, onCancel: () -> Unit) {
                         Spacer(Modifier.width(8.dp))
                         Text("Column 2", Modifier.weight(0.7f))
                     }
+                    if (fileCount > 0) {
+                        Row(Modifier.fillMaxWidth().padding(4.dp)) {
+                            DisableSelection {
+                                Text("文件", Modifier.weight(0.3f))
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Text("$fileCount", Modifier.weight(0.7f))
+                        }
+                    }
+                    if (folderCount > 0) {
+                        Row(Modifier.fillMaxWidth().padding(4.dp)) {
+                            DisableSelection {
+                                Text("文件夹", Modifier.weight(0.3f))
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            Text("$folderCount", Modifier.weight(0.7f))
+                        }
+                    }
                     Row(Modifier.fillMaxWidth().padding(4.dp)) {
                         DisableSelection {
                             Text("创建时间", Modifier.weight(0.3f))
@@ -114,7 +166,7 @@ fun FileInfoDialog(fileInfo: FileInfo, onCancel: () -> Unit) {
 }
 
 @Composable
-fun FileRenameDialog(fileInfo: FileInfo) {
+fun FileRenameDialog(fileInfo: FileInfo, onCancel: (String) -> Unit) {
     var text by rememberSaveable { mutableStateOf(fileInfo.name) }
 
     AlertDialog(
@@ -137,20 +189,12 @@ fun FileRenameDialog(fileInfo: FileInfo) {
         },
         onDismissRequest = {},
         confirmButton = {
-            TextButton(
-                onClick = {
-//                    openDialog.value = false
-                }
-            ) {
+            TextButton({ onCancel(text) }) {
                 Text("确认")
             }
         },
         dismissButton = {
-            TextButton(
-                onClick = {
-//                    openDialog.value = false
-                }
-            ) {
+            TextButton({ onCancel("") }) {
                 Text("取消")
             }
         }

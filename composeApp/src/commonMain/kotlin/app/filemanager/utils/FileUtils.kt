@@ -6,4 +6,6 @@ internal expect object FileUtils {
     fun copyFile(dst: String, src: String)
 
     fun totalSpace(path: String): Long
+
+    fun freeSpace(path: String): Long
 }

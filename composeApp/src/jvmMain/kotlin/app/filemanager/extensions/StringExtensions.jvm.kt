@@ -19,6 +19,8 @@ internal actual fun String.getAllFilesInDirectory(): List<FileInfo> =
         if (file.isFile) {
             mineType = file.extension.toLowerCase(Locale.current)
         }
+        // println(Files.getPosixFilePermissions(path))
+        // 输出例如 [OWNER_READ, OWNER_WRITE, GROUP_READ, OTHERS_READ]
         FileInfo(
             name = file.name,
             description = "",
