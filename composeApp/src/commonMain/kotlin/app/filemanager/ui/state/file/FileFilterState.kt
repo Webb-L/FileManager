@@ -1,13 +1,21 @@
 package app.filemanager.ui.state.file
 
 import androidx.compose.runtime.mutableStateListOf
+import app.filemanager.data.FileInfo
+import app.filemanager.data.file.FileExtensions
 import app.filemanager.data.file.FileFilter
-import app.filemanager.data.file.FileFilterIcon
 import app.filemanager.data.file.FileFilterSort
+import app.filemanager.data.file.FileFilterType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class FileFilterState {
+    private val _updateKey: MutableStateFlow<Int> = MutableStateFlow(0)
+    val updateKey: StateFlow<Int> = _updateKey
+    fun updateFilerKey() {
+        _updateKey.value++
+    }
+
     private val _isSearchText: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isSearchText: StateFlow<Boolean> = _isSearchText
     fun updateSearch(value: Boolean) {
@@ -18,122 +26,174 @@ class FileFilterState {
     val searchText: StateFlow<String> = _searchText
     fun updateSearchText(value: String) {
         _searchText.value = value
+        _updateKey.value++
     }
 
     private val _sortType: MutableStateFlow<FileFilterSort> = MutableStateFlow(FileFilterSort.NameAsc)
     val sortType: StateFlow<FileFilterSort> = _sortType
     fun updateSortType(value: FileFilterSort) {
         _sortType.value = value
+        _updateKey.value++
     }
 
 
     // 过滤的文件类型
-    val filterFileExtensions = mutableStateListOf<FileFilterIcon>()
+    val filterFileExtensions = mutableStateListOf<FileFilterType>()
 
     // 是否显示隐藏文件
     private val _isHideFile: MutableStateFlow<Boolean> = MutableStateFlow(true)
     val isHideFile: StateFlow<Boolean> = _isHideFile
     fun updateHideFile(value: Boolean) {
         _isHideFile.value = value
+        _updateKey.value++
     }
 
     val filterFileTypes = listOf(
         FileFilter(
             name = "图片",
-            iconType = FileFilterIcon.Image,
+            iconType = FileFilterType.Image,
         ),
         FileFilter(
             name = "音乐",
-            iconType = FileFilterIcon.Audio,
+            iconType = FileFilterType.Audio,
         ),
         FileFilter(
             name = "视频",
-            iconType = FileFilterIcon.Video,
+            iconType = FileFilterType.Video,
         ),
         FileFilter(
             name = "文档",
-            iconType = FileFilterIcon.Text,
+            iconType = FileFilterType.Text,
         ),
         FileFilter(
             name = "可执行",
-            iconType = FileFilterIcon.Executable,
+            iconType = FileFilterType.Executable,
         ),
         FileFilter(
             name = "压缩",
-            iconType = FileFilterIcon.Compressed,
+            iconType = FileFilterType.Compressed,
         ),
         FileFilter(
             name = "原始图像",
-            iconType = FileFilterIcon.ImageRaw,
+            iconType = FileFilterType.ImageRaw,
         ),
         FileFilter(
             name = "矢量图",
-            iconType = FileFilterIcon.ImageVector,
+            iconType = FileFilterType.ImageVector,
         ),
         FileFilter(
             name = "游戏",
-            iconType = FileFilterIcon.Game,
+            iconType = FileFilterType.Game,
         ),
         FileFilter(
             name = "3D",
-            iconType = FileFilterIcon.Image3D,
+            iconType = FileFilterType.Image3D,
         ),
         FileFilter(
             name = "网页",
-            iconType = FileFilterIcon.Web,
+            iconType = FileFilterType.Web,
         ),
         FileFilter(
             name = "页面布局",
-            iconType = FileFilterIcon.PageLayout,
+            iconType = FileFilterType.PageLayout,
         ),
         FileFilter(
             name = "CAD",
-            iconType = FileFilterIcon.CAD,
+            iconType = FileFilterType.CAD,
         ),
         FileFilter(
             name = "数据库",
-            iconType = FileFilterIcon.Database,
+            iconType = FileFilterType.Database,
         ),
         FileFilter(
             name = "插件",
-            iconType = FileFilterIcon.Plugin,
+            iconType = FileFilterType.Plugin,
         ),
         FileFilter(
             name = "字体",
-            iconType = FileFilterIcon.Font,
+            iconType = FileFilterType.Font,
         ),
         FileFilter(
             name = "系统",
-            iconType = FileFilterIcon.System,
+            iconType = FileFilterType.System,
         ),
         FileFilter(
             name = "设置",
-            iconType = FileFilterIcon.Settings,
+            iconType = FileFilterType.Settings,
         ),
         FileFilter(
             name = "加密",
-            iconType = FileFilterIcon.Encoded,
+            iconType = FileFilterType.Encoded,
         ),
         FileFilter(
             name = "位置",
-            iconType = FileFilterIcon.GIS,
+            iconType = FileFilterType.GIS,
         ),
         FileFilter(
             name = "磁盘映像",
-            iconType = FileFilterIcon.Disk,
+            iconType = FileFilterType.Disk,
         ),
         FileFilter(
             name = "开发",
-            iconType = FileFilterIcon.Developer,
+            iconType = FileFilterType.Developer,
         ),
         FileFilter(
             name = "备份",
-            iconType = FileFilterIcon.Backup,
+            iconType = FileFilterType.Backup,
         ),
         FileFilter(
             name = "杂项",
-            iconType = FileFilterIcon.Misc,
+            iconType = FileFilterType.Misc,
         ),
     )
 
+
+    fun filter(fileInfos: List<FileInfo>, updateKey: Int): List<FileInfo> {
+        var files = fileInfos
+        if (_isHideFile.value) {
+            files = files.filter { !it.isHidden }
+        }
+
+        for (type in filterFileExtensions) {
+            files =
+                files.filter { FileExtensions.getExtensions(type).contains(it.mineType) }
+        }
+
+        val searchText = searchText.value
+        if (searchText.isNotEmpty()) {
+            files = files.filter { it.name.contains(searchText) }
+        }
+
+        return when (_sortType.value) {
+            FileFilterSort.NameAsc -> files
+                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenBy { it.name })
+
+            FileFilterSort.NameDesc -> files
+                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.name })
+
+            FileFilterSort.SizeAsc -> files
+                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenBy { it.size })
+
+            FileFilterSort.SizeDesc -> files
+                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.size })
+
+            FileFilterSort.TypeAsc -> files
+                .sortedWith(compareBy<FileInfo> { it.isDirectory }.thenBy { it.name })
+
+            FileFilterSort.TypeDesc -> files
+                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenBy { it.name })
+
+            FileFilterSort.CreatedDateAsc -> files
+                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenBy { it.createdDate })
+
+            FileFilterSort.CreatedDateDesc -> files
+                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.createdDate })
+
+            FileFilterSort.UpdatedDateAsc -> files
+                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenBy { it.updatedDate })
+
+            FileFilterSort.UpdatedDateDesc -> files
+                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.updatedDate })
+        }
+    }
 }

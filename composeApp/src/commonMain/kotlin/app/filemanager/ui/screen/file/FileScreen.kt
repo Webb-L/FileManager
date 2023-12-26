@@ -16,7 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import app.filemanager.data.file.getFileFilterIcon
+import app.filemanager.data.file.getFileFilterType
 import app.filemanager.extensions.getAllFilesInDirectory
 import app.filemanager.ui.components.FileCard
 import app.filemanager.ui.components.FileInfoDialog
@@ -44,8 +44,12 @@ fun FileScreen(
     val isRenameFile by fileState.isRenameFile.collectAsState()
     val renameText by fileState.renameText.collectAsState()
 
+    val fileFilterState = koinInject<FileFilterState>()
+    val updateKey by fileFilterState.updateKey.collectAsState()
+
     val scope = rememberCoroutineScope()
     FileFilter()
+
     BoxWithConstraints {
         val columnCount = when (calculateWindowSizeClass(maxWidth, maxHeight)) {
             WindowSizeClass.Compact -> 1
@@ -53,12 +57,7 @@ fun FileScreen(
             WindowSizeClass.Expanded -> 3
         }
         LazyVerticalGrid(columns = GridCells.Fixed(columnCount)) {
-            items(
-                path.getAllFilesInDirectory()
-                    .filter { !it.isHidden }
-                    .sortedBy { it.isDirectory }
-                    .sortedBy { it.name }
-            ) {
+            items(fileFilterState.filter(path.getAllFilesInDirectory(), updateKey)) {
                 FileCard(
                     file = it,
                     onClick = {
@@ -116,7 +115,7 @@ fun FileFilter() {
                 val isSelected = fileFilterState.filterFileExtensions.contains(fileFilter.iconType)
                 FilterChip(selected = isSelected,
                     label = { Text(fileFilter.name) },
-                    leadingIcon = { getFileFilterIcon(fileFilter.iconType) },
+                    leadingIcon = { getFileFilterType(fileFilter.iconType) },
                     shape = RoundedCornerShape(25.dp),
                     onClick = {
                         if (isSelected) {
@@ -124,6 +123,7 @@ fun FileFilter() {
                         } else {
                             fileFilterState.filterFileExtensions.add(fileFilter.iconType)
                         }
+                        fileFilterState.updateFilerKey()
                     })
                 Spacer(Modifier.width(8.dp))
             }

@@ -5,7 +5,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 
-enum class FileFilterIcon(type: String) {
+enum class FileFilterType(type: String) {
     Text("Text"),
     Audio("Audio"),
     Video("Video"),
@@ -34,39 +34,39 @@ enum class FileFilterIcon(type: String) {
 }
 
 @Composable
-fun getFileFilterIcon(type: FileFilterIcon) {
+fun getFileFilterType(type: FileFilterType) {
     when (type) {
-        FileFilterIcon.Text -> Icon(Icons.Default.Description, null)
-        FileFilterIcon.Audio -> Icon(Icons.Default.Headphones, null)
-        FileFilterIcon.Video -> Icon(Icons.Default.Videocam, null)
-        FileFilterIcon.Image -> Icon(Icons.Default.Image, null)
-        FileFilterIcon.ImageRaw -> Icon(Icons.Default.RawOn, null)
-        FileFilterIcon.ImageVector -> Icon(Icons.Default.Landscape, null)
-        FileFilterIcon.Image3D -> Icon(Icons.Default.ViewInAr, null)
-        FileFilterIcon.PageLayout -> Icon(Icons.Default.Article, null)
-        FileFilterIcon.Database -> Icon(Icons.Default.Dataset, null)
-        FileFilterIcon.Executable -> Icon(Icons.Default.Emergency, null)
-        FileFilterIcon.Game -> Icon(Icons.Default.Games, null)
-        FileFilterIcon.CAD -> Icon(Icons.Default.Architecture, null)
-        FileFilterIcon.GIS -> Icon(Icons.Default.Map, null)
-        FileFilterIcon.Web -> Icon(Icons.Default.Web, null)
-        FileFilterIcon.Plugin -> Icon(Icons.Default.Extension, null)
-        FileFilterIcon.Font -> Icon(Icons.Default.FontDownload, null)
-        FileFilterIcon.System -> Icon(Icons.Default.Build, null)
-        FileFilterIcon.Settings -> Icon(Icons.Default.SettingsEthernet, null)
-        FileFilterIcon.Encoded -> Icon(Icons.Default.Lock, null)
-        FileFilterIcon.Compressed -> Icon(Icons.Default.FolderZip, null)
-        FileFilterIcon.Disk -> Icon(Icons.Default.Adjust, null)
-        FileFilterIcon.Developer -> Icon(Icons.Default.DataObject, null)
-        FileFilterIcon.Backup -> Icon(Icons.Default.Backup, null)
-        FileFilterIcon.Misc -> Icon(Icons.Default.HideSource, null)
-        FileFilterIcon.Custom -> Icon(Icons.Default.Filter, null)
+        FileFilterType.Text -> Icon(Icons.Default.Description, null)
+        FileFilterType.Audio -> Icon(Icons.Default.Headphones, null)
+        FileFilterType.Video -> Icon(Icons.Default.Videocam, null)
+        FileFilterType.Image -> Icon(Icons.Default.Image, null)
+        FileFilterType.ImageRaw -> Icon(Icons.Default.RawOn, null)
+        FileFilterType.ImageVector -> Icon(Icons.Default.Landscape, null)
+        FileFilterType.Image3D -> Icon(Icons.Default.ViewInAr, null)
+        FileFilterType.PageLayout -> Icon(Icons.Default.Article, null)
+        FileFilterType.Database -> Icon(Icons.Default.Dataset, null)
+        FileFilterType.Executable -> Icon(Icons.Default.Emergency, null)
+        FileFilterType.Game -> Icon(Icons.Default.Games, null)
+        FileFilterType.CAD -> Icon(Icons.Default.Architecture, null)
+        FileFilterType.GIS -> Icon(Icons.Default.Map, null)
+        FileFilterType.Web -> Icon(Icons.Default.Web, null)
+        FileFilterType.Plugin -> Icon(Icons.Default.Extension, null)
+        FileFilterType.Font -> Icon(Icons.Default.FontDownload, null)
+        FileFilterType.System -> Icon(Icons.Default.Build, null)
+        FileFilterType.Settings -> Icon(Icons.Default.SettingsEthernet, null)
+        FileFilterType.Encoded -> Icon(Icons.Default.Lock, null)
+        FileFilterType.Compressed -> Icon(Icons.Default.FolderZip, null)
+        FileFilterType.Disk -> Icon(Icons.Default.Adjust, null)
+        FileFilterType.Developer -> Icon(Icons.Default.DataObject, null)
+        FileFilterType.Backup -> Icon(Icons.Default.Backup, null)
+        FileFilterType.Misc -> Icon(Icons.Default.HideSource, null)
+        FileFilterType.Custom -> Icon(Icons.Default.Filter, null)
     }
 }
 
 data class FileFilter(
     val name: String,
-    val iconType: FileFilterIcon,
+    val iconType: FileFilterType,
     val isEnable: Boolean = true,
     val iconPath: String = ""
 )

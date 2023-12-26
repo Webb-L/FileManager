@@ -14,8 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.FileInfo
 import app.filemanager.data.file.FileExtensions
-import app.filemanager.data.file.FileFilterIcon
-import app.filemanager.data.file.getFileFilterIcon
+import app.filemanager.data.file.FileFilterType
+import app.filemanager.data.file.getFileFilterType
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
 import app.filemanager.ui.state.file.FileState
@@ -76,8 +76,8 @@ fun FileIcon(file: FileInfo) {
         )
         return
     }
-    val fileFilterIcon = FileFilterIcon.valueOf(fileExtension)
-    getFileFilterIcon(fileFilterIcon)
+    val FileFilterType = FileFilterType.valueOf(fileExtension)
+    getFileFilterType(FileFilterType)
 }
 
 @Composable

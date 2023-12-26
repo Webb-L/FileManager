@@ -22,7 +22,7 @@ object FileExtensions {
         extensionMap = tempMap
     }
 
-    fun getExtensions(type: FileFilterIcon): List<String> {
+    fun getExtensions(type: FileFilterType): List<String> {
         return extensionMap[type.name] ?: listOf()
     }
 
