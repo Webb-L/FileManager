@@ -14,6 +14,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.FileInfo
 import app.filemanager.extensions.formatFileSize
@@ -203,4 +205,43 @@ fun FileRenameDialog(fileInfo: FileInfo, onCancel: (String) -> Unit) {
         }
 
     )
+}
+
+@Composable
+fun TextFieldDialog(title: String, label: String = "", onCancel: (String) -> Unit) {
+    var text by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+    AlertDialog(
+        title = { Text(title) },
+        text = {
+            TextField(
+                value = text,
+                onValueChange = { text = it },
+                label = { Text(label) },
+                modifier = Modifier.focusRequester(focusRequester),
+                trailingIcon = {
+                    if (text.isNotEmpty()) {
+                        IconButton({ text = "" }) {
+                            Icon(Icons.Default.Close, null)
+                        }
+                    }
+                }
+            )
+        },
+        onDismissRequest = {},
+        confirmButton = {
+            TextButton({ onCancel(text) }) {
+                Text("确认")
+            }
+        },
+        dismissButton = {
+            TextButton({ onCancel("") }) {
+                Text("取消")
+            }
+        }
+    )
+
+    LaunchedEffect(Unit) {
+        focusRequester.requestFocus()
+    }
 }

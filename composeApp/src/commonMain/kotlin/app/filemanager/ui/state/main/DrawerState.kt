@@ -57,6 +57,12 @@ class DrawerState() {
         _isExpandDevice.value = value
     }
 
+    private val _isDeviceAdd: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isDeviceAdd: StateFlow<Boolean> = _isDeviceAdd
+    fun updateDeviceAdd(value: Boolean) {
+        _isDeviceAdd.value = value
+    }
+
     val devices = mutableStateListOf<DrawerDevice>()
 
     private val _isExpandNetwork: MutableStateFlow<Boolean> = MutableStateFlow(true)

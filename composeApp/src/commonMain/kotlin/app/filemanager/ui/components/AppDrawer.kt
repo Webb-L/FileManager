@@ -22,6 +22,8 @@ import org.koin.compose.koinInject
 fun AppDrawer() {
     val drawerState = koinInject<DrawerState>()
     val isExpandDevice by drawerState.isExpandDevice.collectAsState()
+    val isDeviceAdd by drawerState.isDeviceAdd.collectAsState()
+
     val isExpandNetwork by drawerState.isExpandNetwork.collectAsState()
 
     ModalDrawerSheet {
@@ -34,7 +36,13 @@ fun AppDrawer() {
                     false,
                     actions = {
                         Row {
-                            Icon(Icons.Default.Add, null, Modifier.clickable { })
+                            Icon(
+                                Icons.Default.Add,
+                                null,
+                                Modifier.clickable {
+                                    drawerState.updateDeviceAdd(true)
+                                }
+                            )
                             Spacer(Modifier.width(8.dp))
                             Icon(
                                 if (isExpandDevice) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -65,6 +73,12 @@ fun AppDrawer() {
                 ) {
                 }
             }
+        }
+    }
+
+    if (isDeviceAdd) {
+        TextFieldDialog("新增设备", label = "IP地址"){
+            drawerState.updateDeviceAdd(false)
         }
     }
 
