@@ -1,6 +1,7 @@
 package app.filemanager.ui.state.file
 
 import app.filemanager.data.FileInfo
+import app.filemanager.utils.FileUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -16,8 +17,7 @@ class FileState {
     }
 
     fun pasteCopyFile(path: String) {
-        println(dstPath)
-        println(path)
+        FileUtils.copyFile(dstPath, path)
         _isPasteCopyFile.value = false
         dstPath = ""
     }
@@ -31,8 +31,7 @@ class FileState {
     }
 
     fun pasteMoveFile(path: String) {
-        println(dstPath)
-        println(path)
+        FileUtils.copyFile(dstPath, path)
         _isPasteMoveFile.value = false
         dstPath = ""
     }
@@ -52,7 +51,7 @@ class FileState {
 
     // 删除文件
     fun deleteFile(path: String) {
-
+        FileUtils.deleteFile(path)
     }
 
     private val _fileInfo: MutableStateFlow<FileInfo?> = MutableStateFlow(null)

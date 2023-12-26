@@ -3,7 +3,10 @@ package app.filemanager.utils
 internal expect object FileUtils {
     fun openFile(file: String)
 
-    fun copyFile(dst: String, src: String)
+    fun copyFile(src: String, dst: String)
+    fun moveFile(src: String, dst: String)
+    fun deleteFile(path: String)
+    fun renameFile(path: String, name: String)
 
     fun totalSpace(path: String): Long
 

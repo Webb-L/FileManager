@@ -77,7 +77,7 @@ fun FileScreen(
                             )
                             when (showSnackbar) {
                                 SnackbarResult.Dismissed -> {}
-                                SnackbarResult.ActionPerformed -> fileState.deleteFile(path)
+                                SnackbarResult.ActionPerformed -> fileState.deleteFile(deletePath)
                             }
                         }
                     }
