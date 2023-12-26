@@ -19,15 +19,17 @@ import app.filemanager.data.file.getFileFilterIcon
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
 import app.filemanager.ui.state.file.FileState
+import org.koin.compose.koinInject
 
 
 @Composable
 fun FileCard(
     file: FileInfo,
-    fileState: FileState,
     onClick: () -> Unit,
     onRemove: (String) -> Unit,
 ) {
+    val fileState = koinInject<FileState>()
+
     ListItem(
         overlineContent = if (file.description.isNotEmpty()) {
             { Text(file.description) }

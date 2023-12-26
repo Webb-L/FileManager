@@ -23,26 +23,29 @@ import app.filemanager.ui.components.FileInfoDialog
 import app.filemanager.ui.components.FileRenameDialog
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileState
+import app.filemanager.ui.state.main.MainState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.WindowSizeClass
 import app.filemanager.utils.calculateWindowSizeClass
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileScreen(
-    path: String,
-    rootPath: String,
-    fileState: FileState,
     snackbarHostState: SnackbarHostState,
     updatePath: (String) -> Unit
 ) {
+    val mainState = koinInject<MainState>()
+    val path by mainState.path.collectAsState()
+
+    val fileState = koinInject<FileState>()
     val fileInfo by fileState.fileInfo.collectAsState()
     val isRenameFile by fileState.isRenameFile.collectAsState()
     val renameText by fileState.renameText.collectAsState()
 
     val scope = rememberCoroutineScope()
-    FileFilter(FileFilterState())
+    FileFilter()
     BoxWithConstraints {
         val columnCount = when (calculateWindowSizeClass(maxWidth, maxHeight)) {
             WindowSizeClass.Compact -> 1
@@ -58,7 +61,6 @@ fun FileScreen(
             ) {
                 FileCard(
                     file = it,
-                    fileState = fileState,
                     onClick = {
                         if (it.isDirectory) {
                             updatePath(it.path)
@@ -93,7 +95,7 @@ fun FileScreen(
             fileState.updateRenameText(it)
         }
     } else if (fileInfo != null) {
-        FileInfoDialog(fileInfo!!, rootPath) {
+        FileInfoDialog(fileInfo!!) {
             fileState.updateFileInfo(null)
         }
     }
@@ -101,7 +103,9 @@ fun FileScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FileFilter(fileFilterState: FileFilterState) {
+fun FileFilter() {
+    val fileFilterState = koinInject<FileFilterState>()
+
     Row {
         Spacer(Modifier.width(4.dp))
         IconButton({}) {

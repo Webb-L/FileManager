@@ -23,117 +23,143 @@ import app.filemanager.ui.state.main.MainState
 import app.filemanager.utils.PathUtils
 import app.filemanager.utils.PathUtils.getRootPaths
 import app.filemanager.utils.WindowSizeClass
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(mainState: MainState, screenType: WindowSizeClass) {
+fun MainScreen(screenType: WindowSizeClass) {
+    val mainState = koinInject<MainState>()
+    val expandDrawer by mainState.isExpandDrawer.collectAsState()
+
+    // 小屏
+    if (screenType == WindowSizeClass.Compact) {
+        ModalNavigationDrawer(
+            drawerState = DrawerState(
+                if (expandDrawer) DrawerValue.Open else DrawerValue.Closed,
+                confirmStateChange = {
+                    if (it == DrawerValue.Closed) {
+                        mainState.updateExpandDrawer(false)
+                    }
+                    true
+                },
+            ),
+            drawerContent = { AppDrawer() },
+        ) {
+            MainScreenContainer()
+        }
+    } else {
+        Row {
+            if (listOf(WindowSizeClass.Medium, WindowSizeClass.Expanded).contains(screenType) && expandDrawer) {
+                AppDrawer()
+            }
+            MainScreenContainer()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MainScreenContainer() {
+    val mainState = koinInject<MainState>()
     val path by mainState.path.collectAsState()
     val rootPath by mainState.rootPath.collectAsState()
+    val expandDrawer by mainState.isExpandDrawer.collectAsState()
 
-    val fileFilterState = FileFilterState()
+    val fileFilterState = koinInject<FileFilterState>()
     val isSearchText by fileFilterState.isSearchText.collectAsState()
     val searchText by fileFilterState.searchText.collectAsState()
 
-    val fileState = FileState()
+    val fileState = koinInject<FileState>()
     val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
     val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
 
+    val paths = path.parsePath()
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = paths.size - 1)
 
-    Row {
-        val expandDrawer by mainState.isExpandDrawer.collectAsState()
-        if (listOf(WindowSizeClass.Medium, WindowSizeClass.Expanded).contains(screenType) && expandDrawer) {
-            AppDrawer(mainState)
-        }
-        val paths = path.parsePath()
-        val listState = rememberLazyListState(initialFirstVisibleItemIndex = paths.size - 1)
-
-        val snackbarHostState = remember { SnackbarHostState() }
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        LazyRow(state = listState) {
-                            item {
-                                RootPathSwitch(mainState)
-                            }
-                            itemsIndexed(paths) { index, text ->
-                                FilterChip(selected = false,
-                                    label = { Text(text) },
-                                    border = null,
-                                    shape = RoundedCornerShape(25.dp),
-                                    onClick = {
-                                        val newPath = rootPath + paths.subList(0, index + 1)
-                                            .joinToString(PathUtils.getPathSeparator())
-                                        mainState.updatePath(newPath)
-                                    })
-                            }
+    val snackbarHostState = remember { SnackbarHostState() }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    LazyRow(state = listState) {
+                        item { RootPathSwitch() }
+                        itemsIndexed(paths) { index, text ->
+                            FilterChip(selected = false,
+                                label = { Text(text) },
+                                border = null,
+                                shape = RoundedCornerShape(25.dp),
+                                onClick = {
+                                    val newPath = rootPath + paths.subList(0, index + 1)
+                                        .joinToString(PathUtils.getPathSeparator())
+                                    mainState.updatePath(newPath)
+                                })
                         }
-                    },
-                    navigationIcon = {
-                        IconButton({ mainState.updateExpandDrawer(!expandDrawer) }) {
-                            Icon(if (expandDrawer) Icons.Default.Close else Icons.Default.Menu, null)
-                        }
-                    },
+                    }
+                },
+                navigationIcon = {
+                    IconButton({ mainState.updateExpandDrawer(!expandDrawer) }) {
+                        Icon(if (expandDrawer) Icons.Default.Close else Icons.Default.Menu, null)
+                    }
+                },
+                actions = {
+                    IconButton({ fileFilterState.updateSearch(!isSearchText) }) {
+                        Icon(Icons.Default.Search, null)
+                    }
+                    SortButton()
+                }
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        bottomBar = {
+            if (isPasteCopyFile || isPasteMoveFile) {
+                BottomAppBar(
                     actions = {
-                        IconButton({ fileFilterState.updateSearch(!isSearchText) }) {
-                            Icon(Icons.Default.Search, null)
+                        if (isPasteCopyFile || isPasteMoveFile) {
+                            IconButton({
+                                if (isPasteCopyFile) fileState.pasteCopyFile(path)
+                                if (isPasteMoveFile) fileState.pasteMoveFile(path)
+                            }) {
+                                Icon(Icons.Filled.ContentPaste, null)
+                            }
                         }
-                        SortButton()
+                    },
+                    floatingActionButton = {
+                        FloatingActionButton(
+                            onClick = { fileState.pasteCopyFile(path) },
+                            containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
+                            elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
+                        ) {
+                            Icon(Icons.Filled.Add, "Localized description")
+                        }
                     }
                 )
-            },
-            snackbarHost = { SnackbarHost(snackbarHostState) },
-            bottomBar = {
-                if (isPasteCopyFile || isPasteMoveFile) {
-                    BottomAppBar(
-                        actions = {
-                            if (isPasteCopyFile || isPasteMoveFile) {
-                                IconButton({
-                                    if (isPasteCopyFile) fileState.pasteCopyFile(path)
-                                    if (isPasteMoveFile) fileState.pasteMoveFile(path)
-                                }) {
-                                    Icon(Icons.Filled.ContentPaste, null)
-                                }
-                            }
-                        },
-                        floatingActionButton = {
-                            FloatingActionButton(
-                                onClick = { fileState.pasteCopyFile(path) },
-                                containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
-                                elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
-                            ) {
-                                Icon(Icons.Filled.Add, "Localized description")
-                            }
-                        }
-                    )
-                }
-            },
-            floatingActionButton = {
-                if (!isPasteCopyFile && !isPasteMoveFile) {
-                    ExtendedFloatingActionButton({ }) {
-                        Icon(Icons.Filled.Add, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("新增")
-                    }
+            }
+        },
+        floatingActionButton = {
+            if (!isPasteCopyFile && !isPasteMoveFile) {
+                ExtendedFloatingActionButton({ }) {
+                    Icon(Icons.Filled.Add, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("新增")
                 }
             }
-        ) {
-            Column(Modifier.padding(it)) {
-                if (isSearchText) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextField(
-                            searchText,
-                            label = { Text("搜索") },
-                            onValueChange = fileFilterState::updateSearchText
-                        )
-                    }
+        }
+    ) {
+        Column(Modifier.padding(it)) {
+            if (isSearchText) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextField(
+                        searchText,
+                        label = { Text("搜索") },
+                        onValueChange = fileFilterState::updateSearchText
+                    )
                 }
-                FileScreen(path, rootPath, fileState, snackbarHostState) {
-                    mainState.updatePath(it)
-                }
+            }
+            FileScreen(snackbarHostState) {
+                mainState.updatePath(it)
             }
         }
     }
@@ -141,7 +167,8 @@ fun MainScreen(mainState: MainState, screenType: WindowSizeClass) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RootPathSwitch(mainState: MainState) {
+private fun RootPathSwitch() {
+    val mainState = koinInject<MainState>()
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
         FilterChip(selected = expanded,

@@ -16,25 +16,17 @@ import app.filemanager.data.main.DrawerBookmarkIcon
 import app.filemanager.service.WebSocketService
 import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.ui.state.main.MainState
+import org.koin.compose.koinInject
 
 @Composable
-fun AppDrawer(mainState: MainState) {
-    val drawerState = DrawerState()
-    val path by mainState.path.collectAsState()
-    val isExpandBookmark by drawerState.isExpandBookmark.collectAsState()
+fun AppDrawer() {
+    val drawerState = koinInject<DrawerState>()
     val isExpandDevice by drawerState.isExpandDevice.collectAsState()
     val isExpandNetwork by drawerState.isExpandNetwork.collectAsState()
 
     ModalDrawerSheet {
         LazyColumn {
-            item {
-                AppDrawerBookmark(
-                    isExpandBookmark,
-                    drawerState,
-                    path,
-                    mainState::updatePath
-                )
-            }
+            item { AppDrawerBookmark() }
             item { Divider() }
             item {
                 AppDrawerItem(
@@ -82,12 +74,13 @@ fun AppDrawer(mainState: MainState) {
 }
 
 @Composable
-private fun AppDrawerBookmark(
-    isExpandBookmark: Boolean,
-    drawerState: DrawerState,
-    path: String,
-    updatePath: (String) -> Unit
-) {
+private fun AppDrawerBookmark() {
+    val mainState = koinInject<MainState>()
+    val path by mainState.path.collectAsState()
+
+    val drawerState = koinInject<DrawerState>()
+    val isExpandBookmark by drawerState.isExpandBookmark.collectAsState()
+
     AppDrawerItem(
         "书签",
         isExpand = isExpandBookmark,
@@ -103,49 +96,26 @@ private fun AppDrawerBookmark(
             }
         }
     ) {
-        if (!isExpandBookmark) {
-            return@AppDrawerItem
-        }
+        if (!isExpandBookmark) return@AppDrawerItem
+
         for (bookmark in drawerState.bookmarks) {
             NavigationDrawerItem(
                 icon = {
-                    when (bookmark.iconType) {
-                        DrawerBookmarkIcon.Favorite -> Icon(
-                            Icons.Default.Favorite,
-                            contentDescription = null
-                        )
-
-                        DrawerBookmarkIcon.Home -> Icon(Icons.Default.Home, contentDescription = null)
-                        DrawerBookmarkIcon.Image -> Icon(Icons.Default.Image, contentDescription = null)
-                        DrawerBookmarkIcon.Audio -> Icon(
-                            Icons.Default.Headphones,
-                            contentDescription = null
-                        )
-
-                        DrawerBookmarkIcon.Video -> Icon(
-                            Icons.Default.Videocam,
-                            contentDescription = null
-                        )
-
-                        DrawerBookmarkIcon.Document -> Icon(
-                            Icons.Default.Description,
-                            contentDescription = null
-                        )
-
-                        DrawerBookmarkIcon.Download -> Icon(
-                            Icons.Default.Download,
-                            contentDescription = null
-                        )
-
-                        DrawerBookmarkIcon.Custom -> Icon(
-                            Icons.Default.Bookmark,
-                            contentDescription = null
-                        )
+                    val icon = when (bookmark.iconType) {
+                        DrawerBookmarkIcon.Favorite -> Icons.Default.Favorite
+                        DrawerBookmarkIcon.Home -> Icons.Default.Home
+                        DrawerBookmarkIcon.Image -> Icons.Default.Image
+                        DrawerBookmarkIcon.Audio -> Icons.Default.Headphones
+                        DrawerBookmarkIcon.Video -> Icons.Default.Videocam
+                        DrawerBookmarkIcon.Document -> Icons.Default.Description
+                        DrawerBookmarkIcon.Download -> Icons.Default.Download
+                        DrawerBookmarkIcon.Custom -> Icons.Default.Bookmark
                     }
+                    Icon(icon, null)
                 },
                 label = { Text(bookmark.name) },
                 selected = path == bookmark.path,
-                onClick = { updatePath(bookmark.path) },
+                onClick = { mainState.updatePath(bookmark.path) },
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
             )
         }

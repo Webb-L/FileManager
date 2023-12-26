@@ -18,12 +18,16 @@ import androidx.compose.ui.unit.dp
 import app.filemanager.data.FileInfo
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
+import app.filemanager.ui.state.main.MainState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
+import org.koin.compose.koinInject
 
 
 @Composable
-fun FileInfoDialog(fileInfo: FileInfo, rootPath: String, onCancel: () -> Unit) {
+fun FileInfoDialog(fileInfo: FileInfo, onCancel: () -> Unit) {
+    val mainState = koinInject<MainState>()
+    val rootPath by mainState.rootPath.collectAsState()
     val rootPathTotalSpace = FileUtils.totalSpace(rootPath)
     val rootPathFreeSpace = FileUtils.freeSpace(rootPath)
 
@@ -56,7 +60,6 @@ fun FileInfoDialog(fileInfo: FileInfo, rootPath: String, onCancel: () -> Unit) {
         title = { SelectionContainer { Text(fileInfo.name) } },
         text = {
             SelectionContainer {
-                println(rootPathTotalSpace)
                 Column {
                     LinearProgressIndicator(
                         progress = (size.toFloat() / rootPathTotalSpace.toFloat()),

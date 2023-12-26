@@ -13,20 +13,18 @@ import app.filemanager.ui.theme.FileManagerTheme
 import app.filemanager.utils.calculateWindowSizeClass
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.koin.compose.KoinApplication
-import org.koin.core.KoinApplication
-import org.koin.core.context.startKoin
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalResourceApi::class)
 @Composable
 internal fun App() = KoinApplication(application = {
     modules(appModule())
-}){
+}) {
     FileManagerTheme {
-        LaunchedEffect(Unit){
+        LaunchedEffect(Unit) {
             FileExtensions.init()
         }
-        val mainState = MainState()
         BoxWithConstraints(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-            MainScreen(mainState, calculateWindowSizeClass(maxWidth, maxHeight))
+            MainScreen(calculateWindowSizeClass(maxWidth, maxHeight))
         }
     }
 }

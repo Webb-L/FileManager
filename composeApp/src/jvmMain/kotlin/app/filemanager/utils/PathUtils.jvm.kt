@@ -25,33 +25,37 @@ internal actual object PathUtils {
         if (directory.exists()) {
             val files = directory.listFiles() ?: emptyArray()
             for (file in files) {
-                val absolutePath = file.absolutePath
-                val path = Paths.get(absolutePath)
-                val attrs = Files.readAttributes(path, BasicFileAttributes::class.java)
-                // TODO Windows 有问题。
-                var mineType = ""
-                if (file.isFile) {
-                    mineType = file.extension.toLowerCase(Locale.current)
-                }
-                fileList.add(
-                    FileInfo(
-                        name = file.name,
-                        description = "",
-                        isDirectory = file.isDirectory,
-                        isHidden = file.isHidden,
-                        path = absolutePath,
-                        mineType = mineType,
-                        size = if (file.isDirectory) (file.listFiles()
-                            ?: emptyArray<File>()).size.toLong() else file.length(),
-                        permissions = 0,
-                        user = "Files.getOwner(path).name",
-                        userGroup = "attrs.group().name",
-                        createdDate = attrs.creationTime().toMillis(),
-                        updatedDate = attrs.lastModifiedTime().toMillis()
+                try {
+                    val absolutePath = file.absolutePath
+                    val paths = Paths.get(absolutePath)
+                    val attrs = Files.readAttributes(paths, BasicFileAttributes::class.java)
+                    // TODO Windows 有问题。
+                    var mineType = ""
+                    if (file.isFile) {
+                        mineType = file.extension.toLowerCase(Locale.current)
+                    }
+                    fileList.add(
+                        FileInfo(
+                            name = file.name,
+                            description = "",
+                            isDirectory = file.isDirectory,
+                            isHidden = file.isHidden,
+                            path = absolutePath,
+                            mineType = mineType,
+                            size = if (file.isDirectory) (file.listFiles()
+                                ?: emptyArray<File>()).size.toLong() else file.length(),
+                            permissions = 0,
+                            user = "Files.getOwner(path).name",
+                            userGroup = "attrs.group().name",
+                            createdDate = attrs.creationTime().toMillis(),
+                            updatedDate = attrs.lastModifiedTime().toMillis()
+                        )
                     )
-                )
-                if (file.isDirectory) {
-                    fileList.addAll(traverse(file.path))
+                    if (file.isDirectory) {
+                        fileList.addAll(traverse(file.path))
+                    }
+                } catch (e: Exception) {
+                    TODO("Not yet implemented")
                 }
             }
         }

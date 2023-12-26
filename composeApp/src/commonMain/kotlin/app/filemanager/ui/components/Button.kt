@@ -12,10 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import app.filemanager.data.file.FileFilterSort
 import app.filemanager.ui.state.file.FileFilterState
+import org.koin.compose.koinInject
 
 @Composable
 fun SortButton() {
-    val fileFilterState = FileFilterState()
+    val fileFilterState = koinInject<FileFilterState>()
     val sortType by fileFilterState.sortType.collectAsState()
     var expanded by remember { mutableStateOf(false) }
 
@@ -38,7 +39,6 @@ fun SortButton() {
                 },
                 trailingIcon = {
                     if (listOf(FileFilterSort.NameAsc, FileFilterSort.NameDesc).contains(sortType)) {
-
                         val modifier =
                             if (sortType == FileFilterSort.NameAsc)
                                 Modifier.rotate(270f)
@@ -63,7 +63,6 @@ fun SortButton() {
                 },
                 trailingIcon = {
                     if (listOf(FileFilterSort.SizeAsc, FileFilterSort.SizeDesc).contains(sortType)) {
-
                         val modifier =
                             if (sortType == FileFilterSort.SizeAsc)
                                 Modifier.rotate(270f)
@@ -88,7 +87,6 @@ fun SortButton() {
                 },
                 trailingIcon = {
                     if (listOf(FileFilterSort.TypeAsc, FileFilterSort.TypeDesc).contains(sortType)) {
-
                         val modifier =
                             if (sortType == FileFilterSort.TypeAsc)
                                 Modifier.rotate(270f)
@@ -113,7 +111,6 @@ fun SortButton() {
                 },
                 trailingIcon = {
                     if (listOf(FileFilterSort.CreatedDateAsc, FileFilterSort.CreatedDateDesc).contains(sortType)) {
-
                         val modifier =
                             if (sortType == FileFilterSort.CreatedDateAsc)
                                 Modifier.rotate(270f)
@@ -138,7 +135,6 @@ fun SortButton() {
                 },
                 trailingIcon = {
                     if (listOf(FileFilterSort.UpdatedDateAsc, FileFilterSort.UpdatedDateDesc).contains(sortType)) {
-
                         val modifier =
                             if (sortType == FileFilterSort.UpdatedDateAsc)
                                 Modifier.rotate(270f)
