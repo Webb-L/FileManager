@@ -188,15 +188,15 @@ private fun MainScreenContainer() {
                 )
             }
         },
-        floatingActionButton = {
-            if (!isPasteCopyFile && !isPasteMoveFile) {
-                ExtendedFloatingActionButton({ }) {
-                    Icon(Icons.Filled.Add, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("新增")
-                }
-            }
-        }
+//        floatingActionButton = {
+//            if (!isPasteCopyFile && !isPasteMoveFile) {
+//                ExtendedFloatingActionButton({ }) {
+//                    Icon(Icons.Filled.Add, null)
+//                    Spacer(Modifier.width(8.dp))
+//                    Text("新增")
+//                }
+//            }
+//        }
     ) {
         Column(Modifier.padding(it)) {
             if (isSearchText) {
@@ -219,10 +219,11 @@ private fun MainScreenContainer() {
 
     if (editPath) {
         TextFieldDialog("修改目录", label = "目录", initText = path) {
+            mainState.updateEditPath(false)
+            if (it.isEmpty()) return@TextFieldDialog
             if (it.parsePath().isNotEmpty()) {
                 mainState.updatePath(it)
             }
-            mainState.updateEditPath(false)
         }
     }
 }

@@ -3,6 +3,7 @@ package app.filemanager.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -11,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.main.DrawerBookmarkIcon
 import app.filemanager.service.WebSocketService
@@ -39,7 +41,7 @@ fun AppDrawer() {
                             Icon(
                                 Icons.Default.Add,
                                 null,
-                                Modifier.clickable {
+                                Modifier.clip(RoundedCornerShape(25.dp)).clickable {
                                     drawerState.updateDeviceAdd(true)
                                 }
                             )
@@ -47,7 +49,8 @@ fun AppDrawer() {
                             Icon(
                                 if (isExpandDevice) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                                 null,
-                                Modifier.clickable { drawerState.updateExpandDevice(!isExpandDevice) }
+                                Modifier.clip(RoundedCornerShape(25.dp))
+                                    .clickable { drawerState.updateExpandDevice(!isExpandDevice) }
                             )
                         }
                     }
@@ -61,12 +64,13 @@ fun AppDrawer() {
                     false,
                     actions = {
                         Row {
-                            Icon(Icons.Default.Add, null, Modifier.clickable { })
+                            Icon(Icons.Default.Add, null, Modifier.clip(RoundedCornerShape(25.dp)).clickable { })
                             Spacer(Modifier.width(8.dp))
                             Icon(
                                 if (isExpandNetwork) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                                 null,
-                                Modifier.clickable { drawerState.updateExpandNetwork(!isExpandNetwork) }
+                                Modifier.clip(RoundedCornerShape(25.dp))
+                                    .clickable { drawerState.updateExpandNetwork(!isExpandNetwork) }
                             )
                         }
                     }
@@ -77,7 +81,7 @@ fun AppDrawer() {
     }
 
     if (isDeviceAdd) {
-        TextFieldDialog("新增设备", label = "IP地址"){
+        TextFieldDialog("新增设备", label = "IP地址") {
             drawerState.updateDeviceAdd(false)
         }
     }
@@ -100,12 +104,13 @@ private fun AppDrawerBookmark() {
         isExpand = isExpandBookmark,
         actions = {
             Row {
-                Icon(Icons.Default.Add, null, Modifier.clickable { })
+                Icon(Icons.Default.Add, null, Modifier.clip(RoundedCornerShape(25.dp)).clickable { })
                 Spacer(Modifier.width(8.dp))
                 Icon(
                     if (isExpandBookmark) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     null,
-                    Modifier.clickable { drawerState.updateExpandBookmark(!isExpandBookmark) }
+                    Modifier.clip(RoundedCornerShape(25.dp))
+                        .clickable { drawerState.updateExpandBookmark(!isExpandBookmark) }
                 )
             }
         }

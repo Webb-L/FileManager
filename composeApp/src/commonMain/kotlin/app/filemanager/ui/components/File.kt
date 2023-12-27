@@ -2,6 +2,7 @@ package app.filemanager.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MoreVert
@@ -11,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.FileInfo
 import app.filemanager.data.file.FileExtensions
@@ -54,7 +56,7 @@ fun FileCard(
         },
         leadingContent = { FileIcon(file) },
         trailingContent = { FileCardMenu(file, fileState, onRemove) },
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = Modifier.clip(RoundedCornerShape(25.dp)).clickable(onClick = onClick)
     )
 }
 
@@ -94,7 +96,7 @@ private fun FileCardMenu(
         Icon(
             Icons.Filled.MoreVert,
             null,
-            modifier = Modifier.clickable {
+            modifier = Modifier.clip(RoundedCornerShape(25.dp)).clickable {
                 expanded = true
             }
         )

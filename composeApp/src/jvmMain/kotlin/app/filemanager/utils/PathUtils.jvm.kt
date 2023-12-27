@@ -12,24 +12,7 @@ internal actual object PathUtils {
         }
 
     // 获取用户目录
-    actual fun getHomePath(): String {
-//        val interfaces = NetworkInterface.getNetworkInterfaces()
-//        val ipAddresses = ArrayList<String>()
-//        while (interfaces.hasMoreElements()) {
-//            val networkInterface = interfaces.nextElement()
-//            if (!networkInterface.isLoopback && !networkInterface.isVirtual) {
-//                val addresses = networkInterface.inetAddresses
-//                while (addresses.hasMoreElements()) {
-//                    val address = addresses.nextElement()
-//                    if (!address.isLoopbackAddress) {
-//                        ipAddresses.add(address.hostAddress)
-//                    }
-//                }
-//            }
-//        }
-//        println(ipAddresses)
-        return System.getProperty("user.home")
-    }
+    actual fun getHomePath(): String = System.getProperty("user.home")
 
     // 获取路径分隔符
     actual fun getPathSeparator(): String = File.separator
