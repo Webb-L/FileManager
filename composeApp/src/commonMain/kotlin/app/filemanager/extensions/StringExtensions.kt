@@ -1,6 +1,7 @@
 package app.filemanager.extensions
 
 import app.filemanager.data.FileInfo
+import app.filemanager.utils.PathUtils
 
-internal expect fun String.getAllFilesInDirectory(): List<FileInfo>
+fun String.getFileAndFolder(): List<FileInfo> = PathUtils.getFileAndFolder(this)
 internal expect fun String.parsePath(): List<String>

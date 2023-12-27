@@ -12,10 +12,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import app.filemanager.data.FileInfo
+import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.AppDrawer
 import app.filemanager.ui.components.SortButton
+import app.filemanager.ui.components.TextFieldDialog
 import app.filemanager.ui.screen.file.FileScreen
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileState
@@ -64,6 +68,7 @@ private fun MainScreenContainer() {
     val path by mainState.path.collectAsState()
     val rootPath by mainState.rootPath.collectAsState()
     val expandDrawer by mainState.isExpandDrawer.collectAsState()
+    val editPath by mainState.isEditPath.collectAsState()
 
     val fileFilterState = koinInject<FileFilterState>()
     val isSearchText by fileFilterState.isSearchText.collectAsState()
@@ -82,17 +87,59 @@ private fun MainScreenContainer() {
             TopAppBar(
                 title = {
                     LazyRow(state = listState) {
-                        item { RootPathSwitch() }
+                        item {
+                            PathSwitch(
+                                mainState.rootPath.value,
+                                getRootPaths().map {
+                                    FileInfo(
+                                        name = it,
+                                        description = "",
+                                        isDirectory = true,
+                                        isHidden = false,
+                                        path = it,
+                                        mineType = "",
+                                        size = 0,
+                                        permissions = 0,
+                                        user = "",
+                                        userGroup = "",
+                                        createdDate = 0,
+                                        updatedDate = 0
+                                    )
+                                },
+                                onClick = {
+                                    mainState.updatePath(mainState.rootPath.value)
+                                },
+                                onSelected = {
+                                    mainState.updateRootPath(it)
+                                    mainState.updatePath(it)
+                                }
+                            )
+                        }
                         itemsIndexed(paths) { index, text ->
-                            FilterChip(selected = false,
-                                label = { Text(text) },
-                                border = null,
-                                shape = RoundedCornerShape(25.dp),
+                            val nowPath = rootPath + paths.subList(0, index).joinToString(PathUtils.getPathSeparator())
+                            PathSwitch(
+                                text,
+                                nowPath.getFileAndFolder().filter { it.isDirectory },
                                 onClick = {
                                     val newPath = rootPath + paths.subList(0, index + 1)
                                         .joinToString(PathUtils.getPathSeparator())
+                                    println(newPath)
                                     mainState.updatePath(newPath)
-                                })
+                                },
+                                onSelected = {
+                                    mainState.updatePath(it)
+                                }
+                            )
+//                            FilterChip(selected = false,
+//                                label = { Text(text) },
+//                                border = null,
+//                                shape = RoundedCornerShape(25.dp),
+//                                onClick = {
+//                                    val newPath = rootPath + paths.subList(0, index + 1)
+//                                        .joinToString(PathUtils.getPathSeparator())
+//                                    println(newPath)
+//                                    mainState.updatePath(newPath)
+//                                })
                         }
                     }
                 },
@@ -100,8 +147,14 @@ private fun MainScreenContainer() {
                     IconButton({ mainState.updateExpandDrawer(!expandDrawer) }) {
                         Icon(if (expandDrawer) Icons.Default.Close else Icons.Default.Menu, null)
                     }
+                    IconButton({ mainState.updateExpandDrawer(!expandDrawer) }) {
+                        Icon(if (expandDrawer) Icons.Default.Close else Icons.Default.Menu, null)
+                    }
                 },
                 actions = {
+                    IconButton({ mainState.updateEditPath(true) }) {
+                        Icon(Icons.Default.Edit, null)
+                    }
                     IconButton({ fileFilterState.updateSearch(!isSearchText) }) {
                         Icon(Icons.Default.Search, null)
                     }
@@ -163,41 +216,50 @@ private fun MainScreenContainer() {
             }
         }
     }
+
+    if (editPath) {
+        TextFieldDialog("修改目录", label = "目录", initText = path) {
+            if (it.parsePath().isNotEmpty()) {
+                mainState.updatePath(it)
+            }
+            mainState.updateEditPath(false)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RootPathSwitch() {
-    val mainState = koinInject<MainState>()
+private fun PathSwitch(name: String, fileInfos: List<FileInfo>, onClick: () -> Unit, onSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
-        FilterChip(selected = expanded,
-            label = { Text(mainState.rootPath.value) },
+        FilterChip(
+            selected = expanded,
+            label = { Text(name) },
             border = null,
             shape = RoundedCornerShape(25.dp),
-            trailingIcon = if (getRootPaths().size > 1) {
+            trailingIcon = if (fileInfos.size > 1) {
                 {
                     Icon(
                         if (expanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
                         null,
-                        Modifier.clickable { expanded = !expanded }
+                        Modifier.clip(RoundedCornerShape(25.dp)).clickable { expanded = !expanded }
                     )
                 }
             } else {
                 null
             },
-            onClick = { mainState.updatePath(mainState.rootPath.value) })
+            onClick = onClick
+        )
 
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
-            for (rootPath in getRootPaths()) {
+            for (fileInfo in fileInfos) {
                 DropdownMenuItem(
-                    text = { Text(rootPath) },
+                    text = { Text(fileInfo.name) },
                     onClick = {
-                        mainState.updateRootPath(rootPath)
-                        mainState.updatePath(rootPath)
+                        onSelected(fileInfo.path)
                         expanded = false
                     })
             }

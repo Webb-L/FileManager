@@ -1,14 +1,16 @@
 package app.filemanager.utils
 
-import androidx.compose.ui.text.intl.Locale
-import androidx.compose.ui.text.toLowerCase
 import app.filemanager.data.FileInfo
+import app.filemanager.extensions.toFileInfo
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.Paths
-import java.nio.file.attribute.BasicFileAttributes
 
 internal actual object PathUtils {
+    // 获取目录下所有文件和文件夹
+    actual fun getFileAndFolder(path: String): List<FileInfo> =
+        (File(path).listFiles() ?: emptyArray<File>()).map { file ->
+            file.toFileInfo()
+        }
+
     // 获取用户目录
     actual fun getHomePath(): String {
 //        val interfaces = NetworkInterface.getNetworkInterfaces()
@@ -43,36 +45,11 @@ internal actual object PathUtils {
             val files = directory.listFiles() ?: emptyArray()
             for (file in files) {
                 try {
-                    val absolutePath = file.absolutePath
-                    val paths = Paths.get(absolutePath)
-                    val attrs = Files.readAttributes(paths, BasicFileAttributes::class.java)
-                    // TODO Windows 有问题。
-                    var mineType = ""
-                    if (file.isFile) {
-                        mineType = file.extension.toLowerCase(Locale.current)
-                    }
-                    fileList.add(
-                        FileInfo(
-                            name = file.name,
-                            description = "",
-                            isDirectory = file.isDirectory,
-                            isHidden = file.isHidden,
-                            path = absolutePath,
-                            mineType = mineType,
-                            size = if (file.isDirectory) (file.listFiles()
-                                ?: emptyArray<File>()).size.toLong() else file.length(),
-                            permissions = 0,
-                            user = "Files.getOwner(path).name",
-                            userGroup = "attrs.group().name",
-                            createdDate = attrs.creationTime().toMillis(),
-                            updatedDate = attrs.lastModifiedTime().toMillis()
-                        )
-                    )
+                    fileList.add(file.toFileInfo())
                     if (file.isDirectory) {
                         fileList.addAll(traverse(file.path))
                     }
                 } catch (e: Exception) {
-
                 }
             }
         }

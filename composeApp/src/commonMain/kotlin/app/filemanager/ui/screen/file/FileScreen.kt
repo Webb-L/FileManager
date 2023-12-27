@@ -17,7 +17,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.getFileFilterType
-import app.filemanager.extensions.getAllFilesInDirectory
+import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.ui.components.FileCard
 import app.filemanager.ui.components.FileInfoDialog
 import app.filemanager.ui.components.FileRenameDialog
@@ -57,7 +57,7 @@ fun FileScreen(
             WindowSizeClass.Expanded -> 3
         }
         LazyVerticalGrid(columns = GridCells.Fixed(columnCount)) {
-            items(fileFilterState.filter(path.getAllFilesInDirectory(), updateKey)) {
+            items(fileFilterState.filter(path.getFileAndFolder(), updateKey)) {
                 FileCard(
                     file = it,
                     onClick = {

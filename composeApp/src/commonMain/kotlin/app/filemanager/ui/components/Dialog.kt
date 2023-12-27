@@ -208,8 +208,8 @@ fun FileRenameDialog(fileInfo: FileInfo, onCancel: (String) -> Unit) {
 }
 
 @Composable
-fun TextFieldDialog(title: String, label: String = "", onCancel: (String) -> Unit) {
-    var text by remember { mutableStateOf("") }
+fun TextFieldDialog(title: String, label: String = "", initText: String = "", onCancel: (String) -> Unit) {
+    var text by remember { mutableStateOf(initText) }
     val focusRequester = remember { FocusRequester() }
     AlertDialog(
         title = { Text(title) },

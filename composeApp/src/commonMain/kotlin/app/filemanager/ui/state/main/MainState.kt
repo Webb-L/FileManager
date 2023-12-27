@@ -11,6 +11,11 @@ class MainState {
     fun updateExpandDrawer(value: Boolean) {
         _isExpandDrawer.value = value
     }
+    private val _isEditPath: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isEditPath: StateFlow<Boolean> = _isEditPath
+    fun updateEditPath(value: Boolean) {
+        _isEditPath.value = value
+    }
 
     private val _rootPath: MutableStateFlow<String> = MutableStateFlow(getRootPaths().first())
     val rootPath: StateFlow<String> = _rootPath
