@@ -18,6 +18,7 @@ import app.filemanager.data.FileInfo
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.AppDrawer
+import app.filemanager.ui.components.FileOperationDialog
 import app.filemanager.ui.components.SortButton
 import app.filemanager.ui.components.TextFieldDialog
 import app.filemanager.ui.screen.file.FileScreen
@@ -226,6 +227,8 @@ private fun MainScreenContainer() {
             }
         }
     }
+
+    FileOperationDialog("复制中")
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
