@@ -1,6 +1,7 @@
 package app.filemanager.di
 
 import app.filemanager.ui.state.file.FileFilterState
+import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.ui.state.main.MainState
@@ -18,5 +19,8 @@ val commonModule = module {
     }
     single {
         FileFilterState()
+    }
+    single {
+        FileOperationState()
     }
 }

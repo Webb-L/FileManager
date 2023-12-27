@@ -28,4 +28,10 @@ class MainState {
     fun updatePath(value: String) {
         _path.value = value
     }
+
+    private val _isCreateFolder: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isCreateFolder: StateFlow<Boolean> = _isCreateFolder
+    fun updateCreateFolder(value: Boolean) {
+        _isCreateFolder.value = value
+    }
 }

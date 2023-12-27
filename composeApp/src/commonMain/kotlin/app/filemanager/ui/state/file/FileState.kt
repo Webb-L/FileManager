@@ -22,6 +22,11 @@ class FileState {
         dstPath = ""
     }
 
+    fun cancelCopyFile() {
+        _isPasteCopyFile.value = false
+        dstPath = ""
+    }
+
     // 是否在移动文件
     private val _isPasteMoveFile: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isPasteMoveFile: StateFlow<Boolean> = _isPasteMoveFile
@@ -32,6 +37,11 @@ class FileState {
 
     fun pasteMoveFile(path: String) {
         FileUtils.copyFile(dstPath, path)
+        _isPasteMoveFile.value = false
+        dstPath = ""
+    }
+
+    fun cancelMoveFile() {
         _isPasteMoveFile.value = false
         dstPath = ""
     }

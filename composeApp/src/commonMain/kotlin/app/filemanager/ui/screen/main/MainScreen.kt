@@ -23,8 +23,10 @@ import app.filemanager.ui.components.SortButton
 import app.filemanager.ui.components.TextFieldDialog
 import app.filemanager.ui.screen.file.FileScreen
 import app.filemanager.ui.state.file.FileFilterState
+import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.MainState
+import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import app.filemanager.utils.PathUtils.getRootPaths
 import app.filemanager.utils.WindowSizeClass
@@ -67,9 +69,9 @@ fun MainScreen(screenType: WindowSizeClass) {
 private fun MainScreenContainer() {
     val mainState = koinInject<MainState>()
     val path by mainState.path.collectAsState()
-    val rootPath by mainState.rootPath.collectAsState()
     val expandDrawer by mainState.isExpandDrawer.collectAsState()
     val editPath by mainState.isEditPath.collectAsState()
+    val isCreateFolder by mainState.isCreateFolder.collectAsState()
 
     val fileFilterState = koinInject<FileFilterState>()
     val isSearchText by fileFilterState.isSearchText.collectAsState()
@@ -79,71 +81,14 @@ private fun MainScreenContainer() {
     val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
     val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
 
-    val paths = path.parsePath()
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = paths.size - 1)
+    val fileOperationState = koinInject<FileOperationState>()
+    val isOperationDialog by fileOperationState.isOperationDialog.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    LazyRow(state = listState) {
-                        item {
-                            PathSwitch(
-                                mainState.rootPath.value,
-                                getRootPaths().map {
-                                    FileInfo(
-                                        name = it,
-                                        description = "",
-                                        isDirectory = true,
-                                        isHidden = false,
-                                        path = it,
-                                        mineType = "",
-                                        size = 0,
-                                        permissions = 0,
-                                        user = "",
-                                        userGroup = "",
-                                        createdDate = 0,
-                                        updatedDate = 0
-                                    )
-                                },
-                                onClick = {
-                                    mainState.updatePath(mainState.rootPath.value)
-                                },
-                                onSelected = {
-                                    mainState.updateRootPath(it)
-                                    mainState.updatePath(it)
-                                }
-                            )
-                        }
-                        itemsIndexed(paths) { index, text ->
-                            val nowPath = rootPath + paths.subList(0, index).joinToString(PathUtils.getPathSeparator())
-                            PathSwitch(
-                                text,
-                                nowPath.getFileAndFolder().filter { it.isDirectory },
-                                onClick = {
-                                    val newPath = rootPath + paths.subList(0, index + 1)
-                                        .joinToString(PathUtils.getPathSeparator())
-                                    println(newPath)
-                                    mainState.updatePath(newPath)
-                                },
-                                onSelected = {
-                                    mainState.updatePath(it)
-                                }
-                            )
-//                            FilterChip(selected = false,
-//                                label = { Text(text) },
-//                                border = null,
-//                                shape = RoundedCornerShape(25.dp),
-//                                onClick = {
-//                                    val newPath = rootPath + paths.subList(0, index + 1)
-//                                        .joinToString(PathUtils.getPathSeparator())
-//                                    println(newPath)
-//                                    mainState.updatePath(newPath)
-//                                })
-                        }
-                    }
-                },
+                title = { AppBarPath() },
                 navigationIcon = {
                     IconButton({ mainState.updateExpandDrawer(!expandDrawer) }) {
                         Icon(if (expandDrawer) Icons.Default.Close else Icons.Default.Menu, null)
@@ -176,14 +121,21 @@ private fun MainScreenContainer() {
                                 Icon(Icons.Filled.ContentPaste, null)
                             }
                         }
+
+                        IconButton({
+                            if (isPasteCopyFile) fileState.cancelCopyFile()
+                            if (isPasteMoveFile) fileState.cancelMoveFile()
+                        }) {
+                            Icon(Icons.Filled.Close, null)
+                        }
                     },
                     floatingActionButton = {
                         FloatingActionButton(
-                            onClick = { fileState.pasteCopyFile(path) },
+                            onClick = { mainState.updateCreateFolder(true) },
                             containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
                             elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
                         ) {
-                            Icon(Icons.Filled.Add, "Localized description")
+                            Icon(Icons.Filled.Add, null)
                         }
                     }
                 )
@@ -218,6 +170,15 @@ private fun MainScreenContainer() {
         }
     }
 
+    if (isCreateFolder) {
+        TextFieldDialog("新增文件夹", initText = path) {
+            mainState.updateCreateFolder(false)
+            if (it.isEmpty()) return@TextFieldDialog
+            FileUtils.createFolder(it)
+            fileFilterState.updateFilerKey()
+        }
+    }
+
     if (editPath) {
         TextFieldDialog("修改目录", label = "目录", initText = path) {
             mainState.updateEditPath(false)
@@ -228,7 +189,65 @@ private fun MainScreenContainer() {
         }
     }
 
-    FileOperationDialog("复制中")
+    if (isOperationDialog) {
+        FileOperationDialog("复制中")
+    }
+}
+
+@Composable
+fun AppBarPath() {
+    val mainState = koinInject<MainState>()
+    val path by mainState.path.collectAsState()
+    val rootPath by mainState.rootPath.collectAsState()
+
+    val paths = path.parsePath()
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = paths.size - 1)
+    LazyRow(state = listState) {
+        item {
+            PathSwitch(
+                mainState.rootPath.value,
+                getRootPaths().map {
+                    FileInfo(
+                        name = it,
+                        description = "",
+                        isDirectory = true,
+                        isHidden = false,
+                        path = it,
+                        mineType = "",
+                        size = 0,
+                        permissions = 0,
+                        user = "",
+                        userGroup = "",
+                        createdDate = 0,
+                        updatedDate = 0
+                    )
+                },
+                onClick = {
+                    mainState.updatePath(mainState.rootPath.value)
+                },
+                onSelected = {
+                    mainState.updateRootPath(it)
+                    mainState.updatePath(it)
+                }
+            )
+        }
+        itemsIndexed(paths) { index, text ->
+            val nowPath = rootPath + paths.subList(0, index).joinToString(PathUtils.getPathSeparator())
+            PathSwitch(
+                text,
+                nowPath.getFileAndFolder().filter { it.isDirectory }.sortedBy { it.name },
+                onClick = {
+                    val newPath = rootPath + paths.subList(0, index + 1)
+                        .joinToString(PathUtils.getPathSeparator())
+                    println(newPath)
+                    mainState.updatePath(newPath)
+                },
+                onSelected = {
+                    mainState.updatePath(it)
+                }
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -51,4 +51,5 @@ internal actual object FileUtils {
 
     actual fun totalSpace(path: String): Long = File(path).totalSpace
     actual fun freeSpace(path: String): Long = File(path).freeSpace
+    actual fun createFolder(path: String)  = File(path).mkdir()
 }
