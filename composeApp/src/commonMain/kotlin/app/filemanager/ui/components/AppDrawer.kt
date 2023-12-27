@@ -20,6 +20,7 @@ import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.ui.state.main.MainState
 import org.koin.compose.koinInject
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppDrawer() {
     val drawerState = koinInject<DrawerState>()
@@ -29,6 +30,19 @@ fun AppDrawer() {
     val isExpandNetwork by drawerState.isExpandNetwork.collectAsState()
 
     ModalDrawerSheet {
+        TopAppBar(
+            title = { Text("Name") },
+            navigationIcon = {
+                IconButton({}){
+                    Icon(Icons.Default.AccountCircle,null)
+                }
+            },
+            actions = {
+                IconButton({}){
+                    Icon(Icons.Default.Settings,null)
+                }
+            }
+        )
         LazyColumn {
             item { AppDrawerBookmark() }
             item { Divider() }

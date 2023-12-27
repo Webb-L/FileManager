@@ -12,7 +12,7 @@ class FileOperationState {
         _isOperationDialog.value = value
     }
 
-    val fileInfos = mutableStateListOf<FileInfo>()
+    val fileInfos = mutableListOf<FileInfo>()
 
     private val _currentIndex: MutableStateFlow<Int> = MutableStateFlow(0)
     val currentIndex: StateFlow<Int> = _currentIndex
@@ -24,11 +24,15 @@ class FileOperationState {
 
     val logs = mutableStateListOf<String>()
 
-    fun updateFileInfos(value: List<FileInfo>){
+    fun updateFileInfos(value: List<FileInfo>) {
         fileInfos.clear()
         fileInfos.addAll(value)
         _currentIndex.value = 0
         isStop = false
         logs.clear()
+    }
+
+    fun addLog(status: Boolean, path: String) {
+        logs.add("${if (status) "成功" else "失败"} - $path")
     }
 }

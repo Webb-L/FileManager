@@ -253,7 +253,7 @@ fun TextFieldDialog(title: String, label: String = "", initText: String = "", on
 }
 
 @Composable
-fun FileOperationDialog(title: String) {
+fun FileOperationDialog(title: String, onCancel: () -> Unit, onDismiss: () -> Unit) {
     val fileOperationState = koinInject<FileOperationState>()
     val currentIndex by fileOperationState.currentIndex.collectAsState()
 
@@ -264,9 +264,20 @@ fun FileOperationDialog(title: String) {
     AlertDialog(
         title = { Text(title) },
         text = {
+            if (fileOperationState.fileInfos.isEmpty() && currentIndex == 0) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                    Spacer(Modifier.height(8.dp))
+                    Text("统计中...")
+                }
+                return@AlertDialog
+            }
             Column {
                 LinearProgressIndicator(
-                    progress = (currentIndex / fileOperationState.fileInfos.size).toFloat(),
+                    progress = ((currentIndex + 1).toFloat() / fileOperationState.fileInfos.size.toFloat()),
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
@@ -287,7 +298,7 @@ fun FileOperationDialog(title: String) {
                                 .background(ProgressIndicatorDefaults.linearColor)
                         )
                         Spacer(Modifier.width(4.dp))
-                        Text("$currentIndex 完成")
+                        Text("${currentIndex + 1} 完成")
                     }
                     Spacer(Modifier.width(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -298,7 +309,7 @@ fun FileOperationDialog(title: String) {
                                 .background(ProgressIndicatorDefaults.linearTrackColor)
                         )
                         Spacer(Modifier.width(4.dp))
-                        Text("${fileOperationState.fileInfos.size - currentIndex} 剩余")
+                        Text("${fileOperationState.fileInfos.size - (currentIndex + 1)} 剩余")
                     }
                 }
                 Spacer(Modifier.height(12.dp))
@@ -331,9 +342,11 @@ fun FileOperationDialog(title: String) {
         onDismissRequest = {},
         confirmButton = {},
         dismissButton = {
-            TextButton({ }) {
-                Text("取消")
+            if (fileOperationState.fileInfos.size == currentIndex + 1) {
+                TextButton(onDismiss) { Text("关闭") }
+                return@AlertDialog
             }
+            TextButton(onCancel) { Text("取消") }
         }
     )
 }

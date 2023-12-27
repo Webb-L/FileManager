@@ -30,6 +30,9 @@ import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import app.filemanager.utils.PathUtils.getRootPaths
 import app.filemanager.utils.WindowSizeClass
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,6 +87,7 @@ private fun MainScreenContainer() {
     val fileOperationState = koinInject<FileOperationState>()
     val isOperationDialog by fileOperationState.isOperationDialog.collectAsState()
 
+    val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     Scaffold(
         topBar = {
@@ -115,8 +119,20 @@ private fun MainScreenContainer() {
                     actions = {
                         if (isPasteCopyFile || isPasteMoveFile) {
                             IconButton({
-                                if (isPasteCopyFile) fileState.pasteCopyFile(path)
-                                if (isPasteMoveFile) fileState.pasteMoveFile(path)
+                                fileOperationState.updateOperationDialog(true)
+                                scope.launch {
+                                    withContext(Dispatchers.Default) {
+                                        val fileInfos = PathUtils.traverse(fileState.dstPath)
+                                            .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.path })
+                                        fileOperationState.updateFileInfos(fileInfos)
+                                        if (isPasteCopyFile) {
+                                            fileState.pasteCopyFile(path, fileOperationState, fileInfos)
+                                        }
+                                        if (isPasteMoveFile) {
+                                            fileState.pasteMoveFile(path)
+                                        }
+                                    }
+                                }
                             }) {
                                 Icon(Icons.Filled.ContentPaste, null)
                             }
@@ -190,7 +206,13 @@ private fun MainScreenContainer() {
     }
 
     if (isOperationDialog) {
-        FileOperationDialog("复制中")
+        FileOperationDialog(
+            "复制中",
+            onCancel = {},
+            onDismiss = {
+                fileOperationState.updateOperationDialog(false)
+            }
+        )
     }
 }
 

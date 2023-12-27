@@ -109,7 +109,7 @@ private fun FileCardMenu(
                 DropdownMenuItem(
                     text = { Text("粘贴") },
                     onClick = {
-                        fileState.pasteCopyFile(file.path)
+//                        fileState.pasteCopyFile(file.path, fileOperationState, fileInfos)
                         expanded = false
                     },
                     leadingIcon = {

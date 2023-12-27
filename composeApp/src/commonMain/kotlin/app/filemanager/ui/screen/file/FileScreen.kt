@@ -22,6 +22,7 @@ import app.filemanager.ui.components.FileCard
 import app.filemanager.ui.components.FileInfoDialog
 import app.filemanager.ui.components.FileRenameDialog
 import app.filemanager.ui.state.file.FileFilterState
+import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.MainState
 import app.filemanager.utils.FileUtils
@@ -46,6 +47,8 @@ fun FileScreen(
 
     val fileFilterState = koinInject<FileFilterState>()
     val updateKey by fileFilterState.updateKey.collectAsState()
+
+    val fileOperationState = koinInject<FileOperationState>()
 
     val scope = rememberCoroutineScope()
     FileFilter()
@@ -77,7 +80,14 @@ fun FileScreen(
                             )
                             when (showSnackbar) {
                                 SnackbarResult.Dismissed -> {}
-                                SnackbarResult.ActionPerformed -> fileState.deleteFile(deletePath)
+                                SnackbarResult.ActionPerformed -> {
+                                    fileOperationState.updateOperationDialog(true)
+                                    fileState.deleteFile(
+                                        fileOperationState,
+                                        deletePath
+                                    )
+                                    fileFilterState.updateFilerKey()
+                                }
                             }
                         }
                     }

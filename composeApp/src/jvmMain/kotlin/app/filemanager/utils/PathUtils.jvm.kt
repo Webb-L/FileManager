@@ -25,15 +25,22 @@ internal actual object PathUtils {
         val fileList = mutableListOf<FileInfo>()
         val directory = File(path)
         if (directory.exists()) {
-            val files = directory.listFiles() ?: emptyArray()
-            for (file in files) {
-                try {
-                    fileList.add(file.toFileInfo())
-                    if (file.isDirectory) {
-                        fileList.addAll(traverse(file.path))
+            if (directory.isDirectory) {
+                val files = directory.listFiles() ?: emptyArray()
+                for (file in files) {
+                    try {
+                        fileList.add(file.toFileInfo())
+                        if (file.isDirectory) {
+                            fileList.addAll(traverse(file.path))
+                        }
+                    } catch (e: Exception) {
                     }
-                } catch (e: Exception) {
                 }
+                if (files.isEmpty()) {
+                    fileList.add(directory.toFileInfo())
+                }
+            } else {
+                fileList.add(directory.toFileInfo())
             }
         }
 
