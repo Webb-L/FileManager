@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class FileOperationState {
+    var title: String = ""
+
     private val _isOperationDialog: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isOperationDialog: StateFlow<Boolean> = _isOperationDialog
     fun updateOperationDialog(value: Boolean) {
@@ -24,6 +26,13 @@ class FileOperationState {
     }
 
     var isStop = false
+    var isCancel = false
+
+    private val _isFinished: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isFinished: StateFlow<Boolean> = _isFinished
+    fun updateFinished(value: Boolean) {
+        _isFinished.value = value
+    }
 
     val logs = mutableStateListOf<String>()
 
@@ -31,11 +40,13 @@ class FileOperationState {
         fileInfos.clear()
         fileInfos.addAll(value)
         _currentIndex.value = 0
+        _isFinished.value = false
         isStop = false
+        isCancel = false
         logs.clear()
     }
 
-    fun addLog(status: Boolean, path: String) {
-        logs.add("${if (status) "成功" else "失败"} - $path")
+    fun addLog(path: String) {
+        logs.add("失败 - $path")
     }
 }

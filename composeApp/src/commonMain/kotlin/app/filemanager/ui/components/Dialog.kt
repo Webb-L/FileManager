@@ -253,16 +253,17 @@ fun TextFieldDialog(title: String, label: String = "", initText: String = "", on
 }
 
 @Composable
-fun FileOperationDialog(title: String, onCancel: () -> Unit, onDismiss: () -> Unit) {
+fun FileOperationDialog(onCancel: () -> Unit, onDismiss: () -> Unit) {
     val fileOperationState = koinInject<FileOperationState>()
     val currentIndex by fileOperationState.currentIndex.collectAsState()
+    val isFinished by fileOperationState.isFinished.collectAsState()
 
     var isExpandDevice by remember {
         mutableStateOf(true)
     }
 
     AlertDialog(
-        title = { Text(title) },
+        title = { Text(fileOperationState.title) },
         text = {
             if (fileOperationState.fileInfos.isEmpty() && currentIndex == 0) {
                 Column(
@@ -271,7 +272,7 @@ fun FileOperationDialog(title: String, onCancel: () -> Unit, onDismiss: () -> Un
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(32.dp))
                     Spacer(Modifier.height(8.dp))
-                    Text("统计中...")
+                    Text("正在统计...")
                 }
                 return@AlertDialog
             }
@@ -345,7 +346,7 @@ fun FileOperationDialog(title: String, onCancel: () -> Unit, onDismiss: () -> Un
         onDismissRequest = {},
         confirmButton = {},
         dismissButton = {
-            if (fileOperationState.fileInfos.size == currentIndex + 1) {
+            if (isFinished) {
                 TextButton(onDismiss) { Text("关闭") }
                 return@AlertDialog
             }

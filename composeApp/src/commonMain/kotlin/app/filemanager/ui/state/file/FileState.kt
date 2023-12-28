@@ -8,32 +8,41 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class FileState {
-    var dstPath = ""
+    var destPath = ""
 
     // 是否在复制文件
     private val _isPasteCopyFile: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isPasteCopyFile: StateFlow<Boolean> = _isPasteCopyFile
     fun copyFile(path: String) {
         _isPasteCopyFile.value = true
-        dstPath = path
+        destPath = path
     }
 
-    fun pasteCopyFile(path: String, fileOperationState: FileOperationState, fileInfos: List<FileInfo>) {
-        for ((index, fileInfo) in fileInfos.withIndex()) {
-            val status = FileUtils.copyFile(fileInfo.path, fileInfo.path.replace(dstPath, path))
+    suspend fun pasteCopyFile(path: String, fileOperationState: FileOperationState) {
+        fileOperationState.title = "复制中..."
+        val fileInfos = PathUtils.traverse(destPath)
+            .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.path })
+        fileOperationState.updateFileInfos(fileInfos)
+        for (fileInfo in fileInfos) {
+            if (fileOperationState.isCancel) return
+            while (fileOperationState.isStop) {
+                delay(100)
+            }
+            val status = FileUtils.copyFile(fileInfo.path, fileInfo.path.replace(destPath, path))
             if (status) {
                 fileOperationState.updateCurrentIndex()
-            }else {
-                fileOperationState.addLog(status, fileInfo.path)
+            } else {
+                fileOperationState.addLog(fileInfo.path)
             }
         }
+        fileOperationState.updateFinished(true)
         _isPasteCopyFile.value = false
-        dstPath = ""
+        destPath = ""
     }
 
     fun cancelCopyFile() {
         _isPasteCopyFile.value = false
-        dstPath = ""
+        destPath = ""
     }
 
     // 是否在移动文件
@@ -41,18 +50,34 @@ class FileState {
     val isPasteMoveFile: StateFlow<Boolean> = _isPasteMoveFile
     fun moveFile(path: String) {
         _isPasteMoveFile.value = true
-        dstPath = path
+        destPath = path
     }
 
-    fun pasteMoveFile(path: String) {
-        FileUtils.copyFile(dstPath, path)
+    suspend fun pasteMoveFile(path: String, fileOperationState: FileOperationState) {
+        fileOperationState.title = "移动中..."
+        val fileInfos = PathUtils.traverse(destPath)
+            .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.path })
+        fileOperationState.updateFileInfos(fileInfos)
+        for (fileInfo in fileInfos) {
+            if (fileOperationState.isCancel) return
+            while (fileOperationState.isStop) {
+                delay(100)
+            }
+            val status = FileUtils.moveFile(fileInfo.path, fileInfo.path.replace(destPath, path))
+            if (status) {
+                fileOperationState.updateCurrentIndex()
+            } else {
+                fileOperationState.addLog(fileInfo.path)
+            }
+        }
+        fileOperationState.updateFinished(true)
         _isPasteMoveFile.value = false
-        dstPath = ""
+        destPath = ""
     }
 
     fun cancelMoveFile() {
         _isPasteMoveFile.value = false
-        dstPath = ""
+        destPath = ""
     }
 
     private val _isRenameFile: MutableStateFlow<Boolean> = MutableStateFlow(false)
@@ -70,21 +95,24 @@ class FileState {
 
     // 删除文件
     suspend fun deleteFile(fileOperationState: FileOperationState, path: String) {
+        fileOperationState.title = "删除中..."
         val fileInfos = PathUtils.traverse(path)
             .sortedWith(compareBy<FileInfo> { it.isDirectory }.thenByDescending { it.path })
         fileOperationState.updateFileInfos(fileInfos)
-        for ((index, fileInfo) in fileInfos.withIndex()) {
+        for (fileInfo in fileInfos) {
+            if (fileOperationState.isCancel) return
             while (fileOperationState.isStop) {
                 delay(100)
             }
             val status = FileUtils.deleteFile(fileInfo.path)
             if (status) {
                 fileOperationState.updateCurrentIndex()
-            }else {
-                fileOperationState.addLog(status, fileInfo.path)
+            } else {
+                fileOperationState.addLog(fileInfo.path)
             }
         }
         FileUtils.deleteFile(path)
+        fileOperationState.updateFinished(true)
     }
 
     private val _fileInfo: MutableStateFlow<FileInfo?> = MutableStateFlow(null)

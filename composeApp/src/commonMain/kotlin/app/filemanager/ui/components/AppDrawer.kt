@@ -43,6 +43,7 @@ fun AppDrawer() {
                 }
             }
         )
+        Divider()
         LazyColumn {
             item { AppDrawerBookmark() }
             item { Divider() }
@@ -91,6 +92,7 @@ fun AppDrawer() {
                 ) {
                 }
             }
+            item { Divider() }
         }
     }
 

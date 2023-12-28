@@ -97,9 +97,6 @@ private fun MainScreenContainer() {
                     IconButton({ mainState.updateExpandDrawer(!expandDrawer) }) {
                         Icon(if (expandDrawer) Icons.Default.Close else Icons.Default.Menu, null)
                     }
-                    IconButton({ mainState.updateExpandDrawer(!expandDrawer) }) {
-                        Icon(if (expandDrawer) Icons.Default.Close else Icons.Default.Menu, null)
-                    }
                 },
                 actions = {
                     IconButton({ mainState.updateEditPath(true) }) {
@@ -122,14 +119,11 @@ private fun MainScreenContainer() {
                                 fileOperationState.updateOperationDialog(true)
                                 scope.launch {
                                     withContext(Dispatchers.Default) {
-                                        val fileInfos = PathUtils.traverse(fileState.dstPath)
-                                            .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.path })
-                                        fileOperationState.updateFileInfos(fileInfos)
                                         if (isPasteCopyFile) {
-                                            fileState.pasteCopyFile(path, fileOperationState, fileInfos)
+                                            fileState.pasteCopyFile(path, fileOperationState)
                                         }
                                         if (isPasteMoveFile) {
-                                            fileState.pasteMoveFile(path)
+                                            fileState.pasteMoveFile(path, fileOperationState)
                                         }
                                     }
                                 }
@@ -207,8 +201,10 @@ private fun MainScreenContainer() {
 
     if (isOperationDialog) {
         FileOperationDialog(
-            "复制中",
-            onCancel = {},
+            onCancel = {
+                fileOperationState.isCancel = true
+                fileOperationState.updateOperationDialog(false)
+            },
             onDismiss = {
                 fileOperationState.updateOperationDialog(false)
             }
@@ -261,7 +257,6 @@ fun AppBarPath() {
                 onClick = {
                     val newPath = rootPath + paths.subList(0, index + 1)
                         .joinToString(PathUtils.getPathSeparator())
-                    println(newPath)
                     mainState.updatePath(newPath)
                 },
                 onSelected = {

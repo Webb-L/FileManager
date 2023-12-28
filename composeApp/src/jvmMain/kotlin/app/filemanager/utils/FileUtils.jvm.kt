@@ -9,43 +9,87 @@ internal actual object FileUtils {
         Desktop.getDesktop().open(File(file))
     }
 
-    actual fun copyFile(src: String, dst: String): Boolean {
-        // TODO 复制文件夹只会复制文件夹下的内容。
+    actual fun copyFile(src: String, dest: String): Boolean {
         try {
             val srcFile = File(src)
-            val destFile = File(dst)
-            if (srcFile.isDirectory) {
-                if (!destFile.exists()) {
-                    return destFile.mkdirs()
-                }
-                return true
-            } else {
+            val destFile = File(dest)
+
+            println("$srcFile $destFile")
+            println("${srcFile.isDirectory} ${destFile.isDirectory}")
+
+            if (srcFile.isDirectory && !destFile.exists()) {
+                return destFile.mkdirs()
+            }
+
+            if (srcFile.isDirectory && destFile.isDirectory) {
+                return File(destFile, srcFile.name).mkdir()
+            }
+
+            // 文件复制到文件夹
+            if (srcFile.isFile && destFile.isDirectory) {
+                return srcFile.copyTo(File(destFile, srcFile.name)).exists()
+            }
+
+            // 文件复制到文件
+            if (srcFile.isFile) {
                 return srcFile.copyTo(destFile).exists()
+            }
+//            if (srcFile.isFile && destFile.isDirectory) {
+//                return srcFile.copyTo(File(destFile, srcFile.name)).exists()
+//            }
+//            // 文件夹复制到文件夹
+//            if (srcFile.isDirectory && destFile.isDirectory) {
+//                return false
+//            }
+
+//            if (srcFile.isDirectory) {
+//                if (!destFile.exists()) {
+//                    return destFile.mkdirs()
+//                }
+//                return true
+//            } else {
+//                println(srcFile)
+//                println(destFile)
+//                return srcFile.copyTo(destFile).exists()
+//            }
+        } catch (e: Exception) {
+            Napier.e { e.message.toString() }
+            return false
+        }
+        return false
+    }
+
+    // TODO 复制文件夹只会复制文件夹下的内容 /test/->/tdd/ 只会把/test/下所有文件复制到/tdd/
+    actual fun moveFile(src: String, dest: String): Boolean {
+        try {
+            val srcFile = File(src)
+            val destFile = File(dest)
+
+            println("$srcFile $destFile")
+            println("${srcFile.isDirectory} ${destFile.isDirectory}")
+
+            if (srcFile.isDirectory && !destFile.exists()) {
+                return destFile.mkdirs()
+            }
+
+            if (srcFile.isDirectory && destFile.isDirectory) {
+                return File(destFile, srcFile.name).mkdir()
+            }
+
+            // 文件复制到文件夹
+            if (srcFile.isFile && destFile.isDirectory) {
+                return srcFile.renameTo(File(destFile, srcFile.name))
+            }
+
+            // 文件复制到文件
+            if (srcFile.isFile) {
+                return srcFile.renameTo(destFile)
             }
         } catch (e: Exception) {
             Napier.e { e.message.toString() }
             return false
         }
-
-//        if (srcFile.isDirectory) {
-//            Files.walk(srcDir).forEach { source ->
-//                val dest = destDir.resolve(srcDir.relativize(source))
-//                if (Files.isDirectory(source)) {
-//                    Files.createDirectories(dest)
-//                } else {
-//                    Files.copy(source, dest, StandardCopyOption.COPY_ATTRIBUTES)
-//                }
-//            }
-//        } else {
-//            if (srcFile.isFile && destFile.isFile) {
-//                Files.copy(srcDir, destDir, StandardCopyOption.COPY_ATTRIBUTES)
-//            } else {
-//                srcFile.copyTo(File(destFile, destFile.name))
-//            }
-//        }
-    }
-
-    actual fun moveFile(src: String, dst: String) {
+        return false
     }
 
     actual fun deleteFile(path: String) = File(path).delete()
