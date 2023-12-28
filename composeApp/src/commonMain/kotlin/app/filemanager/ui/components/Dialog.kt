@@ -258,7 +258,7 @@ fun FileOperationDialog(title: String, onCancel: () -> Unit, onDismiss: () -> Un
     val currentIndex by fileOperationState.currentIndex.collectAsState()
 
     var isExpandDevice by remember {
-        mutableStateOf(false)
+        mutableStateOf(true)
     }
 
     AlertDialog(
@@ -277,7 +277,7 @@ fun FileOperationDialog(title: String, onCancel: () -> Unit, onDismiss: () -> Un
             }
             Column {
                 LinearProgressIndicator(
-                    progress = ((currentIndex + 1).toFloat() / fileOperationState.fileInfos.size.toFloat()),
+                    progress = (currentIndex / fileOperationState.fileInfos.size.toFloat()),
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
@@ -298,7 +298,7 @@ fun FileOperationDialog(title: String, onCancel: () -> Unit, onDismiss: () -> Un
                                 .background(ProgressIndicatorDefaults.linearColor)
                         )
                         Spacer(Modifier.width(4.dp))
-                        Text("${currentIndex + 1} 完成")
+                        Text("$currentIndex 完成")
                     }
                     Spacer(Modifier.width(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -309,16 +309,19 @@ fun FileOperationDialog(title: String, onCancel: () -> Unit, onDismiss: () -> Un
                                 .background(ProgressIndicatorDefaults.linearTrackColor)
                         )
                         Spacer(Modifier.width(4.dp))
-                        Text("${fileOperationState.fileInfos.size - (currentIndex + 1)} 剩余")
+                        Text("${fileOperationState.fileInfos.size - currentIndex} 剩余")
                     }
                 }
                 Spacer(Modifier.height(12.dp))
+                // TODO 删除文件夹或文件有问题
                 Row {
                     Text(
                         "当前：${fileOperationState.fileInfos[currentIndex].path}", Modifier.weight(1f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+
+                    if (fileOperationState.logs.isEmpty()) return@Row
                     Icon(
                         if (isExpandDevice) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                         null,

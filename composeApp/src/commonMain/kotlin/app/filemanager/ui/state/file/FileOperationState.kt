@@ -16,8 +16,11 @@ class FileOperationState {
 
     private val _currentIndex: MutableStateFlow<Int> = MutableStateFlow(0)
     val currentIndex: StateFlow<Int> = _currentIndex
-    fun updateCurrentIndex(value: Int) {
-        _currentIndex.value = value
+    fun updateCurrentIndex() {
+        _currentIndex.value += 1
+        if (_currentIndex.value == fileInfos.size) {
+            _isOperationDialog.value = false
+        }
     }
 
     var isStop = false

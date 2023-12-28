@@ -10,6 +10,7 @@ internal actual object FileUtils {
     }
 
     actual fun copyFile(src: String, dst: String): Boolean {
+        // TODO 复制文件夹只会复制文件夹下的内容。
         try {
             val srcFile = File(src)
             val destFile = File(dst)

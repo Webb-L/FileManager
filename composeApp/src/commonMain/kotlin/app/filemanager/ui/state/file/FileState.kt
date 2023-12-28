@@ -21,8 +21,11 @@ class FileState {
     fun pasteCopyFile(path: String, fileOperationState: FileOperationState, fileInfos: List<FileInfo>) {
         for ((index, fileInfo) in fileInfos.withIndex()) {
             val status = FileUtils.copyFile(fileInfo.path, fileInfo.path.replace(dstPath, path))
-            fileOperationState.updateCurrentIndex(index)
-            fileOperationState.addLog(status, fileInfo.path)
+            if (status) {
+                fileOperationState.updateCurrentIndex()
+            }else {
+                fileOperationState.addLog(status, fileInfo.path)
+            }
         }
         _isPasteCopyFile.value = false
         dstPath = ""
@@ -70,14 +73,16 @@ class FileState {
         val fileInfos = PathUtils.traverse(path)
             .sortedWith(compareBy<FileInfo> { it.isDirectory }.thenByDescending { it.path })
         fileOperationState.updateFileInfos(fileInfos)
-        println(fileInfos.size)
         for ((index, fileInfo) in fileInfos.withIndex()) {
             while (fileOperationState.isStop) {
                 delay(100)
             }
             val status = FileUtils.deleteFile(fileInfo.path)
-            fileOperationState.updateCurrentIndex(index)
-            fileOperationState.addLog(status, fileInfo.path)
+            if (status) {
+                fileOperationState.updateCurrentIndex()
+            }else {
+                fileOperationState.addLog(status, fileInfo.path)
+            }
         }
         FileUtils.deleteFile(path)
     }
