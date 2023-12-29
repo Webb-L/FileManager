@@ -33,13 +33,13 @@ fun AppDrawer() {
         TopAppBar(
             title = { Text("Name") },
             navigationIcon = {
-                IconButton({}){
-                    Icon(Icons.Default.AccountCircle,null)
+                IconButton({}) {
+                    Icon(Icons.Default.AccountCircle, null)
                 }
             },
             actions = {
-                IconButton({}){
-                    Icon(Icons.Default.Settings,null)
+                IconButton({}) {
+                    Icon(Icons.Default.Settings, null)
                 }
             }
         )
@@ -110,6 +110,7 @@ fun AppDrawer() {
 @Composable
 private fun AppDrawerBookmark() {
     val mainState = koinInject<MainState>()
+    val isFavorite by mainState.isFavorite.collectAsState()
     val path by mainState.path.collectAsState()
 
     val drawerState = koinInject<DrawerState>()
@@ -132,12 +133,17 @@ private fun AppDrawerBookmark() {
         }
     ) {
         if (!isExpandBookmark) return@AppDrawerItem
-
+        NavigationDrawerItem(
+            icon = { Icon(Icons.Default.Favorite, null) },
+            label = { Text("收藏") },
+            selected = isFavorite,
+            onClick = { mainState.updateFavorite(true) },
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
         for (bookmark in drawerState.bookmarks) {
             NavigationDrawerItem(
                 icon = {
                     val icon = when (bookmark.iconType) {
-                        DrawerBookmarkIcon.Favorite -> Icons.Default.Favorite
                         DrawerBookmarkIcon.Home -> Icons.Default.Home
                         DrawerBookmarkIcon.Image -> Icons.Default.Image
                         DrawerBookmarkIcon.Audio -> Icons.Default.Headphones
@@ -149,8 +155,11 @@ private fun AppDrawerBookmark() {
                     Icon(icon, null)
                 },
                 label = { Text(bookmark.name) },
-                selected = path == bookmark.path,
-                onClick = { mainState.updatePath(bookmark.path) },
+                selected = !isFavorite && path == bookmark.path,
+                onClick = {
+                    mainState.updatePath(bookmark.path)
+                    mainState.updateFavorite(false)
+                },
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
             )
         }

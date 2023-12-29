@@ -10,34 +10,40 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun FileFilterScreen() {
-    val snackbarHostState = remember { SnackbarHostState() }
+class FileFilterScreen : Screen {
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("过滤类型") },
-                navigationIcon = {
-                    IconButton({}) {
-                        Icon(Icons.Default.ArrowBack, null)
+        val snackbarHostState = remember { SnackbarHostState() }
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("过滤类型") },
+                    navigationIcon = {
+                        IconButton({ navigator.pop() }) {
+                            Icon(Icons.Default.ArrowBack, null)
+                        }
+                    },
+                    actions = {
                     }
-                },
-                actions = {
+                )
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            floatingActionButton = {
+                ExtendedFloatingActionButton({ }) {
+                    Icon(Icons.Filled.Add, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("新增")
                 }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            ExtendedFloatingActionButton({ }) {
-                Icon(Icons.Filled.Add, null)
-                Spacer(Modifier.width(8.dp))
-                Text("新增")
             }
-        }
-    ) {
+        ) {
 
+        }
     }
 }

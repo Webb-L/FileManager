@@ -11,6 +11,13 @@ class MainState {
     fun updateExpandDrawer(value: Boolean) {
         _isExpandDrawer.value = value
     }
+
+    private val _isFavorite: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isFavorite: StateFlow<Boolean> = _isFavorite
+    fun updateFavorite(value: Boolean) {
+        _isFavorite.value = value
+    }
+
     private val _isEditPath: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isEditPath: StateFlow<Boolean> = _isEditPath
     fun updateEditPath(value: Boolean) {

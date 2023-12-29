@@ -1,7 +1,6 @@
 package app.filemanager.data.main
 
 enum class DrawerBookmarkIcon {
-    Favorite,
     Home,
     Image,
     Audio,

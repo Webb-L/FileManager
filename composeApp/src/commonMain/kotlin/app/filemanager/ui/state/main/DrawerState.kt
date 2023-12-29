@@ -24,7 +24,6 @@ class DrawerState() {
         val separator = getPathSeparator()
         bookmarks.addAll(
             listOf(
-                DrawerBookmark(name = "收藏", path = "Favorite", iconType = DrawerBookmarkIcon.Favorite),
                 DrawerBookmark(name = "主目录", path = homePath, iconType = DrawerBookmarkIcon.Home),
                 DrawerBookmark(
                     name = "图片",
