@@ -14,7 +14,10 @@ fun File.toFileInfo(): FileInfo {
     // TODO Windows 有问题。
     var mineType = ""
     if (isFile) {
-        mineType = extension.toLowerCase(Locale.current)
+        val extension = extension.toLowerCase(Locale.current)
+        if (extension.isNotEmpty()) {
+            mineType = ".$extension"
+        }
     }
     // println(Files.getPosixFilePermissions(path))
     // 输出例如 [OWNER_READ, OWNER_WRITE, GROUP_READ, OTHERS_READ]

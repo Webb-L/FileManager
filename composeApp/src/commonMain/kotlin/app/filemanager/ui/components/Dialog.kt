@@ -3,6 +3,7 @@ package app.filemanager.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.DisableSelection
@@ -11,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,12 +22,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.FileInfo
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
 import app.filemanager.ui.state.file.FileOperationState
+import app.filemanager.ui.state.file.FileOperationType
 import app.filemanager.ui.state.main.MainState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
@@ -177,8 +182,13 @@ fun FileInfoDialog(fileInfo: FileInfo, onCancel: () -> Unit) {
 }
 
 @Composable
-fun FileRenameDialog(fileInfo: FileInfo, onCancel: (String) -> Unit) {
+fun FileRenameDialog(
+    fileInfo: FileInfo,
+    verifyFun: (String) -> Pair<Boolean, String>,
+    onCancel: (String) -> Unit
+) {
     var text by rememberSaveable { mutableStateOf(fileInfo.name) }
+    val verify = verifyFun(text)
 
     AlertDialog(
         icon = { Icon(Icons.Outlined.Edit, null) },
@@ -188,19 +198,33 @@ fun FileRenameDialog(fileInfo: FileInfo, onCancel: (String) -> Unit) {
                 value = text,
                 onValueChange = { text = it },
                 label = { Text("名称") },
+                isError = verify.first,
                 leadingIcon = { FileIcon(fileInfo) },
+                modifier = Modifier.semantics { if (verify.first) error(verify.second) },
                 trailingIcon = {
                     if (text.isNotEmpty()) {
                         IconButton({ text = "" }) {
                             Icon(Icons.Default.Close, null)
                         }
                     }
-                }
+                },
+                supportingText = {
+                    if (verify.first) {
+                        Text(
+                            modifier = Modifier.fillMaxWidth(),
+                            text = verify.second,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
             )
         },
         onDismissRequest = {},
         confirmButton = {
-            TextButton({ onCancel(text) }) {
+            TextButton(
+                { onCancel(text) },
+                enabled = if (text.isEmpty()) false else !verify.first
+            ) {
                 Text("确认")
             }
         },
@@ -214,9 +238,17 @@ fun FileRenameDialog(fileInfo: FileInfo, onCancel: (String) -> Unit) {
 }
 
 @Composable
-fun TextFieldDialog(title: String, label: String = "", initText: String = "", onCancel: (String) -> Unit) {
+fun TextFieldDialog(
+    title: String,
+    label: String = "",
+    initText: String = "",
+    verifyFun: (String) -> Pair<Boolean, String> = { _ -> Pair(false, "") },
+    onCancel: (String) -> Unit
+) {
     var text by remember { mutableStateOf(initText) }
     val focusRequester = remember { FocusRequester() }
+    val verify = verifyFun(text)
+
     AlertDialog(
         title = { Text(title) },
         text = {
@@ -224,19 +256,33 @@ fun TextFieldDialog(title: String, label: String = "", initText: String = "", on
                 value = text,
                 onValueChange = { text = it },
                 label = { Text(label) },
-                modifier = Modifier.focusRequester(focusRequester),
+                isError = verify.first,
+                modifier = Modifier.focusRequester(focusRequester)
+                    .semantics { if (verify.first) error(verify.second) },
                 trailingIcon = {
                     if (text.isNotEmpty()) {
                         IconButton({ text = "" }) {
                             Icon(Icons.Default.Close, null)
                         }
                     }
-                }
+                },
+                supportingText = {
+                    if (verify.first) {
+                        Text(
+                            modifier = Modifier.fillMaxWidth(),
+                            text = verify.second,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
             )
         },
         onDismissRequest = {},
         confirmButton = {
-            TextButton({ onCancel(text) }) {
+            TextButton(
+                { onCancel(text) },
+                enabled = if (text.isEmpty()) false else !verify.first
+            ) {
                 Text("确认")
             }
         },
@@ -314,7 +360,6 @@ fun FileOperationDialog(onCancel: () -> Unit, onDismiss: () -> Unit) {
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                // TODO 删除文件夹或文件有问题
                 Row {
                     Text(
                         "当前：${fileOperationState.fileInfos[currentIndex].path}", Modifier.weight(1f),
@@ -353,4 +398,130 @@ fun FileOperationDialog(onCancel: () -> Unit, onDismiss: () -> Unit) {
             TextButton(onCancel) { Text("取消") }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+fun FileWarningOperationDialog() {
+    val operationState = koinInject<FileOperationState>()
+    val type by operationState.warningOperationType.collectAsState()
+    val isUseAll by operationState.warningUseAll.collectAsState()
+    val files by operationState.warningFiles.collectAsState()
+
+    val newFile = files.first
+    val oldFile = files.second
+
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text("是否需要替换") },
+        text = {
+            Column {
+                Spacer(Modifier.height(12.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    OutlinedCard {
+                        ListItem(
+                            headlineContent = { Text(newFile.name) },
+                            supportingContent = { FileWarningDialogItem(newFile) },
+                            leadingContent = { FileIcon(newFile) },
+                            trailingContent = {
+                                Badge(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                                ) { Text("新文件") }
+                            },
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(32.dp))
+                    Spacer(Modifier.height(4.dp))
+                    OutlinedCard {
+                        ListItem(
+                            headlineContent = { Text(oldFile.name) },
+                            supportingContent = { FileWarningDialogItem(oldFile) },
+                            leadingContent = { FileIcon(oldFile) },
+                            trailingContent = { Badge { Text("旧文件") } },
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                FlowRow {
+                    FilterChip(
+                        onClick = { operationState.updateWarningOperationType(FileOperationType.Replace) },
+                        label = { Text("替换文件") },
+                        selected = type == FileOperationType.Replace
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    FilterChip(
+                        onClick = { operationState.updateWarningOperationType(FileOperationType.Jump) },
+                        label = { Text("跳过文件") },
+                        selected = type == FileOperationType.Jump
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    FilterChip(
+                        onClick = { operationState.updateWarningOperationType(FileOperationType.Reserve) },
+                        label = { Text("保留文件") },
+                        selected = type == FileOperationType.Reserve
+                    )
+                }
+
+                if (!newFile.isDirectory && !oldFile.isDirectory) return@Column
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .toggleable(
+                            value = isUseAll,
+                            onValueChange = { operationState.updateWarningUseAll(!isUseAll) },
+                            role = Role.Checkbox
+                        )
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = isUseAll,
+                        onCheckedChange = null
+                    )
+                    Text(
+                        text = "应用此操作到所有文件夹和文件",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(start = 16.dp)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton({
+                when (type) {
+                    FileOperationType.Replace -> {}
+                    FileOperationType.Jump -> operationState.isContinue = true
+                    FileOperationType.Reserve -> {}
+                }
+                operationState.updateWarningOperationDialog(false)
+            }) { Text("确认") }
+        },
+        dismissButton = {
+            TextButton({
+                operationState.updateWarningOperationDialog(false)
+                operationState.isCancel = true
+            }) { Text("取消") }
+        }
+    )
+}
+
+@Composable
+private fun FileWarningDialogItem(newFile: FileInfo) {
+    Row {
+        if (newFile.isDirectory) {
+            Text("${newFile.size}项", style = MaterialTheme.typography.bodySmall)
+        } else {
+            Text(newFile.size.formatFileSize(), style = MaterialTheme.typography.bodySmall)
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            newFile.path.replace(newFile.name, ""),
+            maxLines = 1,
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
 }

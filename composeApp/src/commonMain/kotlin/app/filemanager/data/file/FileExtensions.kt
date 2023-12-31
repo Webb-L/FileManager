@@ -37,7 +37,7 @@ object FileExtensions {
     fun convertFileExtensions(fileExtensions: List<String>): List<String> {
         val convertedExtensions = mutableListOf<String>()
         for (extension in fileExtensions) {
-            val convertedExtension = extension.trimStart('.').toLowerCase(Locale.current)
+            val convertedExtension = extension.toLowerCase(Locale.current)
             convertedExtensions.add(convertedExtension)
         }
         return convertedExtensions

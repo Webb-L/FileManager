@@ -1,5 +1,7 @@
 package app.filemanager.utils
 
+import app.filemanager.data.FileInfo
+
 internal actual object PathUtils {
     actual fun getHomePath(): String {
         return "/"
@@ -11,6 +13,14 @@ internal actual object PathUtils {
 
     actual fun getRootPaths(): List<String> {
         return listOf("/")
+    }
+
+    actual fun getFileAndFolder(path: String): List<FileInfo> {
+        return emptyList()
+    }
+
+    actual fun traverse(path: String): List<FileInfo> {
+        return emptyList()
     }
 
 }

@@ -1,13 +1,16 @@
 package app.filemanager.ui.screen.main
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,25 +21,11 @@ import app.filemanager.data.FileInfo
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.AppDrawer
-import app.filemanager.ui.components.FileOperationDialog
-import app.filemanager.ui.components.SortButton
-import app.filemanager.ui.components.TextFieldDialog
-import app.filemanager.ui.screen.file.FavoriteScreen
-import app.filemanager.ui.screen.file.FileScreen
-import app.filemanager.ui.state.file.FileFilterState
-import app.filemanager.ui.state.file.FileOperationState
-import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.MainState
-import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import app.filemanager.utils.PathUtils.getRootPaths
 import app.filemanager.utils.WindowSizeClass
-import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
-import cafe.adriel.voyager.navigator.currentOrThrow
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -118,9 +107,7 @@ fun AppBarPath() {
                         .joinToString(PathUtils.getPathSeparator())
                     mainState.updatePath(newPath)
                 },
-                onSelected = {
-                    mainState.updatePath(it)
-                }
+                onSelected = { mainState.updatePath(it) }
             )
         }
     }

@@ -7,8 +7,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.FileOperationDialog
+import app.filemanager.ui.components.FileWarningOperationDialog
 import app.filemanager.ui.components.SortButton
 import app.filemanager.ui.components.TextFieldDialog
 import app.filemanager.ui.screen.file.FavoriteScreen
@@ -19,6 +21,7 @@ import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.MainState
 import app.filemanager.utils.FileUtils
+import app.filemanager.utils.VerificationUtils
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
@@ -44,23 +47,28 @@ object HomeScreen : Screen {
         val isSearchText by fileFilterState.isSearchText.collectAsState()
         val searchText by fileFilterState.searchText.collectAsState()
 
+        val fileState = koinInject<FileState>()
+        val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
+        val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
+
         val fileOperationState = koinInject<FileOperationState>()
         val isOperationDialog by fileOperationState.isOperationDialog.collectAsState()
+        val isWarningOperationDialog by fileOperationState.isWarningOperationDialog.collectAsState()
 
         val snackbarHostState = remember { SnackbarHostState() }
         Scaffold(
             topBar = { HomeTopBar() },
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = { HomeBottomBar() },
-//        floatingActionButton = {
-//            if (!isPasteCopyFile && !isPasteMoveFile) {
-//                ExtendedFloatingActionButton({ }) {
-//                    Icon(Icons.Filled.Add, null)
-//                    Spacer(Modifier.width(8.dp))
-//                    Text("新增")
-//                }
-//            }
-//        }
+            floatingActionButton = {
+                if (!isPasteCopyFile && !isPasteMoveFile) {
+                    ExtendedFloatingActionButton({ mainState.updateCreateFolder(true) }) {
+                        Icon(Icons.Filled.Add, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("新增")
+                    }
+                }
+            }
         ) {
             Column(Modifier.padding(it)) {
                 if (isSearchText) {
@@ -83,17 +91,21 @@ object HomeScreen : Screen {
             }
         }
 
-        LaunchedEffect(isFavorite){
+        LaunchedEffect(isFavorite) {
             if (isFavorite) {
                 navigator.push(FavoriteScreen())
             }
         }
 
         if (isCreateFolder) {
-            TextFieldDialog("新增文件夹", initText = path) {
+            TextFieldDialog(
+                "新增文件夹",
+                label = "名称",
+                verifyFun = { text -> VerificationUtils.folder(text, path.getFileAndFolder()) }
+            ) {
                 mainState.updateCreateFolder(false)
                 if (it.isEmpty()) return@TextFieldDialog
-                FileUtils.createFolder(it)
+                FileUtils.createFolder(path, it)
                 fileFilterState.updateFilerKey()
             }
         }
@@ -118,6 +130,10 @@ object HomeScreen : Screen {
                     fileOperationState.updateOperationDialog(false)
                 }
             )
+        }
+
+        if (isWarningOperationDialog) {
+            FileWarningOperationDialog()
         }
     }
 
