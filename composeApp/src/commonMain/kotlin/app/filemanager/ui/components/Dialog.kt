@@ -448,19 +448,37 @@ fun FileWarningOperationDialog() {
                 FlowRow {
                     FilterChip(
                         onClick = { operationState.updateWarningOperationType(FileOperationType.Replace) },
-                        label = { Text("替换文件") },
+                        label = {
+                            if (newFile.isDirectory && oldFile.isDirectory) {
+                                Text("替换文件夹")
+                            } else {
+                                Text("替换文件")
+                            }
+                        },
                         selected = type == FileOperationType.Replace
                     )
                     Spacer(Modifier.width(8.dp))
                     FilterChip(
                         onClick = { operationState.updateWarningOperationType(FileOperationType.Jump) },
-                        label = { Text("跳过文件") },
+                        label = {
+                            if (newFile.isDirectory && oldFile.isDirectory) {
+                                Text("跳过文件夹")
+                            } else {
+                                Text("跳过文件")
+                            }
+                        },
                         selected = type == FileOperationType.Jump
                     )
                     Spacer(Modifier.width(8.dp))
                     FilterChip(
                         onClick = { operationState.updateWarningOperationType(FileOperationType.Reserve) },
-                        label = { Text("保留文件") },
+                        label = {
+                            if (newFile.isDirectory && oldFile.isDirectory) {
+                                Text("保留文件夹")
+                            } else {
+                                Text("保留文件")
+                            }
+                        },
                         selected = type == FileOperationType.Reserve
                     )
                 }

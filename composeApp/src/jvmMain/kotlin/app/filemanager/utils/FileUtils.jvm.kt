@@ -18,15 +18,13 @@ internal actual object FileUtils {
         try {
             val srcFile = File(src)
             val destFile = File(dest)
-
-//            println("${srcFile.isDirectory} ${destFile.isDirectory} $srcFile $destFile")
+            println("${srcFile.path} ${destFile.path}")
 
             if (srcFile.isDirectory && !destFile.exists()) {
                 return destFile.mkdirs()
             }
 
             if (srcFile.isDirectory && destFile.isDirectory) {
-//                println("$destFile/${srcFile.name}")
                 destFile.mkdir()
                 return destFile.exists()
             }
@@ -45,26 +43,7 @@ internal actual object FileUtils {
             if (srcFile.isFile) {
                 return srcFile.copyTo(destFile).exists()
             }
-//            if (srcFile.isFile && destFile.isDirectory) {
-//                return srcFile.copyTo(File(destFile, srcFile.name)).exists()
-//            }
-//            // 文件夹复制到文件夹
-//            if (srcFile.isDirectory && destFile.isDirectory) {
-//                return false
-//            }
-
-//            if (srcFile.isDirectory) {
-//                if (!destFile.exists()) {
-//                    return destFile.mkdirs()
-//                }
-//                return true
-//            } else {
-//                println(srcFile)
-//                println(destFile)
-//                return srcFile.copyTo(destFile).exists()
-//            }
         } catch (e: Exception) {
-            println(e)
             return false
         }
         return false
@@ -76,15 +55,13 @@ internal actual object FileUtils {
             val srcFile = File(src)
             val destFile = File(dest)
 
-//            println("$srcFile $destFile")
-//            println("${srcFile.isDirectory} ${destFile.isDirectory}")
-
+            println("$srcFile $destFile ${srcFile.isDirectory} ${destFile.isDirectory}")
             if (srcFile.isDirectory && !destFile.exists()) {
-                return destFile.mkdirs()
+                return srcFile.renameTo(destFile)
             }
 
             if (srcFile.isDirectory && destFile.isDirectory) {
-                return File(destFile, srcFile.name).mkdir()
+                return srcFile.renameTo(destFile)
             }
 
             // 文件复制到文件夹

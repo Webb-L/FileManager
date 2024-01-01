@@ -2,6 +2,7 @@ package app.filemanager.ui.state.file
 
 import app.filemanager.data.FileInfo
 import app.filemanager.extensions.getFileAndFolder
+import app.filemanager.extensions.replaceLast
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.delay
@@ -20,7 +21,6 @@ class FileState {
     }
 
     suspend fun pasteCopyFile(destPath: String, fileOperationState: FileOperationState) {
-        println(destPath)
         val srcFileInfo = FileUtils.getFile(srcPath)
         val destFileInfo = FileUtils.getFile(destPath)
 
@@ -35,22 +35,25 @@ class FileState {
 
         fileOperationState.title = "复制中..."
         val fileInfos = PathUtils.traverse(srcPath)
-            .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.path })
         fileOperationState.updateFileInfos(fileInfos)
         for (fileInfo in fileInfos) {
-            var toPath = fileInfo.path.replace(srcPath, newDestPath)
-            if (!fileInfo.isDirectory && destFileInfo.isDirectory) {
-                try {
-                    val newDestFile = FileUtils.getFile(fileInfo.path.replace(srcPath, newDestPath), fileInfo.name)
-                    val newName = generateNewName(srcFileInfo, newDestFile, fileOperationState)
-                    println("newName = $newName")
-                    if (newName.isNotEmpty()) {
-                        toPath = newName
+            var toPath: String = fileInfo.path.replace(srcPath, newDestPath)
+            println("${fileInfo.path} $srcPath, $newDestPath")
+            try {
+                val newDestFile = FileUtils.getFile(fileInfo.path.replace(srcPath, newDestPath), fileInfo.name)
+                if (fileInfo.name == newDestFile.name) {
+                    try {
+                        val newName = generateNewName(srcFileInfo, newDestFile, fileOperationState)
+                        if (newName.isNotEmpty()) {
+                            toPath = newName
+                        }
+                    } catch (e: Exception) {
                     }
-                } catch (e: Exception) {
                 }
+            } catch (e: Exception) {
+                toPath = fileInfo.path.replace(srcPath, newDestPath)
             }
-            println("toPath = $toPath")
+            println(toPath)
 
             if (fileOperationState.isContinue) {
                 fileOperationState.isContinue = false
@@ -60,8 +63,7 @@ class FileState {
             while (fileOperationState.isStop) {
                 delay(100)
             }
-//            val path = FileUtils.getFile(fileInfo.path.replace(srcPath,newDestPath),fileInfo.name).path
-//            println("${fileInfo.path} $path")
+
             val status = FileUtils.copyFile(fileInfo.path, toPath)
             if (status) {
                 fileOperationState.updateCurrentIndex()
@@ -72,57 +74,6 @@ class FileState {
         fileOperationState.updateFinished(true)
         _isPasteCopyFile.value = false
         srcPath = ""
-    }
-
-    private suspend fun generateNewName(
-        srcFileInfo: FileInfo,
-        destFileInfo: FileInfo,
-        fileOperationState: FileOperationState,
-    ): String {
-        println("${!srcFileInfo.isDirectory} && ${!destFileInfo.isDirectory}")
-        // 文件复制到文件 显示操作弹框
-        if (!srcFileInfo.isDirectory && !destFileInfo.isDirectory) {
-            println(Pair(srcFileInfo.path, destFileInfo.path))
-            fileOperationState.updateWarningFiles(Pair(srcFileInfo, destFileInfo))
-            // 阻止下面代码执行
-            while (fileOperationState.isWarningOperationDialog.value) {
-                delay(300)
-            }
-        } else {
-            return ""
-        }
-
-        // 保留文件
-        if (fileOperationState.warningOperationType.value == FileOperationType.Reserve) {
-            val path = destFileInfo.path.replace(destFileInfo.name, "")
-            val fileName = destFileInfo.name.replace(destFileInfo.mineType, "")
-            val fileNameRegex = "${Regex.escape(fileName)}(\\(\\d*\\))?".toRegex()
-            // 获取相同文件名
-            val files = path.getFileAndFolder()
-                .asSequence()
-                .filter { !it.isDirectory }
-                .map { it.name.replace(it.mineType, "") }
-                .map { fileNameRegex.find(it) }
-                .filter { it != null }
-                .map { it!!.value }
-                .sortedByDescending { it }
-                .toSet()
-
-            // 只存在一个文件
-            val size: Int
-            if (files.isEmpty() || files.size == 1) {
-                size = 1
-            } else {
-                // 存在多个文件
-                val oldSize = "\\([^()]*\\)\$".toRegex().find(files.first())!!.value
-                    .replace("(", "")
-                    .replace(")", "")
-                size = oldSize.toInt()
-            }
-
-            return "$path$fileName(${size + 1})${destFileInfo.mineType}"
-        }
-        return ""
     }
 
     fun cancelCopyFile() {
@@ -139,25 +90,6 @@ class FileState {
     }
 
     suspend fun pasteMoveFile(destPath: String, fileOperationState: FileOperationState) {
-        fileOperationState.title = "移动中..."
-        val fileInfos = PathUtils.traverse(srcPath)
-            .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.path })
-        fileOperationState.updateFileInfos(fileInfos)
-        for (fileInfo in fileInfos) {
-            if (fileOperationState.isCancel) return
-            while (fileOperationState.isStop) {
-                delay(100)
-            }
-            val status = FileUtils.moveFile(fileInfo.path, fileInfo.path.replace(srcPath, destPath))
-            if (status) {
-                fileOperationState.updateCurrentIndex()
-            } else {
-                fileOperationState.addLog(fileInfo.path)
-            }
-        }
-        fileOperationState.updateFinished(true)
-        _isPasteMoveFile.value = false
-        srcPath = ""
     }
 
     fun cancelMoveFile() {
@@ -197,5 +129,86 @@ class FileState {
     val fileInfo: StateFlow<FileInfo?> = _fileInfo
     fun updateFileInfo(data: FileInfo?) {
         _fileInfo.value = data
+    }
+
+    private suspend fun generateNewName(
+        srcFileInfo: FileInfo,
+        destFileInfo: FileInfo,
+        fileOperationState: FileOperationState,
+    ): String {
+        println("${srcFileInfo.path} -> ${destFileInfo.path} ${srcFileInfo.isDirectory} ${destFileInfo.isDirectory}")
+        var newDestFileInfo = destFileInfo
+        if (srcFileInfo.name == destFileInfo.name) {
+            println("name")
+            // 文件复制到文件
+            // 显示操作弹框 阻止下面代码执行
+            fileOperationState.updateWarningFiles(Pair(srcFileInfo, destFileInfo))
+            while (fileOperationState.isWarningOperationDialog.value) {
+                delay(300)
+            }
+        } else if (srcFileInfo.isDirectory && destFileInfo.isDirectory) {
+            println("isDirectory")
+            // 文件夹复制到文件夹
+            try {
+                newDestFileInfo = FileUtils.getFile(destFileInfo.path, srcFileInfo.name)
+                // 显示操作弹框 阻止下面代码执行
+                fileOperationState.updateWarningFiles(Pair(srcFileInfo, newDestFileInfo))
+                while (fileOperationState.isWarningOperationDialog.value) {
+                    delay(300)
+                }
+            } catch (e: Exception) {
+                return ""
+            }
+        } else {
+            return ""
+        }
+
+        // 保留文件
+        if (fileOperationState.warningOperationType.value == FileOperationType.Reserve) {
+            val path = newDestFileInfo.path.replaceLast(newDestFileInfo.name, "")
+            val fileName = if (newDestFileInfo.isDirectory)
+                newDestFileInfo.name
+            else
+                newDestFileInfo.name.replaceLast(newDestFileInfo.mineType, "")
+
+            val fileNameRegex = "${Regex.escape(fileName)}(\\(\\d*\\))?".toRegex()
+            println("path = $path")
+            // 获取相同文件名
+            val files = path.getFileAndFolder()
+                .asSequence()
+                .filter {
+                    if (it.isDirectory) {
+                        true
+                    } else {
+                        !it.isDirectory
+                    }
+                }
+                .map {
+                    if (it.isDirectory) {
+                        it.name
+                    } else {
+                        it.name.replace(it.mineType, "")
+                    }
+                }
+                .map { fileNameRegex.find(it) }
+                .filter { it != null }
+                .map { it!!.value }
+                .sortedByDescending { it }
+                .toSet()
+
+            // 只存在一个文件
+            val size: Int
+            if (files.isEmpty() || files.size == 1) {
+                size = 1
+            } else {
+                // 存在多个文件
+                val oldSize = "\\([^()]*\\)\$".toRegex().find(files.first())!!.value
+                    .replace("(", "")
+                    .replace(")", "")
+                size = oldSize.toInt()
+            }
+            return "$path$fileName(${size + 1})${newDestFileInfo.mineType}"
+        }
+        return ""
     }
 }
