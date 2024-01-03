@@ -18,9 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import app.filemanager.data.file.FileExtensions
 import app.filemanager.data.file.FileFilterType
-import app.filemanager.db.FileManagerDatabase
 import app.filemanager.ui.state.file.FileFilterState
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -36,7 +34,7 @@ class FileFilterManagerScreen(private val filterType: String) : Screen {
         val fileFilterState = koinInject<FileFilterState>()
         val fileFilterType = FileFilterType.valueOf(filterType)
         // TODO 临时
-        val filter = fileFilterState.filterFileTypes.filter { it.iconType == fileFilterType }
+        val filter = fileFilterState.filterFileTypes.filter { it.type == fileFilterType }
 
         val snackbarHostState = remember { SnackbarHostState() }
         Scaffold(
@@ -65,7 +63,7 @@ class FileFilterManagerScreen(private val filterType: String) : Screen {
             }
         ) {
             LazyColumn(Modifier.padding(it)) {
-                items(FileExtensions.getExtensions(fileFilterType)) { type ->
+                items(fileFilterState.getExtensions(fileFilterType)) { type ->
                     ListItem(
                         headlineContent = { Text(type) },
                         trailingContent = {

@@ -1,15 +1,26 @@
 package app.filemanager.ui.state.file
 
 import androidx.compose.runtime.mutableStateListOf
-import app.filemanager.data.FileInfo
-import app.filemanager.data.file.FileExtensions
-import app.filemanager.data.file.FileFilter
 import app.filemanager.data.file.FileFilterSort
 import app.filemanager.data.file.FileFilterType
+import app.filemanager.data.file.FileInfo
+import app.filemanager.db.FileFilter
+import app.filemanager.db.FileManagerDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
-class FileFilterState {
+class FileFilterState : KoinComponent {
+    private val database by inject<FileManagerDatabase>()
+
+    val filterFileTypes = mutableListOf<FileFilter>()
+
+    init {
+        filterFileTypes.clear()
+        filterFileTypes.addAll(database.fileFilterQueries.queryAllByLimit(0, 100).executeAsList())
+    }
+
     private val _updateKey: MutableStateFlow<Int> = MutableStateFlow(0)
     val updateKey: StateFlow<Int> = _updateKey
     fun updateFilerKey() {
@@ -36,7 +47,6 @@ class FileFilterState {
         _updateKey.value++
     }
 
-
     // 过滤的文件类型
     val filterFileExtensions = mutableStateListOf<FileFilterType>()
 
@@ -48,105 +58,6 @@ class FileFilterState {
         _updateKey.value++
     }
 
-    val filterFileTypes = listOf(
-        FileFilter(
-            name = "图片",
-            iconType = FileFilterType.Image,
-        ),
-        FileFilter(
-            name = "音乐",
-            iconType = FileFilterType.Audio,
-        ),
-        FileFilter(
-            name = "视频",
-            iconType = FileFilterType.Video,
-        ),
-        FileFilter(
-            name = "文档",
-            iconType = FileFilterType.Text,
-        ),
-        FileFilter(
-            name = "可执行",
-            iconType = FileFilterType.Executable,
-        ),
-        FileFilter(
-            name = "压缩",
-            iconType = FileFilterType.Compressed,
-        ),
-        FileFilter(
-            name = "原始图像",
-            iconType = FileFilterType.ImageRaw,
-        ),
-        FileFilter(
-            name = "矢量图",
-            iconType = FileFilterType.ImageVector,
-        ),
-        FileFilter(
-            name = "游戏",
-            iconType = FileFilterType.Game,
-        ),
-        FileFilter(
-            name = "3D",
-            iconType = FileFilterType.Image3D,
-        ),
-        FileFilter(
-            name = "网页",
-            iconType = FileFilterType.Web,
-        ),
-        FileFilter(
-            name = "页面布局",
-            iconType = FileFilterType.PageLayout,
-        ),
-        FileFilter(
-            name = "CAD",
-            iconType = FileFilterType.CAD,
-        ),
-        FileFilter(
-            name = "数据库",
-            iconType = FileFilterType.Database,
-        ),
-        FileFilter(
-            name = "插件",
-            iconType = FileFilterType.Plugin,
-        ),
-        FileFilter(
-            name = "字体",
-            iconType = FileFilterType.Font,
-        ),
-        FileFilter(
-            name = "系统",
-            iconType = FileFilterType.System,
-        ),
-        FileFilter(
-            name = "设置",
-            iconType = FileFilterType.Settings,
-        ),
-        FileFilter(
-            name = "加密",
-            iconType = FileFilterType.Encoded,
-        ),
-        FileFilter(
-            name = "位置",
-            iconType = FileFilterType.GIS,
-        ),
-        FileFilter(
-            name = "磁盘映像",
-            iconType = FileFilterType.Disk,
-        ),
-        FileFilter(
-            name = "开发",
-            iconType = FileFilterType.Developer,
-        ),
-        FileFilter(
-            name = "备份",
-            iconType = FileFilterType.Backup,
-        ),
-        FileFilter(
-            name = "杂项",
-            iconType = FileFilterType.Misc,
-        ),
-    )
-
     fun filter(fileInfos: List<FileInfo>, updateKey: Int): List<FileInfo> {
         var files = fileInfos
         if (_isHideFile.value) {
@@ -155,7 +66,7 @@ class FileFilterState {
 
         for (type in filterFileExtensions) {
             files =
-                files.filter { FileExtensions.getExtensions(type).contains(it.mineType) }
+                files.filter { getExtensions(type).contains(it.mineType) }
         }
 
         val searchText = searchText.value
@@ -200,5 +111,21 @@ class FileFilterState {
     val isCreateDialog: StateFlow<Boolean> = _isCreateDialog
     fun updateCreateDialog(value: Boolean) {
         _isCreateDialog.value = value
+    }
+
+    fun getExtensions(type: FileFilterType): List<String> {
+        val filter = filterFileTypes.filter { it.type == type }
+        if (filter.isNotEmpty()) {
+            return filter.last().extensions
+        }
+        return emptyList()
+    }
+
+    fun getExtensionTypeByFileExtension(type: String): FileFilterType? {
+        val filter = filterFileTypes.filter { it.extensions.contains(type) }
+        if (filter.isEmpty()) {
+            return null
+        }
+        return filter.first().type
     }
 }

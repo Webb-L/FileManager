@@ -2,7 +2,7 @@ package app.filemanager.extensions
 
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.toLowerCase
-import app.filemanager.data.FileInfo
+import app.filemanager.data.file.FileInfo
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths

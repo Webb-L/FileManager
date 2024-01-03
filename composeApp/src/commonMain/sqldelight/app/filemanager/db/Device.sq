@@ -1,8 +1,10 @@
+import app.filemanager.data.file.DeviceType;
+
 CREATE TABLE Device
 (
-    id   TEXT NOT NULL CONSTRAINT Device_pk PRIMARY KEY CONSTRAINT Device_pk_2 UNIQUE,
-    name TEXT NOT NULL,
-    type TEXT NOT NULL
+    id   TEXT               NOT NULL CONSTRAINT Device_pk PRIMARY KEY CONSTRAINT Device_pk_2 UNIQUE,
+    name TEXT               NOT NULL,
+    type TEXT AS DeviceType NOT NULL
 );
 
 insert:

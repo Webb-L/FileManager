@@ -1,4 +1,4 @@
-package app.filemanager.data
+package app.filemanager.data.file
 
 data class FileInfo(
     val name: String,

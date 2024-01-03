@@ -19,7 +19,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import app.filemanager.data.file.FileExtensions
 import app.filemanager.data.file.getFileFilterType
 import app.filemanager.ui.components.TextFieldDialog
 import app.filemanager.ui.state.file.FileFilterState
@@ -69,16 +68,16 @@ class FileFilterScreen : Screen {
                         headlineContent = { Text(fileFilter.name) },
                         supportingContent = {
                             Text(
-                                FileExtensions.getExtensions(fileFilter.iconType).joinToString(", "),
+                                fileFilterState.getExtensions(fileFilter.type).joinToString(", "),
                                 maxLines = 3,
                                 overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.bodySmall
                             )
                         },
-                        leadingContent = { getFileFilterType(fileFilter.iconType) },
+                        leadingContent = { getFileFilterType(fileFilter.type) },
                         trailingContent = { Icon(Icons.Default.ChevronRight, null) },
                         modifier = Modifier.clickable {
-                            navigator.push(FileFilterManagerScreen(fileFilter.iconType.toString()))
+                            navigator.push(FileFilterManagerScreen(fileFilter.type.toString()))
                         }
                     )
                 }

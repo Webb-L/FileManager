@@ -26,7 +26,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import app.filemanager.data.FileInfo
+import app.filemanager.data.file.FileInfo
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
 import app.filemanager.ui.state.file.FileOperationState

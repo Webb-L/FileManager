@@ -1,7 +1,7 @@
 package app.filemanager.utils
 
-import app.filemanager.data.FileInfo
-import app.filemanager.data.file.FileFilter
+import app.filemanager.data.file.FileInfo
+import app.filemanager.db.FileFilter
 
 object VerificationUtils {
     fun folder(text: String, fileInfos: List<FileInfo>, ignoreName: List<String> = emptyList()): Pair<Boolean, String> {

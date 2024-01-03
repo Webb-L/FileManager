@@ -1,6 +1,6 @@
 package app.filemanager.ui.state.file
 
-import app.filemanager.data.FileInfo
+import app.filemanager.data.file.FileInfo
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.replaceLast
 import app.filemanager.utils.FileUtils

@@ -1,11 +1,14 @@
+import app.filemanager.data.file.FileProtocol;
+import app.filemanager.data.main.DrawerBookmarkType;
+
 CREATE TABLE FileBookmark
 (
     id          INTEGER NOT NULL CONSTRAINT FileBookmark_pk PRIMARY KEY AUTOINCREMENT CONSTRAINT FileBookmark_pk_2 UNIQUE,
-    name        TEXT    NOT NULL,
-    type        TEXT    NOT NULL,
-    path        TEXT    NOT NULL,
-    protocol    TEXT    NOT NULL,
-    protocolId TEXT,
+    name        TEXT                            NOT NULL,
+    type        TEXT AS DrawerBookmarkType      NOT NULL,
+    path        TEXT                            NOT NULL,
+    protocol    TEXT AS FileProtocol            NOT NULL,
+    protocolId  TEXT,
     icon        TEXT,
     sort        INTEGER NOT NULL
 );
@@ -16,3 +19,6 @@ CREATE UNIQUE INDEX FileBookmark_id_uindex
 insert:
 INSERT INTO FileBookmark (name, type, path, protocol, protocolId, icon, sort)
 VALUES (?, ?, ?, ?, ?, ?, ?);
+
+deleteById:
+DELETE FROM FileBookmark WHERE id = ?;

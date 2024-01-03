@@ -17,7 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import app.filemanager.data.FileInfo
+import app.filemanager.data.file.FileInfo
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.AppDrawer

@@ -1,6 +1,6 @@
 package app.filemanager.data.main
 
-enum class DrawerBookmarkIcon {
+enum class DrawerBookmarkType {
     Home,
     Image,
     Audio,
@@ -13,7 +13,7 @@ enum class DrawerBookmarkIcon {
 data class DrawerBookmark(
     val name: String,
     val path: String,
-    val iconType: DrawerBookmarkIcon,
+    val iconType: DrawerBookmarkType,
     val iconPath: String = ""
 )
 

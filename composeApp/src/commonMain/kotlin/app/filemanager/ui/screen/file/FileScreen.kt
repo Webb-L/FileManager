@@ -129,16 +129,16 @@ class FileScreen(
             }
             Row(Modifier.horizontalScroll(rememberScrollState()).weight(1f)) {
                 fileFilterState.filterFileTypes.forEachIndexed { index, fileFilter ->
-                    val isSelected = fileFilterState.filterFileExtensions.contains(fileFilter.iconType)
+                    val isSelected = fileFilterState.filterFileExtensions.contains(fileFilter.type)
                     FilterChip(selected = isSelected,
                         label = { Text(fileFilter.name) },
-                        leadingIcon = { getFileFilterType(fileFilter.iconType) },
+                        leadingIcon = { getFileFilterType(fileFilter.type) },
                         shape = RoundedCornerShape(25.dp),
                         onClick = {
                             if (isSelected) {
-                                fileFilterState.filterFileExtensions.remove(fileFilter.iconType)
+                                fileFilterState.filterFileExtensions.remove(fileFilter.type)
                             } else {
-                                fileFilterState.filterFileExtensions.add(fileFilter.iconType)
+                                fileFilterState.filterFileExtensions.add(fileFilter.type)
                             }
                             fileFilterState.updateFilerKey()
                         })

@@ -1,10 +1,12 @@
+import kotlin.Boolean;
+
 CREATE TABLE DevicePermissions
 (
-    deviceId TEXT    NOT NULL,
-    path      TEXT    NOT NULL,
-    useAll   INTEGER NOT NULL,
-    read      INTEGER NOT NULL,
-    write     INTEGER NOT NULL
+    deviceId  TEXT               NOT NULL,
+    path      TEXT               NOT NULL,
+    useAll    INTEGER AS Boolean NOT NULL,
+    read      INTEGER AS Boolean NOT NULL,
+    write     INTEGER AS Boolean NOT NULL
 );
 
 insert:

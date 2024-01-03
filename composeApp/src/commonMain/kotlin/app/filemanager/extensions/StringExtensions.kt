@@ -1,6 +1,6 @@
 package app.filemanager.extensions
 
-import app.filemanager.data.FileInfo
+import app.filemanager.data.file.FileInfo
 import app.filemanager.utils.PathUtils
 
 fun String.replaceLast(oldValue: String, newValue: String): String {

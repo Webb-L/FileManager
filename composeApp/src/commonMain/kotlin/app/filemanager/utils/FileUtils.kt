@@ -1,6 +1,6 @@
 package app.filemanager.utils
 
-import app.filemanager.data.FileInfo
+import app.filemanager.data.file.FileInfo
 
 internal expect object FileUtils {
     fun getFile(path: String): FileInfo

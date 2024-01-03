@@ -54,6 +54,7 @@ kotlin {
             implementation(libs.koin.core)
             implementation(libs.koin.test)
             implementation(libs.koin.compose)
+            implementation(libs.sqlDelight.driver.adapters)
 
             @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
             implementation(compose.components.resources)

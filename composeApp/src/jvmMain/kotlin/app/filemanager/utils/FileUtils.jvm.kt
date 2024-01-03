@@ -1,6 +1,6 @@
 package app.filemanager.utils
 
-import app.filemanager.data.FileInfo
+import app.filemanager.data.file.FileInfo
 import app.filemanager.extensions.toFileInfo
 import io.github.aakira.napier.Napier
 import java.awt.Desktop

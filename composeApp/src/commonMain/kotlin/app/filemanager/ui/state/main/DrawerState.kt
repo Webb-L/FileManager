@@ -2,7 +2,7 @@ package app.filemanager.ui.state.main
 
 import androidx.compose.runtime.mutableStateListOf
 import app.filemanager.data.main.DrawerBookmark
-import app.filemanager.data.main.DrawerBookmarkIcon
+import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.data.main.DrawerDevice
 import app.filemanager.data.main.DrawerNetwork
 import app.filemanager.utils.PathUtils.getHomePath
@@ -24,27 +24,27 @@ class DrawerState() {
         val separator = getPathSeparator()
         bookmarks.addAll(
             listOf(
-                DrawerBookmark(name = "主目录", path = homePath, iconType = DrawerBookmarkIcon.Home),
+                DrawerBookmark(name = "主目录", path = homePath, iconType = DrawerBookmarkType.Home),
                 DrawerBookmark(
                     name = "图片",
                     path = "$homePath${separator}Pictures",
-                    iconType = DrawerBookmarkIcon.Image
+                    iconType = DrawerBookmarkType.Image
                 ),
-                DrawerBookmark(name = "音乐", path = "$homePath${separator}Music", iconType = DrawerBookmarkIcon.Audio),
+                DrawerBookmark(name = "音乐", path = "$homePath${separator}Music", iconType = DrawerBookmarkType.Audio),
                 DrawerBookmark(
                     name = "视频",
                     path = "$homePath${separator}Videos",
-                    iconType = DrawerBookmarkIcon.Video
+                    iconType = DrawerBookmarkType.Video
                 ),
                 DrawerBookmark(
                     name = "文档",
                     path = "$homePath${separator}Documents",
-                    iconType = DrawerBookmarkIcon.Document
+                    iconType = DrawerBookmarkType.Document
                 ),
                 DrawerBookmark(
                     name = "下载",
                     path = "$homePath${separator}Downloads",
-                    iconType = DrawerBookmarkIcon.Download
+                    iconType = DrawerBookmarkType.Download
                 ),
             )
         )

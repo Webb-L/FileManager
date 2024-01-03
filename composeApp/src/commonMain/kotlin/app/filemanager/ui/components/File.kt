@@ -17,12 +17,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import app.filemanager.data.FileInfo
-import app.filemanager.data.file.FileExtensions
-import app.filemanager.data.file.FileFilterType
+import app.filemanager.data.file.FileInfo
+import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.getFileFilterType
+import app.filemanager.db.FileFavorite
+import app.filemanager.db.FileManagerDatabase
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
+import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
 import kotlinx.coroutines.launch
@@ -75,15 +77,64 @@ fun FileCard(
                     }
                 },
                 leadingContent = { FileIcon(file) },
-                trailingContent = { FileCardMenu(file, fileState, onRemove) },
+                trailingContent = { FileCardMenu(file, onRemove) },
                 modifier = Modifier.clickable(onClick = onClick)
             )
         },
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FileFavoriteCard(
+    favorite: FileFavorite,
+    onClick: () -> Unit,
+    onRemove: () -> Unit
+) {
+    ListItem(
+        headlineContent = { if (favorite.name.isNotEmpty()) Text(favorite.name) },
+        supportingContent = {
+            Row {
+//                Text(favorite.user, style = MaterialTheme.typography.bodySmall)
+//                Spacer(Modifier.width(8.dp))
+//                Text(favorite.userGroup, style = MaterialTheme.typography.bodySmall)
+//                Spacer(Modifier.width(8.dp))
+                if (favorite.isDirectory) {
+                    Text("${favorite.size}项", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    Text(favorite.size.formatFileSize(), style = MaterialTheme.typography.bodySmall)
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(favorite.createdDate.timestampToSyncDate(), style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        leadingContent = {
+            FileIcon(
+                FileInfo(
+                    name = "",
+                    description = "",
+                    isDirectory = favorite.isDirectory,
+                    isHidden = false,
+                    path = "",
+                    mineType = favorite.mineType,
+                    size = 0,
+                    permissions = 0,
+                    user = "",
+                    userGroup = "",
+                    createdDate = 0,
+                    updatedDate = 0
+                )
+            )
+        },
+        trailingContent = { FileFavoriteCardMenu(favorite = favorite, onRemove = onRemove) },
+        modifier = Modifier.clickable(onClick = onClick)
+    )
+}
+
 @Composable
 fun FileIcon(file: FileInfo) {
+    val fileFilterState = koinInject<FileFilterState>()
+
     if (file.isDirectory) {
         Icon(
             imageVector = Icons.Default.Folder,
@@ -92,28 +143,29 @@ fun FileIcon(file: FileInfo) {
         return
     }
 
-    val fileExtension = FileExtensions.getExtensionTypeByFileExtension(file.mineType)
-    if (fileExtension.isEmpty()) {
+    val fileExtension = fileFilterState.getExtensionTypeByFileExtension(file.mineType)
+    if (fileExtension == null) {
         Icon(
             Icons.Default.Note,
             contentDescription = file.name,
         )
         return
     }
-    getFileFilterType(FileFilterType.valueOf(fileExtension))
+    getFileFilterType(fileExtension)
 }
 
 @Composable
 fun FileCardMenu(
     file: FileInfo,
-    fileState: FileState,
     onRemove: (String) -> Unit
 ) {
+    val fileState = koinInject<FileState>()
     val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
     val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
     var expanded by remember { mutableStateOf(false) }
 
     val fileOperationState = koinInject<FileOperationState>()
+    val database = koinInject<FileManagerDatabase>()
 
     val scope = rememberCoroutineScope()
     Box(Modifier.wrapContentSize(Alignment.TopStart)) {
@@ -214,6 +266,20 @@ fun FileCardMenu(
             DropdownMenuItem(
                 text = { Text("收藏") },
                 onClick = {
+                    scope.launch {
+                        database.fileFavoriteQueries.insert(
+                            name = file.name,
+                            isDirectory = file.isDirectory,
+                            isFixed = false,
+                            path = file.path,
+                            mineType = file.mineType,
+                            size = file.size,
+                            createdDate = file.createdDate,
+                            updatedDate = file.updatedDate,
+                            protocol = FileProtocol.Local,
+                            protocolId = ""
+                        )
+                    }
                     expanded = false
                 },
                 leadingIcon = {
@@ -221,12 +287,13 @@ fun FileCardMenu(
                         Icons.Outlined.FavoriteBorder,
                         contentDescription = null
                     )
-                },
-                trailingIcon = { })
+                })
             DropdownMenuItem(
                 text = { Text("属性") },
                 onClick = {
-                    fileState.updateFileInfo(file)
+                    scope.launch {
+                        fileState.updateFileInfo(file)
+                    }
                     expanded = false
                 },
                 leadingIcon = {
@@ -234,8 +301,59 @@ fun FileCardMenu(
                         Icons.Outlined.Info,
                         contentDescription = null
                     )
+                })
+        }
+    }
+}
+
+@Composable
+fun FileFavoriteCardMenu(
+    favorite: FileFavorite,
+    onRemove: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(Modifier.wrapContentSize(Alignment.TopStart)) {
+        Icon(
+            Icons.Filled.MoreVert,
+            null,
+            modifier = Modifier
+                .clip(RoundedCornerShape(25.dp))
+                .clickable { expanded = true }
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = {
+                    if (favorite.isFixed) {
+                        Text("取消")
+                    } else {
+                        Text("固定")
+                    }
                 },
-                trailingIcon = { })
+                onClick = {
+                    expanded = false
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Outlined.VerticalAlignTop,
+                        contentDescription = null
+                    )
+                })
+            DropdownMenuItem(
+                text = { Text("删除") },
+                onClick = {
+                    onRemove()
+                    expanded = false
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Outlined.Delete,
+                        contentDescription = null
+                    )
+                })
         }
     }
 }

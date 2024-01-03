@@ -1,22 +1,30 @@
+import app.filemanager.data.file.FileProtocol;
+import kotlin.Boolean;
+
 CREATE TABLE FileFavorite
 (
-    id                  INTEGER     NOT NULL CONSTRAINT FileFavorite_pk PRIMARY KEY AUTOINCREMENT CONSTRAINT FileFavorite_pk_2 UNIQUE,
-    name                TEXT        NOT NULL,
-    isDirectory         INTEGER     NOT NULL,
-    isHidden            INTEGER     NOT NULL,
-    path                TEXT        NOT NULL,
-    mineType            TEXT        NOT NULL,
-    size                INTEGER     NOT NULL,
-    createdDate         INTEGER     NOT NULL,
-    updatedDate         INTEGER     NOT NULL,
-    type                TEXT        NOT NULL,
-    protocol            TEXT        NOT NULL,
-    protocol_id         TEXT
+    id                  INTEGER                         NOT NULL CONSTRAINT FileFavorite_pk PRIMARY KEY AUTOINCREMENT CONSTRAINT FileFavorite_pk_2 UNIQUE,
+    name                TEXT                            NOT NULL,
+    isDirectory         INTEGER     AS Boolean          NOT NULL,
+    isFixed             INTEGER     AS Boolean          NOT NULL,
+    path                TEXT                            NOT NULL,
+    mineType            TEXT                            NOT NULL,
+    size                INTEGER                         NOT NULL,
+    createdDate         INTEGER                         NOT NULL,
+    updatedDate         INTEGER                         NOT NULL,
+    protocol            TEXT        AS FileProtocol     NOT NULL,
+    protocolId          TEXT
 );
 
 CREATE UNIQUE INDEX FileFavorite_id_uindex
     ON FileFavorite (id);
 
 insert:
-INSERT INTO FileFavorite (name, isDirectory, isHidden, path, mineType, size, createdDate, updatedDate, type, protocol, protocol_id)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO FileFavorite (name, isDirectory, isFixed, path, mineType, size, createdDate, updatedDate, protocol, protocolId)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteById:
+DELETE FROM FileFavorite WHERE id = ?;
+
+queryAllByLimit:
+SELECT * FROM  FileFavorite ORDER BY isFixed DESC, name LIMIT :start, :end;

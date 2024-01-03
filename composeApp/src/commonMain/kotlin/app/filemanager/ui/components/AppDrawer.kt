@@ -14,7 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import app.filemanager.data.main.DrawerBookmarkIcon
+import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.service.WebSocketService
 import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.ui.state.main.MainState
@@ -144,13 +144,13 @@ private fun AppDrawerBookmark() {
             NavigationDrawerItem(
                 icon = {
                     val icon = when (bookmark.iconType) {
-                        DrawerBookmarkIcon.Home -> Icons.Default.Home
-                        DrawerBookmarkIcon.Image -> Icons.Default.Image
-                        DrawerBookmarkIcon.Audio -> Icons.Default.Headphones
-                        DrawerBookmarkIcon.Video -> Icons.Default.Videocam
-                        DrawerBookmarkIcon.Document -> Icons.Default.Description
-                        DrawerBookmarkIcon.Download -> Icons.Default.Download
-                        DrawerBookmarkIcon.Custom -> Icons.Default.Bookmark
+                        DrawerBookmarkType.Home -> Icons.Default.Home
+                        DrawerBookmarkType.Image -> Icons.Default.Image
+                        DrawerBookmarkType.Audio -> Icons.Default.Headphones
+                        DrawerBookmarkType.Video -> Icons.Default.Videocam
+                        DrawerBookmarkType.Document -> Icons.Default.Description
+                        DrawerBookmarkType.Download -> Icons.Default.Download
+                        DrawerBookmarkType.Custom -> Icons.Default.Bookmark
                     }
                     Icon(icon, null)
                 },

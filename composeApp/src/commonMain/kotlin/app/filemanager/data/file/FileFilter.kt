@@ -64,13 +64,6 @@ fun getFileFilterType(type: FileFilterType) {
     }
 }
 
-data class FileFilter(
-    val name: String,
-    val iconType: FileFilterType,
-    val isEnable: Boolean = true,
-    val iconPath: String = ""
-)
-
 enum class FileFilterSort(type: Int) {
     NameAsc(0),
     NameDesc(1),
