@@ -147,7 +147,6 @@ class FileFilterState {
         ),
     )
 
-
     fun filter(fileInfos: List<FileInfo>, updateKey: Int): List<FileInfo> {
         var files = fileInfos
         if (_isHideFile.value) {
@@ -195,5 +194,11 @@ class FileFilterState {
             FileFilterSort.UpdatedDateDesc -> files
                 .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.updatedDate })
         }
+    }
+
+    private val _isCreateDialog: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isCreateDialog: StateFlow<Boolean> = _isCreateDialog
+    fun updateCreateDialog(value: Boolean) {
+        _isCreateDialog.value = value
     }
 }

@@ -1,0 +1,13 @@
+CREATE TABLE Device
+(
+    id   TEXT NOT NULL CONSTRAINT Device_pk PRIMARY KEY CONSTRAINT Device_pk_2 UNIQUE,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL
+);
+
+insert:
+INSERT INTO Device (id, name, type)
+VALUES (?, ?, ?);
+
+updateNameById:
+UPDATE Device SET name = ? WHERE id = ? LIMIT 1;

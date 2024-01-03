@@ -83,6 +83,8 @@ kotlin {
         jsMain.dependencies {
             implementation(compose.html.core)
             implementation(libs.sqlDelight.driver.js)
+            implementation(npm("sql.js", "1.6.2"))
+            implementation(devNpm("copy-webpack-plugin", "9.1.0"))
         }
 
         iosMain.dependencies {
@@ -151,7 +153,7 @@ buildConfig {
 
 sqldelight {
     databases {
-        create("MyDatabase") {
+        create("FileManagerDatabase") {
             // Database configuration here.
             // https://cashapp.github.io/sqldelight
             packageName.set("app.filemanager.db")

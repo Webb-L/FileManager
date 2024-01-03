@@ -1,0 +1,22 @@
+CREATE TABLE FileFavorite
+(
+    id                  INTEGER     NOT NULL CONSTRAINT FileFavorite_pk PRIMARY KEY AUTOINCREMENT CONSTRAINT FileFavorite_pk_2 UNIQUE,
+    name                TEXT        NOT NULL,
+    isDirectory         INTEGER     NOT NULL,
+    isHidden            INTEGER     NOT NULL,
+    path                TEXT        NOT NULL,
+    mineType            TEXT        NOT NULL,
+    size                INTEGER     NOT NULL,
+    createdDate         INTEGER     NOT NULL,
+    updatedDate         INTEGER     NOT NULL,
+    type                TEXT        NOT NULL,
+    protocol            TEXT        NOT NULL,
+    protocol_id         TEXT
+);
+
+CREATE UNIQUE INDEX FileFavorite_id_uindex
+    ON FileFavorite (id);
+
+insert:
+INSERT INTO FileFavorite (name, isDirectory, isHidden, path, mineType, size, createdDate, updatedDate, type, protocol, protocol_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);

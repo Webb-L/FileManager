@@ -1,0 +1,15 @@
+CREATE TABLE FileFilter
+(
+    id         INTEGER NOT NULL CONSTRAINT File_Filter_PK_2 PRIMARY KEY AUTOINCREMENT CONSTRAINT File_Filter_PK UNIQUE,
+    name       TEXT    NOT NULL,
+    type       TEXT    NOT NULL,
+    extensions TEXT    NOT NULL,
+    icon       TEXT,
+    sort       INTEGER NOT NULL
+);
+
+CREATE UNIQUE INDEX file_filter_id_uindex ON FileFilter (id);
+
+insert:
+INSERT INTO FileFilter (name, type, extensions, icon, sort)
+VALUES (?, ?, ?, ?, ?);

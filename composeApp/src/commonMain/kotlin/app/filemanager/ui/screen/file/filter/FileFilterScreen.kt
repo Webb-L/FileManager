@@ -13,6 +13,8 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -21,6 +23,7 @@ import app.filemanager.data.file.FileExtensions
 import app.filemanager.data.file.getFileFilterType
 import app.filemanager.ui.components.TextFieldDialog
 import app.filemanager.ui.state.file.FileFilterState
+import app.filemanager.utils.VerificationUtils
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -53,7 +56,7 @@ class FileFilterScreen : Screen {
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
             floatingActionButton = {
-                ExtendedFloatingActionButton({ }) {
+                ExtendedFloatingActionButton({ fileFilterState.updateCreateDialog(true) }) {
                     Icon(Icons.Filled.Add, null)
                     Spacer(Modifier.width(8.dp))
                     Text("新增")
@@ -75,7 +78,7 @@ class FileFilterScreen : Screen {
                         leadingContent = { getFileFilterType(fileFilter.iconType) },
                         trailingContent = { Icon(Icons.Default.ChevronRight, null) },
                         modifier = Modifier.clickable {
-                            navigator.push(FileFilterManageScreen(fileFilter.iconType.toString()))
+                            navigator.push(FileFilterManagerScreen(fileFilter.iconType.toString()))
                         }
                     )
                 }
@@ -83,10 +86,23 @@ class FileFilterScreen : Screen {
         }
 
 
-        TextFieldDialog(
-            "新增类型",
-            label = "名称",
-            verifyFun = { text -> Pair(false, "") }
-        ) {}
+        DialogContent()
+    }
+
+    @Composable
+    fun DialogContent() {
+        val fileFilterState = koinInject<FileFilterState>()
+        val isCreateDialog by fileFilterState.isCreateDialog.collectAsState()
+
+        if (isCreateDialog) {
+            TextFieldDialog(
+                "新增类型",
+                label = "名称",
+                verifyFun = { text -> VerificationUtils.filterType(text, fileFilterState.filterFileTypes) }
+            ) {
+                fileFilterState.updateCreateDialog(false)
+                if (it.isEmpty()) return@TextFieldDialog
+            }
+        }
     }
 }

@@ -20,13 +20,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileExtensions
 import app.filemanager.data.file.FileFilterType
+import app.filemanager.db.FileManagerDatabase
 import app.filemanager.ui.state.file.FileFilterState
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import org.koin.compose.koinInject
 
-class FileFilterManageScreen(private val filterType: String) : Screen {
+class FileFilterManagerScreen(private val filterType: String) : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {

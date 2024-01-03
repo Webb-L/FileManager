@@ -1,0 +1,18 @@
+CREATE TABLE FileBookmark
+(
+    id          INTEGER NOT NULL CONSTRAINT FileBookmark_pk PRIMARY KEY AUTOINCREMENT CONSTRAINT FileBookmark_pk_2 UNIQUE,
+    name        TEXT    NOT NULL,
+    type        TEXT    NOT NULL,
+    path        TEXT    NOT NULL,
+    protocol    TEXT    NOT NULL,
+    protocolId TEXT,
+    icon        TEXT,
+    sort        INTEGER NOT NULL
+);
+
+CREATE UNIQUE INDEX FileBookmark_id_uindex
+    ON FileBookmark (id);
+
+insert:
+INSERT INTO FileBookmark (name, type, path, protocol, protocolId, icon, sort)
+VALUES (?, ?, ?, ?, ?, ?, ?);
