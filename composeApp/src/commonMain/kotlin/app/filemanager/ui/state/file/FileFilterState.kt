@@ -14,7 +14,7 @@ import org.koin.core.component.inject
 class FileFilterState : KoinComponent {
     private val database by inject<FileManagerDatabase>()
 
-    val filterFileTypes = mutableListOf<FileFilter>()
+    val filterFileTypes = mutableStateListOf<FileFilter>()
 
     init {
         filterFileTypes.clear()
@@ -113,6 +113,12 @@ class FileFilterState : KoinComponent {
         _isCreateDialog.value = value
     }
 
+    private val _isSort: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isSort: StateFlow<Boolean> = _isSort
+    fun updateSort(value: Boolean) {
+        _isSort.value = value
+    }
+
     fun getExtensions(type: FileFilterType): List<String> {
         val filter = filterFileTypes.filter { it.type == type }
         if (filter.isNotEmpty()) {
@@ -121,11 +127,34 @@ class FileFilterState : KoinComponent {
         return emptyList()
     }
 
-    fun getExtensionTypeByFileExtension(type: String): FileFilterType? {
+    fun getFilterFileByFileExtension(type: String): FileFilter? {
         val filter = filterFileTypes.filter { it.extensions.contains(type) }
         if (filter.isEmpty()) {
             return null
         }
-        return filter.first().type
+        return filter.first()
+    }
+
+    fun getFileFilter(filterId: Long) = database.fileFilterQueries.queryById(filterId).executeAsOne()
+    fun updateFileFilter(extensions: List<String>, id: Long) {
+        database.fileFilterQueries.updateExtensionsById(extensions, id)
+    }
+
+    fun deleteFilter(fileFilter: FileFilter) {
+        database.fileFilterQueries.deleteById(fileFilter.id)
+        filterFileTypes.clear()
+        filterFileTypes.addAll(database.fileFilterQueries.queryAllByLimit(0, 100).executeAsList())
+    }
+
+    fun createFilter(name: String) {
+        database.fileFilterQueries.insert(
+            name = name,
+            type = FileFilterType.Custom,
+            extensions = listOf(),
+            icon = null,
+            sort = 0
+        )
+        filterFileTypes.clear()
+        filterFileTypes.addAll(database.fileFilterQueries.queryAllByLimit(0, 100).executeAsList())
     }
 }

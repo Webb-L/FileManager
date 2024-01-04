@@ -1,3 +1,3 @@
 package app.filemanager.di
 
-fun appModule() = listOf(commonModule, platformModule)
+fun appModule() = listOf(commonScreenModule, commonDatabaseModule, platformModule)

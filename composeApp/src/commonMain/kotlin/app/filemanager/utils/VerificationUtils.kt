@@ -24,4 +24,13 @@ object VerificationUtils {
             Pair(false, "")
         }
     }
+
+    fun filterExtensions(text: String, extensions: List<String>): Pair<Boolean, String> {
+        val filter = extensions.filter { it.replaceFirst(".", "") == text.replaceFirst(".", "") }
+        return if (filter.isNotEmpty()) {
+            Pair(true, "“$text”，已存在了。换个名称试试吧！")
+        } else {
+            Pair(false, "")
+        }
+    }
 }

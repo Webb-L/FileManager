@@ -9,10 +9,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileInfo
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
+import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileOperationType
 import app.filemanager.ui.state.main.MainState
@@ -43,6 +41,8 @@ fun FileInfoDialog(fileInfo: FileInfo, onCancel: () -> Unit) {
     val rootPath by mainState.rootPath.collectAsState()
     val rootPathTotalSpace = FileUtils.totalSpace(rootPath)
     val rootPathFreeSpace = FileUtils.freeSpace(rootPath)
+
+    val fileFilterState = koinInject<FileFilterState>()
 
     var fileCount by remember {
         mutableStateOf(0)
@@ -130,7 +130,15 @@ fun FileInfoDialog(fileInfo: FileInfo, onCancel: () -> Unit) {
                         }
                         Spacer(Modifier.width(8.dp))
                         DisableSelection {
-                            Text(if (fileInfo.isDirectory) "文件夹" else "文件", Modifier.weight(0.7f))
+                            if (fileInfo.isDirectory) {
+                                Text("文件夹", Modifier.weight(0.7f))
+                            } else {
+                                val fileFilter = fileFilterState.getFilterFileByFileExtension(fileInfo.mineType)
+                                Text(
+                                    "文件${if (fileFilter != null) "(${fileFilter.name})" else ""}",
+                                    Modifier.weight(0.7f)
+                                )
+                            }
                         }
                     }
                     Row(Modifier.fillMaxWidth().padding(4.dp)) {
@@ -242,6 +250,7 @@ fun TextFieldDialog(
     title: String,
     label: String = "",
     initText: String = "",
+    leadingIcon: @Composable (() -> Unit)? = null,
     verifyFun: (String) -> Pair<Boolean, String> = { _ -> Pair(false, "") },
     onCancel: (String) -> Unit
 ) {
@@ -259,6 +268,7 @@ fun TextFieldDialog(
                 isError = verify.first,
                 modifier = Modifier.focusRequester(focusRequester)
                     .semantics { if (verify.first) error(verify.second) },
+                leadingIcon = leadingIcon,
                 trailingIcon = {
                     if (text.isNotEmpty()) {
                         IconButton({ text = "" }) {

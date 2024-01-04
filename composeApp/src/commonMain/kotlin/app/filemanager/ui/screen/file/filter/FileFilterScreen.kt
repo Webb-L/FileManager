@@ -6,17 +6,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DragHandle
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.getFileFilterType
@@ -26,6 +26,7 @@ import app.filemanager.utils.VerificationUtils
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 class FileFilterScreen : Screen {
@@ -35,7 +36,9 @@ class FileFilterScreen : Screen {
         val navigator = LocalNavigator.currentOrThrow
 
         val fileFilterState = koinInject<FileFilterState>()
+        val isSort by fileFilterState.isSort.collectAsState()
 
+        val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
         Scaffold(
             topBar = {
@@ -47,7 +50,7 @@ class FileFilterScreen : Screen {
                         }
                     },
                     actions = {
-                        IconButton({ }) {
+                        IconButton({ fileFilterState.updateSort(true) }) {
                             Icon(Icons.Default.Sort, null)
                         }
                     }
@@ -75,9 +78,43 @@ class FileFilterScreen : Screen {
                             )
                         },
                         leadingContent = { getFileFilterType(fileFilter.type) },
-                        trailingContent = { Icon(Icons.Default.ChevronRight, null) },
+                        trailingContent = {
+                            if (isSort) {
+                                Icon(
+                                    Icons.Outlined.DragHandle,
+                                    null,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(25.dp))
+                                        .clickable {
+
+                                        }
+                                )
+                                return@ListItem
+                            }
+                            Icon(
+                                Icons.Outlined.Delete,
+                                null,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(25.dp))
+                                    .clickable {
+                                        scope.launch {
+                                            when (snackbarHostState.showSnackbar(
+                                                message = fileFilter.name,
+                                                actionLabel = "删除",
+                                                withDismissAction = true,
+                                                duration = SnackbarDuration.Short
+                                            )) {
+                                                SnackbarResult.Dismissed -> {}
+                                                SnackbarResult.ActionPerformed -> {
+                                                    fileFilterState.deleteFilter(fileFilter)
+                                                }
+                                            }
+                                        }
+                                    }
+                            )
+                        },
                         modifier = Modifier.clickable {
-                            navigator.push(FileFilterManagerScreen(fileFilter.type.toString()))
+                            navigator.push(FileFilterManagerScreen(fileFilter.id))
                         }
                     )
                 }
@@ -101,6 +138,7 @@ class FileFilterScreen : Screen {
             ) {
                 fileFilterState.updateCreateDialog(false)
                 if (it.isEmpty()) return@TextFieldDialog
+                fileFilterState.createFilter(it)
             }
         }
     }

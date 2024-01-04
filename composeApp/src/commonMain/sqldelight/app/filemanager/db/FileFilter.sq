@@ -93,5 +93,13 @@ VALUES (?, ?, ?, ?, ?);
 deleteById:
 DELETE FROM FileFilter WHERE id = ?;
 
+updateExtensionsById:
+UPDATE FileFilter
+SET extensions = ?
+WHERE id = ?;
+
+queryById:
+SELECT * FROM FileFilter WHERE id = ?;
+
 queryAllByLimit:
 SELECT * FROM  FileFilter ORDER BY sort DESC LIMIT :start, :end;

@@ -60,7 +60,7 @@ fun getFileFilterType(type: FileFilterType) {
         FileFilterType.Developer -> Icon(Icons.Default.DataObject, null)
         FileFilterType.Backup -> Icon(Icons.Default.Backup, null)
         FileFilterType.Misc -> Icon(Icons.Default.HideSource, null)
-        FileFilterType.Custom -> Icon(Icons.Default.Filter, null)
+        FileFilterType.Custom -> Icon(Icons.Default.MoreHoriz, null)
     }
 }
 

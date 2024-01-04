@@ -10,7 +10,8 @@ import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.ui.state.main.MainState
 import org.koin.dsl.module
 
-val commonModule = module {
+
+val commonScreenModule = module {
     single {
         MainState()
     }
@@ -29,7 +30,9 @@ val commonModule = module {
     single {
         FileFavoriteState()
     }
+}
 
+val commonDatabaseModule = module {
     single {
         val driverFactory = DriverFactory()
         createDatabase(driverFactory)

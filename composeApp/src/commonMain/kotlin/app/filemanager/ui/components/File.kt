@@ -143,15 +143,15 @@ fun FileIcon(file: FileInfo) {
         return
     }
 
-    val fileExtension = fileFilterState.getExtensionTypeByFileExtension(file.mineType)
-    if (fileExtension == null) {
+    val fileFilter = fileFilterState.getFilterFileByFileExtension(file.mineType)
+    if (fileFilter == null) {
         Icon(
             Icons.Default.Note,
             contentDescription = file.name,
         )
         return
     }
-    getFileFilterType(fileExtension)
+    getFileFilterType(fileFilter.type)
 }
 
 @Composable
