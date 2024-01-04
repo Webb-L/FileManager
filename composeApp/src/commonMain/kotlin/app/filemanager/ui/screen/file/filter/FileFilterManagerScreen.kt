@@ -4,13 +4,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.filemanager.db.FileFilter
-import app.filemanager.ui.components.NullDataError
+import app.filemanager.ui.components.GridList
 import app.filemanager.ui.components.TextFieldDialog
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.utils.VerificationUtils
@@ -44,15 +42,15 @@ class FileFilterManagerScreen(private val filterId: Long) : Screen {
                 TopAppBar(
                     title = { Text("${fileFilter.name} - 过滤类型") },
                     navigationIcon = {
-                        IconButton({ navigator.pop() }) {
+                        IconButton({
+                            // TODO 这里应该是HomeNavigator文件处理
+                            fileFilterState.syncFilterFileTypes()
+                            navigator.pop()
+                        }) {
                             Icon(Icons.Default.ArrowBack, null)
                         }
                     },
-                    actions = {
-                        IconButton({ }) {
-                            Icon(Icons.Default.Search, null)
-                        }
-                    }
+                    actions = {}
                 )
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -64,12 +62,12 @@ class FileFilterManagerScreen(private val filterId: Long) : Screen {
                 }
             }
         ) {
-            if (fileFilter.extensions.isEmpty()) {
-                NullDataError()
-                return@Scaffold
-            }
-            LazyColumn(Modifier.padding(it)) {
-                itemsIndexed(fileFilter.extensions) { index, type ->
+            val extensions = fileFilter.extensions
+            GridList(
+                isEmpty = extensions.isEmpty(),
+                modifier = Modifier.padding(it)
+            ) {
+                itemsIndexed(extensions) { index, type ->
                     ListItem(
                         headlineContent = { Text(type) },
                         trailingContent = {
@@ -80,7 +78,7 @@ class FileFilterManagerScreen(private val filterId: Long) : Screen {
                                     .clip(RoundedCornerShape(25.dp))
                                     .clickable {
                                         fileFilterState.updateFileFilter(
-                                            fileFilter.extensions
+                                            extensions
                                                 .toMutableList().apply {
                                                     removeAt(index)
                                                 },
@@ -89,7 +87,8 @@ class FileFilterManagerScreen(private val filterId: Long) : Screen {
                                         fileFilter = fileFilterState.getFileFilter(filterId)
                                     })
                         },
-                        modifier = Modifier.clickable {}
+                        modifier = Modifier
+                            .clickable {}
                     )
                 }
             }

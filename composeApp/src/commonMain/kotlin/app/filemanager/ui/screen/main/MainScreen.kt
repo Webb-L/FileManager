@@ -21,11 +21,11 @@ import app.filemanager.data.file.FileInfo
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.AppDrawer
+import app.filemanager.ui.navigator.HomeNavigator
 import app.filemanager.ui.state.main.MainState
 import app.filemanager.utils.PathUtils
 import app.filemanager.utils.PathUtils.getRootPaths
 import app.filemanager.utils.WindowSizeClass
-import cafe.adriel.voyager.navigator.Navigator
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,14 +48,14 @@ fun MainScreen(screenType: WindowSizeClass) {
             ),
             drawerContent = { AppDrawer() },
         ) {
-            Navigator(HomeScreen)
+            HomeNavigator()
         }
     } else {
         Row {
             if (listOf(WindowSizeClass.Medium, WindowSizeClass.Expanded).contains(screenType) && expandDrawer) {
                 AppDrawer()
             }
-            Navigator(HomeScreen)
+            HomeNavigator()
         }
     }
 }

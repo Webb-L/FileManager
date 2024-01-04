@@ -4,8 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -20,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.getFileFilterType
+import app.filemanager.ui.components.GridList
 import app.filemanager.ui.components.TextFieldDialog
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.utils.VerificationUtils
@@ -65,17 +65,26 @@ class FileFilterScreen : Screen {
                 }
             }
         ) {
-            LazyColumn(Modifier.padding(it)) {
-                items(fileFilterState.filterFileTypes) { fileFilter ->
+            val filterFileTypes = fileFilterState.filterFileTypes
+            GridList(
+                isEmpty = filterFileTypes.isEmpty(),
+                modifier = Modifier.padding(it)
+            ) {
+                items(filterFileTypes) { fileFilter ->
+                    val extensions = fileFilterState.getExtensions(fileFilter.type)
                     ListItem(
                         headlineContent = { Text(fileFilter.name) },
-                        supportingContent = {
-                            Text(
-                                fileFilterState.getExtensions(fileFilter.type).joinToString(", "),
-                                maxLines = 3,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                        supportingContent = if (extensions.isNotEmpty()) {
+                            {
+                                Text(
+                                    extensions.joinToString(", "),
+                                    maxLines = 3,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        } else {
+                            null
                         },
                         leadingContent = { getFileFilterType(fileFilter.type) },
                         trailingContent = {

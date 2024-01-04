@@ -38,7 +38,6 @@ fun FileCard(
     onClick: () -> Unit,
     onRemove: (String) -> Unit,
 ) {
-    val fileState = koinInject<FileState>()
     val dismissState = rememberDismissState()
 
     SwipeToDismiss(

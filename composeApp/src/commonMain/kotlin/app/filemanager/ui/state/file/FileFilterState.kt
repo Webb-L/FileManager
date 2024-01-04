@@ -17,8 +17,7 @@ class FileFilterState : KoinComponent {
     val filterFileTypes = mutableStateListOf<FileFilter>()
 
     init {
-        filterFileTypes.clear()
-        filterFileTypes.addAll(database.fileFilterQueries.queryAllByLimit(0, 100).executeAsList())
+        syncFilterFileTypes()
     }
 
     private val _updateKey: MutableStateFlow<Int> = MutableStateFlow(0)
@@ -142,8 +141,7 @@ class FileFilterState : KoinComponent {
 
     fun deleteFilter(fileFilter: FileFilter) {
         database.fileFilterQueries.deleteById(fileFilter.id)
-        filterFileTypes.clear()
-        filterFileTypes.addAll(database.fileFilterQueries.queryAllByLimit(0, 100).executeAsList())
+        syncFilterFileTypes()
     }
 
     fun createFilter(name: String) {
@@ -154,6 +152,10 @@ class FileFilterState : KoinComponent {
             icon = null,
             sort = 0
         )
+        syncFilterFileTypes()
+    }
+
+    fun syncFilterFileTypes() {
         filterFileTypes.clear()
         filterFileTypes.addAll(database.fileFilterQueries.queryAllByLimit(0, 100).executeAsList())
     }
