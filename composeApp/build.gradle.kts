@@ -79,6 +79,7 @@ kotlin {
             implementation(compose.desktop.currentOs)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.sqlDelight.driver.sqlite)
+            implementation(libs.jasypt)
         }
 
         jsMain.dependencies {

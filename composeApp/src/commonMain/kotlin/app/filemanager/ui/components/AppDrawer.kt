@@ -15,7 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.main.DrawerBookmarkType
-import app.filemanager.service.WebSocketService
+import app.filemanager.service.WebSocketServiceManager
+import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.ui.state.main.MainState
 import org.koin.compose.koinInject
@@ -24,8 +25,8 @@ import org.koin.compose.koinInject
 @Composable
 fun AppDrawer() {
     val drawerState = koinInject<DrawerState>()
-    val isExpandDevice by drawerState.isExpandDevice.collectAsState()
-    val isDeviceAdd by drawerState.isDeviceAdd.collectAsState()
+    val deviceState = koinInject<DeviceState>()
+    val isDeviceAdd by deviceState.isDeviceAdd.collectAsState()
 
     val isExpandNetwork by drawerState.isExpandNetwork.collectAsState()
 
@@ -47,31 +48,7 @@ fun AppDrawer() {
         LazyColumn {
             item { AppDrawerBookmark() }
             item { Divider() }
-            item {
-                AppDrawerItem(
-                    "设备",
-                    false,
-                    actions = {
-                        Row {
-                            Icon(
-                                Icons.Default.Add,
-                                null,
-                                Modifier.clip(RoundedCornerShape(25.dp)).clickable {
-                                    drawerState.updateDeviceAdd(true)
-                                }
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Icon(
-                                if (isExpandDevice) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                null,
-                                Modifier.clip(RoundedCornerShape(25.dp))
-                                    .clickable { drawerState.updateExpandDevice(!isExpandDevice) }
-                            )
-                        }
-                    }
-                ) {
-                }
-            }
+            item { AppDrawerDevice() }
             item { Divider() }
             item {
                 AppDrawerItem(
@@ -97,13 +74,9 @@ fun AppDrawer() {
     }
 
     if (isDeviceAdd) {
-        TextFieldDialog("新增设备", label = "IP地址") {
-            drawerState.updateDeviceAdd(false)
+        TextFieldDialog("设备服务", label = "IP地址") {
+            deviceState.updateDeviceAdd(false)
         }
-    }
-
-    LaunchedEffect(Unit) {
-        println(WebSocketService().scanService())
     }
 }
 
@@ -180,6 +153,61 @@ private fun AppDrawerItem(
 
 @Composable
 private fun AppDrawerDevice() {
+    val drawerState = koinInject<DrawerState>()
+    val isExpandDevice by drawerState.isExpandDevice.collectAsState()
+
+    val deviceState = koinInject<DeviceState>()
+
+    AppDrawerItem(
+        "设备",
+        false,
+        actions = {
+            Row {
+                Icon(
+                    Icons.Default.Add,
+                    null,
+                    Modifier.clip(RoundedCornerShape(25.dp)).clickable {
+                        deviceState.updateDeviceAdd(true)
+                    }
+                )
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    Icons.Default.Sync,
+                    null,
+                    Modifier
+                        .clip(RoundedCornerShape(25.dp))
+                        .clickable {
+
+                        }
+                )
+                Spacer(Modifier.width(8.dp))
+                IpsButton()
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    if (isExpandDevice) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    null,
+                    Modifier.clip(RoundedCornerShape(25.dp))
+                        .clickable { drawerState.updateExpandDevice(!isExpandDevice) }
+                )
+            }
+        }
+    ) {
+        if (!isExpandDevice) return@AppDrawerItem
+        for (device in deviceState.devices) {
+            NavigationDrawerItem(
+                icon = { Icon(Icons.Default.Devices, null) },
+                label = { Text(device.name) },
+                selected = false,
+                onClick = {},
+                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+            )
+        }
+    }
+
+    val webSocketServiceManager = koinInject<WebSocketServiceManager>()
+    LaunchedEffect(Unit) {
+        webSocketServiceManager.connect("127.0.0.1")
+    }
 }
 
 @Composable

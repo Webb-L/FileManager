@@ -17,13 +17,6 @@ data class DrawerBookmark(
     val iconPath: String = ""
 )
 
-data class DrawerDevice(
-    val name: String,
-    val host: String,
-    val username: String,
-    val password: String
-)
-
 enum class DrawerNetworkProtocol {
     FTP,
     SFTP,

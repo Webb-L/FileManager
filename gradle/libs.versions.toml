@@ -19,6 +19,7 @@ multiplatformSettings = "1.1.1"
 koin = "3.5.3"
 koin-compose = "1.1.2"
 sqlDelight = "2.0.1"
+jasypt = "1.9.2"
 
 [libraries]
 
@@ -46,6 +47,7 @@ sqlDelight-driver-android = { module = "app.cash.sqldelight:android-driver", ver
 sqlDelight-driver-native = { module = "app.cash.sqldelight:native-driver", version.ref = "sqlDelight" }
 sqlDelight-driver-js = { module = "app.cash.sqldelight:web-worker-driver", version.ref = "sqlDelight" }
 sqlDelight-driver-adapters = { module = "app.cash.sqldelight:primitive-adapters", version.ref = "sqlDelight" }
+jasypt = { module = "org.jasypt:jasypt", version.ref = "jasypt" }
 
 [plugins]
 

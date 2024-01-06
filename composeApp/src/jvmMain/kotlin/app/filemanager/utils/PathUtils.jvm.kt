@@ -12,6 +12,9 @@ internal actual object PathUtils {
         }
 
     // 获取用户目录
+    actual fun getAppPath(): String = System.getProperty("user.dir")
+
+    // 获取用户目录
     actual fun getHomePath(): String = System.getProperty("user.home")
 
     // 获取路径分隔符

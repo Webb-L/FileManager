@@ -10,7 +10,7 @@ import java.net.URL
 import java.util.concurrent.Semaphore
 
 actual class WebSocketService {
-    fun getNetworkIp(): List<String> {
+    actual fun getNetworkIp(): List<String> {
         val ipv4Regex =
             "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3})\$".toRegex()
         val interfaces = NetworkInterface.getNetworkInterfaces()

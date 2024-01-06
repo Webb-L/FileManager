@@ -162,6 +162,7 @@ fun FileCardMenu(
     val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
     val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
     var expanded by remember { mutableStateOf(false) }
+    var shareExpanded by remember { mutableStateOf(false) }
 
     val fileOperationState = koinInject<FileOperationState>()
     val database = koinInject<FileManagerDatabase>()
@@ -239,6 +240,12 @@ fun FileCardMenu(
                     )
                 })
             Divider()
+            if (true) {
+                ShareButton(shareExpanded) {
+                    shareExpanded = it
+                }
+                Divider()
+            }
             DropdownMenuItem(
                 text = { Text("重命名") },
                 onClick = {
@@ -287,6 +294,7 @@ fun FileCardMenu(
                         contentDescription = null
                     )
                 })
+            Divider()
             DropdownMenuItem(
                 text = { Text("属性") },
                 onClick = {

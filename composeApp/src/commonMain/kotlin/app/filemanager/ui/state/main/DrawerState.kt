@@ -3,8 +3,6 @@ package app.filemanager.ui.state.main
 import androidx.compose.runtime.mutableStateListOf
 import app.filemanager.data.main.DrawerBookmark
 import app.filemanager.data.main.DrawerBookmarkType
-import app.filemanager.data.main.DrawerDevice
-import app.filemanager.data.main.DrawerNetwork
 import app.filemanager.utils.PathUtils.getHomePath
 import app.filemanager.utils.PathUtils.getPathSeparator
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,19 +54,10 @@ class DrawerState() {
         _isExpandDevice.value = value
     }
 
-    private val _isDeviceAdd: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isDeviceAdd: StateFlow<Boolean> = _isDeviceAdd
-    fun updateDeviceAdd(value: Boolean) {
-        _isDeviceAdd.value = value
-    }
-
-    val devices = mutableStateListOf<DrawerDevice>()
-
     private val _isExpandNetwork: MutableStateFlow<Boolean> = MutableStateFlow(true)
     val isExpandNetwork: StateFlow<Boolean> = _isExpandNetwork
     fun updateExpandNetwork(value: Boolean) {
         _isExpandNetwork.value = value
     }
 
-    val networks = mutableStateListOf<DrawerNetwork>()
 }
