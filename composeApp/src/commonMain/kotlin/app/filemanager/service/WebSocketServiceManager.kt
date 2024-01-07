@@ -11,16 +11,18 @@ class WebSocketServiceManager : KoinComponent {
 
     suspend fun connect(host: String) {
         val webSocketConnectService = WebSocketConnectService()
-        withContext(Dispatchers.Main) {
-            launch {
-                println(webSocketConnectService.isConnected)
-                while (!webSocketConnectService.isConnected) {
-                    println(webSocketConnectService.isConnected)
-                    services.add(webSocketConnectService)
-                    break
+        try {
+            withContext(Dispatchers.Main) {
+                launch {
+                    while (!webSocketConnectService.isConnected) {
+                        services.add(webSocketConnectService)
+                        break
+                    }
                 }
+                webSocketConnectService.connect(host)
             }
-            webSocketConnectService.connect(host)
+        } catch (e: Exception) {
+            println(e)
         }
     }
 }

@@ -5,11 +5,11 @@ import app.filemanager.extensions.toFileInfo
 import io.github.aakira.napier.Napier
 import java.awt.Desktop
 import java.io.File
+import java.io.RandomAccessFile
 
 internal actual object FileUtils {
     actual fun getFile(path: String): FileInfo = File(path).toFileInfo()
     actual fun getFile(path: String, fileName: String): FileInfo = File(path, fileName).toFileInfo()
-
     actual fun openFile(file: String) {
         Desktop.getDesktop().open(File(file))
     }
@@ -98,5 +98,28 @@ internal actual object FileUtils {
         val oldFile = File(path, oldName)
         val newFile = File(path, newName)
         return oldFile.renameTo(newFile)
+    }
+
+    actual fun getData(filePath: String, start: Long, end: Long): ByteArray {
+        try {
+            val file = RandomAccessFile(filePath, "r")
+            val fileSize = file.length()
+            var bytesRead = 0
+            val buffer = ByteArray((end - start).toInt())
+
+            if (start < fileSize) {
+                file.seek(start)
+                bytesRead = file.read(buffer)
+            }
+
+            file.close()
+
+            if (bytesRead > 0) {
+                return buffer
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return byteArrayOf()
     }
 }

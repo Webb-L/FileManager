@@ -1,7 +1,7 @@
 package app.filemanager.ui.state.main
 
 import androidx.compose.runtime.mutableStateListOf
-import app.filemanager.db.Device
+import app.filemanager.data.main.Device
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 

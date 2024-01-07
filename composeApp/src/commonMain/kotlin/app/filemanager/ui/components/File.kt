@@ -27,6 +27,7 @@ import app.filemanager.extensions.timestampToSyncDate
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
+import app.filemanager.ui.state.main.DeviceState
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -167,6 +168,7 @@ fun FileCardMenu(
     val fileOperationState = koinInject<FileOperationState>()
     val database = koinInject<FileManagerDatabase>()
 
+    val deviceState = koinInject<DeviceState>()
     val scope = rememberCoroutineScope()
     Box(Modifier.wrapContentSize(Alignment.TopStart)) {
         Icon(
@@ -240,8 +242,8 @@ fun FileCardMenu(
                     )
                 })
             Divider()
-            if (true) {
-                ShareButton(shareExpanded) {
+            if (deviceState.devices.isNotEmpty()) {
+                ShareButton(shareExpanded, file) {
                     shareExpanded = it
                 }
                 Divider()

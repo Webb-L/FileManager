@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileFilterSort
+import app.filemanager.data.file.FileInfo
 import app.filemanager.service.WebSocketService
 import app.filemanager.service.WebSocketServiceManager
 import app.filemanager.ui.state.file.FileFilterState
@@ -195,7 +196,7 @@ fun IpsButton() {
 }
 
 @Composable
-fun ShareButton(expanded: Boolean, onDismissRequest: (Boolean) -> Unit) {
+fun ShareButton(expanded: Boolean, file: FileInfo, onDismissRequest: (Boolean) -> Unit) {
     val webSocketServiceManager = koinInject<WebSocketServiceManager>()
     val deviceState = koinInject<DeviceState>()
 
@@ -231,8 +232,7 @@ fun ShareButton(expanded: Boolean, onDismissRequest: (Boolean) -> Unit) {
                     text = { Text(device.name) },
                     onClick = {
                         scope.launch {
-                            println(webSocketServiceManager.services.size)
-                            webSocketServiceManager.services.first().send(device.id)
+                            webSocketServiceManager.services.first().sendFile(device.id, file.path)
                         }
                     }
                 )

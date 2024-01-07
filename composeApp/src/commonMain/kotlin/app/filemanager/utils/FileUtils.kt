@@ -14,4 +14,5 @@ internal expect object FileUtils {
     fun freeSpace(path: String): Long
     fun createFolder(path: String, name: String): Boolean
     fun renameFolder(path: String, oldName: String, newName: String): Boolean
+    fun getData(filePath: String, start: Long, end: Long): ByteArray
 }

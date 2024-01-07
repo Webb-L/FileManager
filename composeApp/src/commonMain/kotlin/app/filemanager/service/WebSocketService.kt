@@ -1,12 +1,14 @@
 package app.filemanager.service
 
 import app.filemanager.data.file.DeviceType
-import app.filemanager.db.Device
+import app.filemanager.data.main.Device
 import app.filemanager.ui.state.main.DeviceState
+import app.filemanager.utils.FileUtils
 import com.russhwolf.settings.Settings
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.http.*
+import io.ktor.utils.io.core.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -63,10 +65,15 @@ class WebSocketConnectService() : KoinComponent {
         }
     }
 
-    suspend fun send(id: String) {
+    private suspend fun send(content: ByteArray) {
         if (isConnected) {
-            session?.send("/message $id\n\ntext")
+            session?.send(String(content))
         }
+    }
+
+    suspend fun sendFile(id: String, fileName: String) {
+        val header = "/upload 12132 $id\n\n"
+        send(header.toByteArray().plus(FileUtils.getData(fileName, 0, 300)))
     }
 
     private fun parseMessage(msg: String) {
@@ -77,8 +84,14 @@ class WebSocketConnectService() : KoinComponent {
             "===devices===" -> {
                 for (message in content.split("\n")) {
                     val line = message.split(" ")
-                    deviceState.devices.add(Device(id = line[0], name = line[1], type = DeviceType.IOS))
-                    println("${line[0]} ${line[1]} ${line[2]}")
+                    deviceState.devices.add(
+                        Device(
+                            id = line[0],
+                            name = line[1],
+                            host = line[2],
+                            type = DeviceType.IOS
+                        )
+                    )
                 }
             }
 
