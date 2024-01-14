@@ -1,7 +1,5 @@
 package app.filemanager.data.main
 
-import app.filemanager.data.file.DeviceType
-
 enum class DrawerBookmarkType {
     Home,
     Image,
@@ -19,6 +17,13 @@ data class DrawerBookmark(
     val iconPath: String = ""
 )
 
+enum class DeviceType(type: String) {
+    Android("Android"),
+    IOS("IOS"),
+    JVM("JVM"),
+    JS("JS")
+}
+
 data class Device(
     val id: String,
     val name: String,
@@ -26,14 +31,14 @@ data class Device(
     val type: DeviceType
 )
 
-enum class DrawerNetworkProtocol {
+enum class NetworkProtocol {
     FTP,
     SFTP,
     SMB,
     WebDav,
 }
 
-data class DrawerNetwork(
+data class Network(
     val name: String,
     val protocol: String,
     val host: String,

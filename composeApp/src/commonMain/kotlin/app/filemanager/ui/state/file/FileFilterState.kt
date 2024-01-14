@@ -112,12 +112,6 @@ class FileFilterState : KoinComponent {
         _isCreateDialog.value = value
     }
 
-    private val _isSort: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isSort: StateFlow<Boolean> = _isSort
-    fun updateSort(value: Boolean) {
-        _isSort.value = value
-    }
-
     fun getExtensions(type: FileFilterType): List<String> {
         val filter = filterFileTypes.filter { it.type == type }
         if (filter.isNotEmpty()) {

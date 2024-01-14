@@ -1,7 +1,7 @@
 package app.filemanager.service
 
-import app.filemanager.data.file.DeviceType
 import app.filemanager.data.main.Device
+import app.filemanager.data.main.DeviceType
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.FileUtils
 import com.russhwolf.settings.Settings

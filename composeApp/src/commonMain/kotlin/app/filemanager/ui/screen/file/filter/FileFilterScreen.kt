@@ -9,9 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.DragHandle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -36,7 +34,6 @@ class FileFilterScreen : Screen {
         val navigator = LocalNavigator.currentOrThrow
 
         val fileFilterState = koinInject<FileFilterState>()
-        val isSort by fileFilterState.isSort.collectAsState()
 
         val scope = rememberCoroutineScope()
         val snackbarHostState = remember { SnackbarHostState() }
@@ -49,11 +46,7 @@ class FileFilterScreen : Screen {
                             Icon(Icons.Default.ArrowBack, null)
                         }
                     },
-                    actions = {
-                        IconButton({ fileFilterState.updateSort(true) }) {
-                            Icon(Icons.Default.Sort, null)
-                        }
-                    }
+                    actions = {}
                 )
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -88,18 +81,6 @@ class FileFilterScreen : Screen {
                         },
                         leadingContent = { getFileFilterType(fileFilter.type) },
                         trailingContent = {
-                            if (isSort) {
-                                Icon(
-                                    Icons.Outlined.DragHandle,
-                                    null,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(25.dp))
-                                        .clickable {
-
-                                        }
-                                )
-                                return@ListItem
-                            }
                             Icon(
                                 Icons.Outlined.Delete,
                                 null,

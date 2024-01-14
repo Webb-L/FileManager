@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.getFileFilterType
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.ui.components.FileCard
@@ -53,10 +54,11 @@ class FileScreen(
         val fileOperationState = koinInject<FileOperationState>()
 
         val scope = rememberCoroutineScope()
-        FileFilterButtons(onToFilterScreen)
 
+        val fileAndFolder = path.getFileAndFolder()
+        FileFilterButtons(fileAndFolder, onToFilterScreen)
 
-        val files = fileFilterState.filter(path.getFileAndFolder(), updateKey)
+        val files = fileFilterState.filter(fileAndFolder, updateKey)
         GridList(files.isEmpty()) {
             items(files) {
                 FileCard(
@@ -97,7 +99,7 @@ class FileScreen(
 
         if (isRenameFile && fileInfo != null) {
             FileRenameDialog(fileInfo!!, {
-                VerificationUtils.folder(it, path.getFileAndFolder(), listOf(fileInfo!!.name))
+                VerificationUtils.folder(it, fileAndFolder, listOf(fileInfo!!.name))
             }) {
                 fileState.updateRenameFile(false)
                 fileState.updateFileInfo(null)
@@ -114,31 +116,38 @@ class FileScreen(
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun FileFilterButtons(onToFilterScreen: () -> Unit) {
+    fun FileFilterButtons(fileAndFolder: List<FileInfo>, onToFilterScreen: () -> Unit) {
         val fileFilterState = koinInject<FileFilterState>()
-
+        val extensions =
+            fileAndFolder.filter { !it.isDirectory }.groupBy { it.mineType }.mapValues { (_, value) -> value.size }
         Row {
             Spacer(Modifier.width(4.dp))
             IconButton(onToFilterScreen) {
                 Icon(Icons.Default.GridView, null, tint = MaterialTheme.colorScheme.primary)
             }
             Row(Modifier.horizontalScroll(rememberScrollState()).weight(1f)) {
-                fileFilterState.filterFileTypes.forEachIndexed { index, fileFilter ->
-                    val isSelected = fileFilterState.filterFileExtensions.contains(fileFilter.type)
-                    FilterChip(selected = isSelected,
-                        label = { Text(fileFilter.name) },
-                        leadingIcon = { getFileFilterType(fileFilter.type) },
-                        shape = RoundedCornerShape(25.dp),
-                        onClick = {
-                            if (isSelected) {
-                                fileFilterState.filterFileExtensions.remove(fileFilter.type)
-                            } else {
-                                fileFilterState.filterFileExtensions.add(fileFilter.type)
-                            }
-                            fileFilterState.updateFilerKey()
-                        })
-                    Spacer(Modifier.width(8.dp))
-                }
+                fileFilterState.filterFileTypes
+                    .filter { filterFileType -> filterFileType.extensions.any { it in extensions.keys } }
+                    .forEachIndexed { index, fileFilter ->
+                        val isSelected = fileFilterState.filterFileExtensions.contains(fileFilter.type)
+                        val fileCount = fileFilter.extensions.intersect(extensions.keys).map { key ->
+                            extensions.filterKeys { it == key }.values.sum()
+                        }.sum()
+
+                        FilterChip(selected = isSelected,
+                            label = { Text("${fileFilter.name}($fileCount)") },
+                            leadingIcon = { getFileFilterType(fileFilter.type) },
+                            shape = RoundedCornerShape(25.dp),
+                            onClick = {
+                                if (isSelected) {
+                                    fileFilterState.filterFileExtensions.remove(fileFilter.type)
+                                } else {
+                                    fileFilterState.filterFileExtensions.add(fileFilter.type)
+                                }
+                                fileFilterState.updateFilerKey()
+                            })
+                        Spacer(Modifier.width(8.dp))
+                    }
             }
             Row(Modifier.padding(start = 16.dp, end = 12.dp)) {
                 val isHideFile by fileFilterState.isHideFile.collectAsState()

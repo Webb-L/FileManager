@@ -2,9 +2,9 @@ package app.filemanager.service
 
 import app.cash.sqldelight.ColumnAdapter
 import app.cash.sqldelight.db.SqlDriver
-import app.filemanager.data.file.DeviceType
 import app.filemanager.data.file.FileFilterType
 import app.filemanager.data.file.FileProtocol
+import app.filemanager.data.main.DeviceType
 import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.db.*
 

@@ -1,4 +1,5 @@
-import app.filemanager.data.file.DeviceType;
+import app.filemanager.data.main.DeviceType;
+
 
 CREATE TABLE Device
 (
