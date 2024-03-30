@@ -10,9 +10,7 @@ import java.io.RandomAccessFile
 internal actual object FileUtils {
     actual fun getFile(path: String): FileInfo = File(path).toFileInfo()
     actual fun getFile(path: String, fileName: String): FileInfo = File(path, fileName).toFileInfo()
-    actual fun openFile(file: String) {
-        Desktop.getDesktop().open(File(file))
-    }
+    actual fun openFile(file: String) = Desktop.getDesktop().open(File(file))
 
     actual fun copyFile(src: String, dest: String): Boolean {
         try {

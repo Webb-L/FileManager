@@ -1,26 +1,53 @@
 package app.filemanager.utils
 
+import android.os.Environment
 import app.filemanager.data.file.FileInfo
+import app.filemanager.extensions.toFileInfo
+import java.io.File
 
 internal actual object PathUtils {
-    actual fun getHomePath(): String {
-        return "/"
-    }
+    // 获取目录下所有文件和文件夹
+    actual fun getFileAndFolder(path: String): List<FileInfo> =
+        (File(path).listFiles() ?: emptyArray<File>()).map { file ->
+            file.toFileInfo()
+        }
 
-    actual fun getPathSeparator(): String {
-        return "/"
-    }
+    // 获取用户目录
+    actual fun getAppPath(): String = System.getProperty("user.dir")
 
-    actual fun getRootPaths(): List<String> {
-        return listOf("/")
-    }
+    // 获取用户目录
+    actual fun getHomePath(): String = Environment.getExternalStorageDirectory().absolutePath;
 
-    actual fun getFileAndFolder(path: String): List<FileInfo> {
-        return emptyList()
-    }
+    // 获取路径分隔符
+    actual fun getPathSeparator(): String = File.separator
 
+    // 获取根目录
+    actual fun getRootPaths(): List<String> = File.listRoots().map { it.path }
+
+    // 遍历目录
     actual fun traverse(path: String): List<FileInfo> {
-        return emptyList()
-    }
+        val fileList = mutableListOf<FileInfo>()
+        val directory = File(path)
+        if (directory.exists()) {
+            if (directory.isDirectory) {
+                val files = directory.listFiles() ?: emptyArray()
+                for (file in files) {
+                    try {
+                        fileList.add(file.toFileInfo())
+                        if (file.isDirectory) {
+                            fileList.addAll(traverse(file.path))
+                        }
+                    } catch (e: Exception) {
+                    }
+                }
+                if (files.isEmpty()) {
+                    fileList.add(directory.toFileInfo())
+                }
+            } else {
+                fileList.add(directory.toFileInfo())
+            }
+        }
 
+        return fileList
+    }
 }

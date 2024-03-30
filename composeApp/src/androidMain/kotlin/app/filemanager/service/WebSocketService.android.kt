@@ -10,4 +10,8 @@ actual class WebSocketService {
 
     actual fun stopService() {
     }
+
+    actual fun getNetworkIp(): List<String> {
+        return listOf()
+    }
 }

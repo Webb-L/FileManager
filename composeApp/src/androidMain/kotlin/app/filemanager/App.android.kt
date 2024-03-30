@@ -21,8 +21,23 @@ class AndroidApp : Application() {
 class AppActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        action = this@AppActivity
+//        startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+
         setContent {
             App()
+        }
+    }
+
+    companion object {
+        var action: AppActivity? = null
+        fun openFile(path: String) {
+            val intent = Intent().apply {
+                action = Intent.ACTION_VIEW
+                data = Uri.parse(path)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            action!!.startActivity(Intent.createChooser(intent, null))
         }
     }
 }

@@ -46,6 +46,18 @@ fun AppDrawer() {
         )
         Divider()
         LazyColumn {
+            item {
+                AppDrawerHeader("工具箱", actions = {
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        null,
+                        Modifier.clip(RoundedCornerShape(25.dp))
+                            .clickable { }
+                    )
+                })
+                Spacer(Modifier.height(12.dp))
+            }
+            item { Divider() }
             item { AppDrawerBookmark() }
             item { Divider() }
             item { AppDrawerDevice() }
@@ -53,7 +65,6 @@ fun AppDrawer() {
             item {
                 AppDrawerItem(
                     "网络",
-                    false,
                     actions = {
                         Row {
                             Icon(Icons.Default.Add, null, Modifier.clip(RoundedCornerShape(25.dp)).clickable { })
@@ -91,7 +102,6 @@ private fun AppDrawerBookmark() {
 
     AppDrawerItem(
         "书签",
-        isExpand = isExpandBookmark,
         actions = {
             Row {
                 Icon(Icons.Default.Add, null, Modifier.clip(RoundedCornerShape(25.dp)).clickable { })
@@ -142,7 +152,6 @@ private fun AppDrawerBookmark() {
 @Composable
 private fun AppDrawerItem(
     title: String,
-    isExpand: Boolean,
     actions: @Composable () -> Unit,
     content: @Composable () -> Unit
 ) {
@@ -160,7 +169,6 @@ private fun AppDrawerDevice() {
 
     AppDrawerItem(
         "设备",
-        false,
         actions = {
             Row {
                 Icon(

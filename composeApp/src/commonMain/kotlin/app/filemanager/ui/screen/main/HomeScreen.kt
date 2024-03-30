@@ -11,10 +11,8 @@ import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.FileOperationDialog
 import app.filemanager.ui.components.FileWarningOperationDialog
-import app.filemanager.ui.components.SortButton
 import app.filemanager.ui.components.TextFieldDialog
 import app.filemanager.ui.screen.file.FavoriteScreen
-import app.filemanager.ui.screen.file.filter.FileFilterScreen
 import app.filemanager.ui.screen.file.FileScreen
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
@@ -32,7 +30,6 @@ import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 
 object HomeScreen : Screen {
-    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -83,11 +80,7 @@ object HomeScreen : Screen {
                         )
                     }
                 }
-                Navigator(FileScreen(
-                    snackbarHostState = snackbarHostState,
-                    updatePath = mainState::updatePath,
-                    onToFilterScreen = { navigator.push(FileFilterScreen()) }
-                ))
+                Navigator(FileScreen())
             }
         }
 
@@ -160,7 +153,6 @@ object HomeScreen : Screen {
                 IconButton({ fileFilterState.updateSearch(!isSearchText) }) {
                     Icon(Icons.Default.Search, null)
                 }
-                SortButton()
             }
         )
     }

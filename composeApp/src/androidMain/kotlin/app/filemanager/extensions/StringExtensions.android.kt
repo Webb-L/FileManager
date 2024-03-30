@@ -1,5 +1,5 @@
 package app.filemanager.extensions
 
-internal actual fun String.parsePath(): List<String> {
-    return listOf("sdfasfsfasfasfs","sdfasfsdfs","dsfasfsdfaafs","sdfsafsfsfdadf","29034809810942")
-}
+import com.eygraber.uri.Uri
+
+internal actual fun String.parsePath(): List<String>  = Uri.parse(this).pathSegments

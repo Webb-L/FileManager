@@ -5,8 +5,9 @@ agp = "8.2.0"
 compose = "1.5.11"
 androidx-appcompat = "1.6.1"
 androidx-activityCompose = "1.8.2"
-compose-uitooling = "1.5.4"
+compose-uitooling = "1.6.2"
 libres = "1.2.2"
+securityCrypto = "1.1.0-alpha06"
 voyager = "1.0.0-rc10"
 composeImageLoader = "1.7.1"
 napier = "2.6.1"
@@ -25,6 +26,7 @@ jasypt = "1.9.2"
 
 androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
 androidx-activityCompose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activityCompose" }
+androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 compose-uitooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "compose-uitooling" }
 libres = { module = "io.github.skeptick.libres:libres-compose", version.ref = "libres" }
 voyager-navigator = { module = "cafe.adriel.voyager:voyager-navigator", version.ref = "voyager" }

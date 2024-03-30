@@ -20,10 +20,8 @@ import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.getFileFilterType
 import app.filemanager.extensions.getFileAndFolder
-import app.filemanager.ui.components.FileCard
-import app.filemanager.ui.components.FileInfoDialog
-import app.filemanager.ui.components.FileRenameDialog
-import app.filemanager.ui.components.GridList
+import app.filemanager.ui.components.*
+import app.filemanager.ui.screen.file.filter.FileFilterScreen
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
@@ -31,16 +29,15 @@ import app.filemanager.ui.state.main.MainState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.VerificationUtils
 import cafe.adriel.voyager.core.screen.Screen
-import kotlinx.coroutines.launch
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import org.koin.compose.koinInject
 
-class FileScreen(
-    private val snackbarHostState: SnackbarHostState,
-    private val updatePath: (String) -> Unit,
-    private val onToFilterScreen: () -> Unit
-) : Screen {
+class FileScreen : Screen {
     @Composable
     override fun Content() {
+        val navigator = LocalNavigator.currentOrThrow
+
         val mainState = koinInject<MainState>()
         val path by mainState.path.collectAsState()
 
@@ -56,7 +53,9 @@ class FileScreen(
         val scope = rememberCoroutineScope()
 
         val fileAndFolder = path.getFileAndFolder()
-        FileFilterButtons(fileAndFolder, onToFilterScreen)
+        FileFilterButtons(fileAndFolder) {
+            navigator.push(FileFilterScreen())
+        }
 
         val files = fileFilterState.filter(fileAndFolder, updateKey)
         GridList(files.isEmpty()) {
@@ -65,33 +64,33 @@ class FileScreen(
                     file = it,
                     onClick = {
                         if (it.isDirectory) {
-                            updatePath(it.path)
+                            mainState.updatePath(it.path)
                         } else {
                             FileUtils.openFile(it.path)
                         }
                     },
                     onRemove = { deletePath ->
-                        scope.launch {
-                            val showSnackbar = snackbarHostState.showSnackbar(
-                                message = deletePath,
-                                actionLabel = "删除",
-                                withDismissAction = true,
-                                duration = SnackbarDuration.Short
-                            )
-                            when (showSnackbar) {
-                                SnackbarResult.Dismissed -> {}
-                                SnackbarResult.ActionPerformed -> {
-                                    fileOperationState.updateOperationDialog(true)
-                                    scope.launch {
-                                        fileState.deleteFile(
-                                            fileOperationState,
-                                            deletePath
-                                        )
-                                        fileFilterState.updateFilerKey()
-                                    }
-                                }
-                            }
-                        }
+//                        scope.launch {
+//                            val showSnackbar = snackbarHostState.showSnackbar(
+//                                message = deletePath,
+//                                actionLabel = "删除",
+//                                withDismissAction = true,
+//                                duration = SnackbarDuration.Short
+//                            )
+//                            when (showSnackbar) {
+//                                SnackbarResult.Dismissed -> {}
+//                                SnackbarResult.ActionPerformed -> {
+//                                    fileOperationState.updateOperationDialog(true)
+//                                    scope.launch {
+//                                        fileState.deleteFile(
+//                                            fileOperationState,
+//                                            deletePath
+//                                        )
+//                                        fileFilterState.updateFilerKey()
+//                                    }
+//                                }
+//                            }
+//                        }
                     }
                 )
             }
@@ -155,6 +154,8 @@ class FileScreen(
                     label = { Text("隐藏文件") },
                     shape = RoundedCornerShape(25.dp),
                     onClick = { fileFilterState.updateHideFile(!isHideFile) })
+
+                    SortButton()
             }
         }
     }

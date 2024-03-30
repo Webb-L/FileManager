@@ -1,12 +1,12 @@
 package app.filemanager.service
 
-import android.content.Context
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
-import app.filemanager.db.MyDatabase
+import app.filemanager.AndroidApp
+import app.filemanager.db.FileManagerDatabase
 
-actual class DriverFactory(private val context: Context) {
+actual class DriverFactory {
     actual fun createDriver(): SqlDriver {
-        return AndroidSqliteDriver(MyDatabase.Schema, context, "file_manager.db")
+        return AndroidSqliteDriver(FileManagerDatabase.Schema, AndroidApp.INSTANCE, "file_manager.db")
     }
 }
