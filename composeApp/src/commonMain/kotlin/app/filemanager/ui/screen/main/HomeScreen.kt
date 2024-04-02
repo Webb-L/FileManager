@@ -22,7 +22,6 @@ import app.filemanager.utils.FileUtils
 import app.filemanager.utils.VerificationUtils
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -80,7 +79,7 @@ object HomeScreen : Screen {
                         )
                     }
                 }
-                Navigator(FileScreen())
+                FileScreen(snackbarHostState)
             }
         }
 

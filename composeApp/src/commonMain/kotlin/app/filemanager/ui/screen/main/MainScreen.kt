@@ -23,12 +23,12 @@ import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.AppDrawer
 import app.filemanager.ui.navigator.HomeNavigator
 import app.filemanager.ui.state.main.MainState
+import app.filemanager.utils.NaturalOrderComparator
 import app.filemanager.utils.PathUtils
 import app.filemanager.utils.PathUtils.getRootPaths
 import app.filemanager.utils.WindowSizeClass
 import org.koin.compose.koinInject
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(screenType: WindowSizeClass) {
     val mainState = koinInject<MainState>()
@@ -101,7 +101,8 @@ fun AppBarPath() {
             val nowPath = rootPath + paths.subList(0, index).joinToString(PathUtils.getPathSeparator())
             PathSwitch(
                 text,
-                nowPath.getFileAndFolder().filter { it.isDirectory }.sortedBy { it.name },
+                nowPath.getFileAndFolder().filter { it.isDirectory }
+                    .sortedWith(NaturalOrderComparator()),
                 onClick = {
                     val newPath = rootPath + paths.subList(0, index + 1)
                         .joinToString(PathUtils.getPathSeparator())
@@ -110,6 +111,10 @@ fun AppBarPath() {
                 onSelected = { mainState.updatePath(it) }
             )
         }
+    }
+
+    LaunchedEffect(paths) {
+        listState.scrollToItem(paths.size)
     }
 }
 

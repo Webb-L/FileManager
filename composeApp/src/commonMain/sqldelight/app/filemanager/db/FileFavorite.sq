@@ -26,5 +26,11 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 deleteById:
 DELETE FROM FileFavorite WHERE id = ?;
 
+updateIsFixedById:
+UPDATE FileFavorite SET isFixed = ? WHERE id = ?;
+
 queryAllByLimit:
 SELECT * FROM  FileFavorite ORDER BY isFixed DESC, name LIMIT :start, :end;
+
+queryByPathProtocol:
+SELECT id FROM FileFavorite WHERE path = :path AND protocol = :protocol;

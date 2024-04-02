@@ -14,12 +14,19 @@ class FileFavoriteState : KoinComponent {
     var startLimit = 0L
     var endLimit = 100L
 
-    init {
+    fun sync() {
+        startLimit = 0L
+        endLimit = 100L
+        favorites.clear()
         favorites.addAll(database.fileFavoriteQueries.queryAllByLimit(startLimit, endLimit).executeAsList())
     }
 
-    fun updateFixed(favorite: FileFavorite){
-
+    fun updateFixed(favorite: FileFavorite) {
+        val index = favorites.indexOf(favorite)
+        if (index < 0) return
+        database.fileFavoriteQueries.updateIsFixedById(!favorite.isFixed, favorite.id)
+        favorites[index] = favorite.copy(isFixed = !favorite.isFixed)
+        favorites.sortByDescending { it.isFixed }
     }
 
     fun delete(favorite: FileFavorite) {

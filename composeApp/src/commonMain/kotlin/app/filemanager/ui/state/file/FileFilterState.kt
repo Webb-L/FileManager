@@ -6,6 +6,7 @@ import app.filemanager.data.file.FileFilterType
 import app.filemanager.data.file.FileInfo
 import app.filemanager.db.FileFilter
 import app.filemanager.db.FileManagerDatabase
+import app.filemanager.utils.NaturalOrderComparator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.koin.core.component.KoinComponent
@@ -75,10 +76,10 @@ class FileFilterState : KoinComponent {
 
         return when (_sortType.value) {
             FileFilterSort.NameAsc -> files
-                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenBy { it.name })
+                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.then(NaturalOrderComparator()))
 
             FileFilterSort.NameDesc -> files
-                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.name })
+                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenDescending(NaturalOrderComparator()))
 
             FileFilterSort.SizeAsc -> files
                 .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenBy { it.size })
@@ -87,10 +88,10 @@ class FileFilterState : KoinComponent {
                 .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.size })
 
             FileFilterSort.TypeAsc -> files
-                .sortedWith(compareBy<FileInfo> { it.isDirectory }.thenBy { it.name })
+                .sortedWith(compareBy<FileInfo> { it.isDirectory }.then(NaturalOrderComparator()))
 
             FileFilterSort.TypeDesc -> files
-                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenBy { it.name })
+                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.then(NaturalOrderComparator()))
 
             FileFilterSort.CreatedDateAsc -> files
                 .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenBy { it.createdDate })

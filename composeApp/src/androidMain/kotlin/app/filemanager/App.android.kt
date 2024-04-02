@@ -4,8 +4,11 @@ import android.app.Application
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.webkit.MimeTypeMap
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import java.io.File
+
 
 class AndroidApp : Application() {
     companion object {
@@ -32,9 +35,13 @@ class AppActivity : ComponentActivity() {
     companion object {
         var action: AppActivity? = null
         fun openFile(path: String) {
+            var mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(File(path).extension)
+            if (mimeType == null) {
+                mimeType = "application/octet-stream"
+            }
             val intent = Intent().apply {
                 action = Intent.ACTION_VIEW
-                data = Uri.parse(path)
+                setDataAndType(Uri.parse(path), mimeType)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             action!!.startActivity(Intent.createChooser(intent, null))

@@ -25,6 +25,7 @@ class FavoriteScreen : Screen {
 
         val mainState = koinInject<MainState>()
         val fileFavoriteState = koinInject<FileFavoriteState>()
+        fileFavoriteState.sync()
 
         val snackbarHostState = remember { SnackbarHostState() }
         Scaffold(
@@ -57,6 +58,7 @@ class FavoriteScreen : Screen {
                             mainState.updateFavorite(false)
                             navigator.pop()
                         },
+                        onFixed = { fileFavoriteState.updateFixed(favorite) },
                         onRemove = { fileFavoriteState.delete(favorite) }
                     )
                 }
