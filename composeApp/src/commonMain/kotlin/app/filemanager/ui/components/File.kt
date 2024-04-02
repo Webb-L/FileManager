@@ -257,10 +257,17 @@ fun FileCardMenu(
                     )
                 })
             Divider()
+
+            val isFixed = database.fileFavoriteQueries
+                .queryByPathProtocol(file.path, FileProtocol.Local)
+                .executeAsList()
+
             DropdownMenuItem(
                 text = { Text("收藏") },
                 onClick = {
-                    scope.launch {
+                    if (isFixed.isNotEmpty()) {
+                        database.fileFavoriteQueries.deleteById(isFixed.first())
+                    } else {
                         database.fileFavoriteQueries.insert(
                             name = file.name,
                             isDirectory = file.isDirectory,
@@ -277,10 +284,6 @@ fun FileCardMenu(
                     expanded = false
                 },
                 leadingIcon = {
-                    val isFixed = database.fileFavoriteQueries
-                        .queryByPathProtocol(file.path, FileProtocol.Local)
-                        .executeAsList()
-
                     Icon(
                         if (isFixed.isNotEmpty())
                             Icons.Outlined.Favorite
