@@ -21,6 +21,7 @@ import app.filemanager.data.file.FileInfo
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.AppDrawer
+import app.filemanager.ui.components.buttons.DiskSwitchButton
 import app.filemanager.ui.navigator.HomeNavigator
 import app.filemanager.ui.state.main.MainState
 import app.filemanager.utils.NaturalOrderComparator
@@ -65,10 +66,17 @@ fun AppBarPath() {
     val mainState = koinInject<MainState>()
     val path by mainState.path.collectAsState()
     val rootPath by mainState.rootPath.collectAsState()
+    val deskType by mainState.deskType.collectAsState()
 
     val paths = path.parsePath()
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = paths.size - 1)
     LazyRow(state = listState) {
+        item {
+            DiskSwitchButton(
+                deskType,
+                mainState::updateDesk
+            )
+        }
         item {
             PathSwitch(
                 mainState.rootPath.value,
@@ -120,11 +128,17 @@ fun AppBarPath() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PathSwitch(name: String, fileInfos: List<FileInfo>, onClick: () -> Unit, onSelected: (String) -> Unit) {
+private fun PathSwitch(
+    name: String,
+    fileInfos: List<FileInfo>,
+    selected: Boolean = false,
+    onClick: () -> Unit,
+    onSelected: (String) -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
         FilterChip(
-            selected = expanded,
+            selected = selected,
             label = { Text(name) },
             border = null,
             shape = RoundedCornerShape(25.dp),

@@ -11,6 +11,7 @@ import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.ui.state.main.MainState
+import app.filemanager.ui.state.main.NetworkState
 import org.koin.dsl.module
 
 val commonModule = module {
@@ -22,6 +23,7 @@ val commonScreenModule = module {
     single { MainState() }
     single { DrawerState() }
     single { DeviceState() }
+    single { NetworkState() }
     single { FileState() }
     single { FileFilterState() }
     single { FileOperationState() }

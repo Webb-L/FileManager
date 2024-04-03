@@ -17,6 +17,15 @@ data class DrawerBookmark(
     val iconPath: String = ""
 )
 
+
+abstract class DiskBase {
+    abstract val name: String
+}
+
+data class Local(
+    override val name: String = "本地"
+) : DiskBase()
+
 enum class DeviceType(type: String) {
     Android("Android"),
     IOS("IOS"),
@@ -26,10 +35,10 @@ enum class DeviceType(type: String) {
 
 data class Device(
     val id: String,
-    val name: String,
+    override val name: String,
     val host: String,
     val type: DeviceType
-)
+) : DiskBase()
 
 enum class NetworkProtocol {
     FTP,
@@ -39,10 +48,9 @@ enum class NetworkProtocol {
 }
 
 data class Network(
-    val name: String,
+    override val name: String,
     val protocol: String,
     val host: String,
     val username: String,
     val password: String
-)
-
+) : DiskBase()

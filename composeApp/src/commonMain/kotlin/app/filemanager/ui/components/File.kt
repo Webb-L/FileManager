@@ -4,9 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Note
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -44,11 +42,14 @@ fun FileCard(
         },
         headlineContent = { if (file.name.isNotEmpty()) Text(file.name) },
         supportingContent = {
-            Row {
-//                Text(file.user, style = MaterialTheme.typography.bodySmall)
-//                Spacer(Modifier.width(8.dp))
-//                Text(file.userGroup, style = MaterialTheme.typography.bodySmall)
-//                Spacer(Modifier.width(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Public, null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(4.dp))
+                Icon(Icons.Default.Devices, null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(4.dp))
+                Icon(Icons.Default.FavoriteBorder, null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(12.dp))
+
                 if (file.isDirectory) {
                     Text("${file.size}项", style = MaterialTheme.typography.bodySmall)
                 } else {
@@ -228,12 +229,6 @@ fun FileCardMenu(
                     )
                 })
             Divider()
-            if (deviceState.devices.isNotEmpty()) {
-                ShareButton(shareExpanded, file) {
-                    shareExpanded = it
-                }
-                Divider()
-            }
             DropdownMenuItem(
                 text = { Text("重命名") },
                 onClick = {

@@ -2,7 +2,6 @@ package app.filemanager.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -10,8 +9,6 @@ import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.SwitchLeft
-import androidx.compose.material.icons.outlined.ArrowRight
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,12 +17,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileFilterSort
-import app.filemanager.data.file.FileInfo
 import app.filemanager.service.WebSocketService
-import app.filemanager.service.WebSocketServiceManager
 import app.filemanager.ui.state.file.FileFilterState
-import app.filemanager.ui.state.main.DeviceState
-import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @Composable
@@ -189,52 +182,6 @@ fun IpsButton() {
                         expanded = false
                     },
                     leadingIcon = { Icon(Icons.Default.Dns, null) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun ShareButton(expanded: Boolean, file: FileInfo, onDismissRequest: (Boolean) -> Unit) {
-    val webSocketServiceManager = koinInject<WebSocketServiceManager>()
-    val deviceState = koinInject<DeviceState>()
-
-    val scope = rememberCoroutineScope()
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .wrapContentSize(Alignment.TopStart)
-    ) {
-        DropdownMenuItem(
-            text = { Text("分享") },
-            onClick = { onDismissRequest(true) },
-            leadingIcon = {
-                Icon(
-                    Icons.Outlined.Share,
-                    contentDescription = null
-                )
-            },
-            trailingIcon = {
-                Icon(
-                    Icons.Outlined.ArrowRight,
-                    contentDescription = null
-                )
-            }
-        )
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { onDismissRequest(false) }
-        ) {
-            for (device in deviceState.devices) {
-                DropdownMenuItem(
-                    text = { Text(device.name) },
-                    onClick = {
-                        scope.launch {
-                            webSocketServiceManager.services.first().sendFile(device.id, file.path)
-                        }
-                    }
                 )
             }
         }
