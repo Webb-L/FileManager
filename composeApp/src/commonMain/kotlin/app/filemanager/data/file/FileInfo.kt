@@ -1,5 +1,8 @@
 package app.filemanager.data.file
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class FileInfo(
     val name: String,
     val description: String = "",
@@ -13,6 +16,8 @@ data class FileInfo(
     val userGroup: String,
     val createdDate: Long,
     val updatedDate: Long,
+    var protocol: FileProtocol = FileProtocol.Local,
+    var protocolId: String = "",
 ) {
     companion object {
         fun nullFileInfo() = FileInfo(
