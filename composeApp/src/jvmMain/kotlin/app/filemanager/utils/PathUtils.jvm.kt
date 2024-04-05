@@ -1,8 +1,11 @@
 package app.filemanager.utils
 
 import app.filemanager.data.file.FileInfo
+import app.filemanager.data.main.DrawerBookmark
+import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.extensions.toFileInfo
 import java.io.File
+import java.io.File.separator
 
 internal actual object PathUtils {
     // 获取目录下所有文件和文件夹
@@ -48,5 +51,34 @@ internal actual object PathUtils {
         }
 
         return fileList
+    }
+
+    actual fun getBookmarks(): List<DrawerBookmark> {
+        val homePath = getHomePath()
+
+        return listOf(
+            DrawerBookmark(name = "主目录", path = homePath, iconType = DrawerBookmarkType.Home),
+            DrawerBookmark(
+                name = "图片",
+                path = "$homePath${separator}Pictures",
+                iconType = DrawerBookmarkType.Image
+            ),
+            DrawerBookmark(name = "音乐", path = "$homePath${separator}Music", iconType = DrawerBookmarkType.Audio),
+            DrawerBookmark(
+                name = "视频",
+                path = "$homePath${separator}Videos",
+                iconType = DrawerBookmarkType.Video
+            ),
+            DrawerBookmark(
+                name = "文档",
+                path = "$homePath${separator}Documents",
+                iconType = DrawerBookmarkType.Document
+            ),
+            DrawerBookmark(
+                name = "下载",
+                path = "$homePath${separator}Downloads",
+                iconType = DrawerBookmarkType.Download
+            ),
+        )
     }
 }

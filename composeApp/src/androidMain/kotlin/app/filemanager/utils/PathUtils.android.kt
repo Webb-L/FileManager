@@ -2,6 +2,8 @@ package app.filemanager.utils
 
 import android.os.Environment
 import app.filemanager.data.file.FileInfo
+import app.filemanager.data.main.DrawerBookmark
+import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.extensions.toFileInfo
 import java.io.File
 
@@ -49,5 +51,38 @@ internal actual object PathUtils {
         }
 
         return fileList
+    }
+
+    actual fun getBookmarks(): List<DrawerBookmark> {
+        val homePath = getHomePath()
+
+        return listOf(
+            DrawerBookmark(name = "主目录", path = homePath, iconType = DrawerBookmarkType.Home),
+            DrawerBookmark(
+                name = "图片",
+                path = "$homePath${File.separator}Pictures",
+                iconType = DrawerBookmarkType.Image
+            ),
+            DrawerBookmark(
+                name = "音乐",
+                path = "$homePath${File.separator}Music",
+                iconType = DrawerBookmarkType.Audio
+            ),
+            DrawerBookmark(
+                name = "视频",
+                path = "$homePath${File.separator}Movies",
+                iconType = DrawerBookmarkType.Video
+            ),
+            DrawerBookmark(
+                name = "文档",
+                path = "$homePath${File.separator}Documents",
+                iconType = DrawerBookmarkType.Document
+            ),
+            DrawerBookmark(
+                name = "下载",
+                path = "$homePath${File.separator}Download",
+                iconType = DrawerBookmarkType.Download
+            ),
+        )
     }
 }

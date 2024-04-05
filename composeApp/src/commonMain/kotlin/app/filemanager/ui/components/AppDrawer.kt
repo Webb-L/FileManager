@@ -14,8 +14,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import app.filemanager.data.main.Device
 import app.filemanager.data.main.DrawerBookmarkType
-import app.filemanager.data.main.Local
 import app.filemanager.service.WebSocketServiceManager
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.DrawerState
@@ -103,7 +103,7 @@ private fun AppDrawerBookmark() {
     val isExpandBookmark by drawerState.isExpandBookmark.collectAsState()
 
     AppDrawerItem(
-        if (deskType is Local) "书签" else "${deskType.name} - 书签",
+        if (deskType is Device) "${deskType.name} - 书签" else "书签",
         actions = {
             Row {
                 Icon(Icons.Default.Add, null, Modifier.clip(RoundedCornerShape(25.dp)).clickable { })

@@ -1,5 +1,7 @@
 package app.filemanager.data.main
 
+import kotlinx.serialization.Serializable
+
 enum class DrawerBookmarkType {
     Home,
     Image,
@@ -10,6 +12,7 @@ enum class DrawerBookmarkType {
     Custom
 }
 
+@Serializable
 data class DrawerBookmark(
     val name: String,
     val path: String,
