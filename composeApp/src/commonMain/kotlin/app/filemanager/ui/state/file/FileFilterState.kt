@@ -65,8 +65,13 @@ class FileFilterState : KoinComponent {
         }
 
         for (type in filterFileExtensions) {
-            files =
-                files.filter { getExtensions(type).contains(it.mineType) }
+            files = when (type) {
+                FileFilterType.Folder -> files.filter { it.isDirectory }
+
+                FileFilterType.File -> files.filter { !it.isDirectory && getFilterFileByFileExtension(it.mineType) == null }
+
+                else -> files.filter { getExtensions(type).contains(it.mineType) }
+            }
         }
 
         val searchText = searchText.value

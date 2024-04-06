@@ -6,6 +6,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 
 enum class FileFilterType(type: String) {
+    Folder("Folder"),
+    File("File"),
     Text("Text"),
     Audio("Audio"),
     Video("Video"),
@@ -36,6 +38,8 @@ enum class FileFilterType(type: String) {
 @Composable
 fun getFileFilterType(type: FileFilterType) {
     when (type) {
+        FileFilterType.Folder -> Icon(Icons.Default.Folder, null)
+        FileFilterType.File -> Icon(Icons.Default.Note, null)
         FileFilterType.Text -> Icon(Icons.Default.Description, null)
         FileFilterType.Audio -> Icon(Icons.Default.Headphones, null)
         FileFilterType.Video -> Icon(Icons.Default.Videocam, null)
