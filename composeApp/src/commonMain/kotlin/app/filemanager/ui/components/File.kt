@@ -22,18 +22,18 @@ import app.filemanager.extensions.timestampToSyncDate
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
-import app.filemanager.ui.state.main.DeviceState
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileCard(
     file: FileInfo,
     onClick: () -> Unit,
     onRemove: (String) -> Unit,
 ) {
+    val database = koinInject<FileManagerDatabase>()
+
     ListItem(
         overlineContent = if (file.description.isNotEmpty()) {
             { Text(file.description) }
@@ -43,12 +43,37 @@ fun FileCard(
         headlineContent = { if (file.name.isNotEmpty()) Text(file.name) },
         supportingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Public, null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(4.dp))
-                Icon(Icons.Default.Devices, null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(4.dp))
-                Icon(Icons.Default.FavoriteBorder, null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(12.dp))
+                when (file.protocol) {
+                    FileProtocol.Local -> {}
+                    FileProtocol.Device -> {
+                        Icon(
+                            Icons.Default.Devices,
+                            null,
+                            Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(4.dp))
+                    }
+
+                    FileProtocol.Network -> {
+                        Icon(Icons.Default.Public, null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(4.dp))
+                    }
+                }
+
+                val isFavorite = database.fileFavoriteQueries
+                    .queryByPathProtocol(file.path, file.protocol)
+                    .executeAsList()
+
+                if (isFavorite.isNotEmpty()) {
+                    Icon(
+                        Icons.Default.FavoriteBorder,
+                        null,
+                        Modifier.size(12.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(12.dp))
+                }
 
                 if (file.isDirectory) {
                     Text("${file.size}项", style = MaterialTheme.typography.bodySmall)
@@ -65,7 +90,6 @@ fun FileCard(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileFavoriteCard(
     favorite: FileFavorite,
@@ -150,18 +174,18 @@ fun FileCardMenu(
     val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
     val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
     var expanded by remember { mutableStateOf(false) }
-    var shareExpanded by remember { mutableStateOf(false) }
 
     val fileOperationState = koinInject<FileOperationState>()
     val database = koinInject<FileManagerDatabase>()
 
-    val deviceState = koinInject<DeviceState>()
     val scope = rememberCoroutineScope()
     Box(Modifier.wrapContentSize(Alignment.TopStart)) {
         Icon(
             Icons.Filled.MoreVert,
             null,
-            modifier = Modifier.clip(RoundedCornerShape(25.dp)).clickable {
+            modifier = Modifier
+                .clip(RoundedCornerShape(25.dp))
+                .clickable {
                 expanded = true
             }
         )
@@ -253,15 +277,15 @@ fun FileCardMenu(
                 })
             Divider()
 
-            val isFixed = database.fileFavoriteQueries
+            val isFavorite = database.fileFavoriteQueries
                 .queryByPathProtocol(file.path, FileProtocol.Local)
                 .executeAsList()
 
             DropdownMenuItem(
                 text = { Text("收藏") },
                 onClick = {
-                    if (isFixed.isNotEmpty()) {
-                        database.fileFavoriteQueries.deleteById(isFixed.first())
+                    if (isFavorite.isNotEmpty()) {
+                        database.fileFavoriteQueries.deleteById(isFavorite.first())
                     } else {
                         database.fileFavoriteQueries.insert(
                             name = file.name,
@@ -280,7 +304,7 @@ fun FileCardMenu(
                 },
                 leadingIcon = {
                     Icon(
-                        if (isFixed.isNotEmpty())
+                        if (isFavorite.isNotEmpty())
                             Icons.Outlined.Favorite
                         else
                             Icons.Outlined.FavoriteBorder,

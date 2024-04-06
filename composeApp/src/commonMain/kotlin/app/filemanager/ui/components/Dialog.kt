@@ -9,7 +9,10 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,7 +32,7 @@ import app.filemanager.extensions.timestampToSyncDate
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileOperationType
-import app.filemanager.ui.state.main.MainState
+import app.filemanager.ui.state.file.FileState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import org.koin.compose.koinInject
@@ -37,8 +40,8 @@ import org.koin.compose.koinInject
 
 @Composable
 fun FileInfoDialog(fileInfo: FileInfo, onCancel: () -> Unit) {
-    val mainState = koinInject<MainState>()
-    val rootPath by mainState.rootPath.collectAsState()
+    val fileState = koinInject<FileState>()
+    val rootPath by fileState.rootPath.collectAsState()
     val rootPathTotalSpace = FileUtils.totalSpace(rootPath)
     val rootPathFreeSpace = FileUtils.freeSpace(rootPath)
 
@@ -251,12 +254,16 @@ fun TextFieldDialog(
     label: String = "",
     initText: String = "",
     leadingIcon: @Composable (() -> Unit)? = null,
-    verifyFun: (String) -> Pair<Boolean, String> = { _ -> Pair(false, "") },
+    verifyFun: suspend (String) -> Pair<Boolean, String> = { _ -> Pair(false, "") },
     onCancel: (String) -> Unit
 ) {
     var text by remember { mutableStateOf(initText) }
     val focusRequester = remember { FocusRequester() }
-    val verify = verifyFun(text)
+    var verify by remember { mutableStateOf(Pair(false, "")) }
+
+    LaunchedEffect(text) {
+        verify = verifyFun(text)
+    }
 
     AlertDialog(
         title = { Text(title) },

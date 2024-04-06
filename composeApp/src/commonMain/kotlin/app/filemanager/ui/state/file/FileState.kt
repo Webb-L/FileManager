@@ -1,15 +1,86 @@
 package app.filemanager.ui.state.file
 
+import androidx.compose.runtime.mutableStateListOf
 import app.filemanager.data.file.FileInfo
+import app.filemanager.data.file.FileProtocol
+import app.filemanager.data.main.Device
+import app.filemanager.data.main.DiskBase
+import app.filemanager.data.main.Local
+import app.filemanager.data.main.Network
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.replaceLast
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 class FileState {
+    val fileAndFolder = mutableStateListOf<FileInfo>()
+
+    private val _rootPath: MutableStateFlow<String> = MutableStateFlow(PathUtils.getRootPaths().first())
+    val rootPath: StateFlow<String> = _rootPath
+    suspend fun updateRootPath(value: String) {
+        _rootPath.value = value
+        updateFileAndFolder()
+    }
+
+    private val _path: MutableStateFlow<String> = MutableStateFlow(PathUtils.getHomePath())
+    val path: StateFlow<String> = _path
+    suspend fun updatePath(value: String) {
+        _path.value = value
+        updateFileAndFolder()
+    }
+
+    private val _isCreateFolder: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isCreateFolder: StateFlow<Boolean> = _isCreateFolder
+    fun updateCreateFolder(value: Boolean) {
+        _isCreateFolder.value = value
+    }
+
+    private val _deskType: MutableStateFlow<DiskBase> = MutableStateFlow(Local())
+    val deskType: StateFlow<DiskBase> = _deskType
+    suspend fun updateDesk(protocol: FileProtocol, type: DiskBase) {
+        _deskType.value = type
+        when (protocol) {
+            FileProtocol.Local -> {
+
+            }
+
+            FileProtocol.Device -> {
+                val device = type as Device
+            }
+
+            FileProtocol.Network -> {
+                val network = type as Network
+            }
+        }
+
+        updateFileAndFolder()
+    }
+
+    suspend fun getFileAndFolder(path: String): List<FileInfo> {
+        return when (_deskType.value) {
+            is Local -> path.getFileAndFolder()
+            else -> listOf()
+        }
+    }
+
+    suspend fun updateFileAndFolder() {
+        fileAndFolder.clear()
+        fileAndFolder.addAll(getFileAndFolder(_path.value))
+    }
+
+
+    init {
+        MainScope().launch {
+            updateFileAndFolder()
+        }
+    }
+
+
     var srcPath = ""
 
     // 是否在复制文件
@@ -117,7 +188,8 @@ class FileState {
                         if (newName.isNotEmpty()) {
                             toPath = newName
                         }
-                    } catch (e: Exception) { }
+                    } catch (e: Exception) {
+                    }
                 }
             } catch (e: Exception) {
                 toPath = fileInfo.path.replace(srcPath, newDestPath)
@@ -223,7 +295,7 @@ class FileState {
 
             val fileNameRegex = "${Regex.escape(fileName)}(\\(\\d*\\))?".toRegex()
             // 获取相同文件名
-            val files = path.getFileAndFolder()
+            val files = getFileAndFolder(path)
                 .asSequence()
                 .filter {
                     if (it.isDirectory) {

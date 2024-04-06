@@ -34,5 +34,20 @@ data class FileInfo(
             createdDate = 0,
             updatedDate = 0
         )
+
+        fun pathFileInfo(path: String) = FileInfo(
+            name = path,
+            description = "",
+            isDirectory = true,
+            isHidden = false,
+            path = path,
+            mineType = "",
+            size = 0,
+            permissions = 0,
+            user = "",
+            userGroup = "",
+            createdDate = 0,
+            updatedDate = 0
+        )
     }
 }

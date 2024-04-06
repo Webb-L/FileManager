@@ -7,14 +7,17 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import app.filemanager.ui.components.FileFavoriteCard
 import app.filemanager.ui.components.GridList
 import app.filemanager.ui.state.file.FileFavoriteState
+import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.MainState
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 class FavoriteScreen : Screen {
@@ -23,9 +26,13 @@ class FavoriteScreen : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
 
+        val scope = rememberCoroutineScope()
+
         val mainState = koinInject<MainState>()
         val fileFavoriteState = koinInject<FileFavoriteState>()
         fileFavoriteState.sync()
+
+        val fileState = koinInject<FileState>()
 
         val snackbarHostState = remember { SnackbarHostState() }
         Scaffold(
@@ -54,7 +61,9 @@ class FavoriteScreen : Screen {
                 items(favorites) { favorite ->
                     FileFavoriteCard(favorite = favorite,
                         onClick = {
-                            mainState.updatePath(favorite.path)
+                            scope.launch {
+                                fileState.updatePath(favorite.path)
+                            }
                             mainState.updateFavorite(false)
                             navigator.pop()
                         },

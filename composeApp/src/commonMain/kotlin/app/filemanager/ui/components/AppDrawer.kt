@@ -7,19 +7,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.service.WebSocketServiceManager
+import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.ui.state.main.MainState
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -94,10 +93,14 @@ fun AppDrawer() {
 
 @Composable
 private fun AppDrawerBookmark() {
+    val scope = rememberCoroutineScope()
+
     val mainState = koinInject<MainState>()
     val isFavorite by mainState.isFavorite.collectAsState()
-    val path by mainState.path.collectAsState()
-    val deskType by mainState.deskType.collectAsState()
+
+    val fileState = koinInject<FileState>()
+    val path by fileState.path.collectAsState()
+    val deskType by fileState.deskType.collectAsState()
 
     val drawerState = koinInject<DrawerState>()
     val isExpandBookmark by drawerState.isExpandBookmark.collectAsState()
@@ -142,7 +145,9 @@ private fun AppDrawerBookmark() {
                 label = { Text(bookmark.name) },
                 selected = !isFavorite && path == bookmark.path,
                 onClick = {
-                    mainState.updatePath(bookmark.path)
+                    scope.launch {
+                        fileState.updatePath(bookmark.path)
+                    }
                     mainState.updateFavorite(false)
                 },
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)

@@ -7,8 +7,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.parsePath
+import app.filemanager.ui.components.AppBarPath
 import app.filemanager.ui.components.FileOperationDialog
 import app.filemanager.ui.components.FileWarningOperationDialog
 import app.filemanager.ui.components.TextFieldDialog
@@ -33,10 +33,10 @@ object HomeScreen : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
 
+        val scope = rememberCoroutineScope()
+
         val mainState = koinInject<MainState>()
-        val path by mainState.path.collectAsState()
         val editPath by mainState.isEditPath.collectAsState()
-        val isCreateFolder by mainState.isCreateFolder.collectAsState()
         val isFavorite by mainState.isFavorite.collectAsState()
 
         val fileFilterState = koinInject<FileFilterState>()
@@ -44,6 +44,8 @@ object HomeScreen : Screen {
         val searchText by fileFilterState.searchText.collectAsState()
 
         val fileState = koinInject<FileState>()
+        val path by fileState.path.collectAsState()
+        val isCreateFolder by fileState.isCreateFolder.collectAsState()
         val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
         val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
 
@@ -58,7 +60,7 @@ object HomeScreen : Screen {
             bottomBar = { HomeBottomBar() },
             floatingActionButton = {
                 if (!isPasteCopyFile && !isPasteMoveFile) {
-                    ExtendedFloatingActionButton({ mainState.updateCreateFolder(true) }) {
+                    ExtendedFloatingActionButton({ fileState.updateCreateFolder(true) }) {
                         Icon(Icons.Filled.Add, null)
                         Spacer(Modifier.width(8.dp))
                         Text("新增")
@@ -93,9 +95,9 @@ object HomeScreen : Screen {
             TextFieldDialog(
                 "新增文件夹",
                 label = "名称",
-                verifyFun = { text -> VerificationUtils.folder(text, path.getFileAndFolder()) }
+                verifyFun = { text -> VerificationUtils.folder(text, fileState.getFileAndFolder(path)) }
             ) {
-                mainState.updateCreateFolder(false)
+                fileState.updateCreateFolder(false)
                 if (it.isEmpty()) return@TextFieldDialog
                 FileUtils.createFolder(path, it)
                 fileFilterState.updateFilerKey()
@@ -107,7 +109,9 @@ object HomeScreen : Screen {
                 mainState.updateEditPath(false)
                 if (it.isEmpty()) return@TextFieldDialog
                 if (it.parsePath().isNotEmpty()) {
-                    mainState.updatePath(it)
+                    scope.launch {
+                        fileState.updatePath(it)
+                    }
                 }
             }
         }
@@ -160,12 +164,11 @@ object HomeScreen : Screen {
     fun HomeBottomBar() {
         val scope = rememberCoroutineScope()
 
-        val mainState = koinInject<MainState>()
-        val path by mainState.path.collectAsState()
 
         val fileOperationState = koinInject<FileOperationState>()
 
         val fileState = koinInject<FileState>()
+        val path by fileState.path.collectAsState()
         val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
         val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
 
@@ -199,7 +202,7 @@ object HomeScreen : Screen {
                 },
                 floatingActionButton = {
                     FloatingActionButton(
-                        onClick = { mainState.updateCreateFolder(true) },
+                        onClick = { fileState.updateCreateFolder(true) },
                         containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
                         elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
                     ) {

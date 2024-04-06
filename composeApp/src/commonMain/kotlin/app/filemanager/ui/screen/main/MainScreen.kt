@@ -1,32 +1,15 @@
 package app.filemanager.ui.screen.main
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.ArrowDropUp
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.unit.dp
-import app.filemanager.data.file.FileInfo
-import app.filemanager.extensions.getFileAndFolder
-import app.filemanager.extensions.parsePath
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import app.filemanager.ui.components.AppDrawer
-import app.filemanager.ui.components.buttons.DiskSwitchButton
 import app.filemanager.ui.navigator.HomeNavigator
 import app.filemanager.ui.state.main.MainState
-import app.filemanager.utils.NaturalOrderComparator
-import app.filemanager.utils.PathUtils
-import app.filemanager.utils.PathUtils.getRootPaths
 import app.filemanager.utils.WindowSizeClass
 import org.koin.compose.koinInject
 
@@ -57,117 +40,6 @@ fun MainScreen(screenType: WindowSizeClass) {
                 AppDrawer()
             }
             HomeNavigator()
-        }
-    }
-}
-
-@Composable
-fun AppBarPath() {
-    val mainState = koinInject<MainState>()
-    val path by mainState.path.collectAsState()
-    val rootPath by mainState.rootPath.collectAsState()
-    val deskType by mainState.deskType.collectAsState()
-
-    val paths = path.parsePath()
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = paths.size - 1)
-    LazyRow(state = listState) {
-        item {
-            DiskSwitchButton(
-                deskType,
-                mainState::updateDesk
-            )
-        }
-        item {
-            PathSwitch(
-                mainState.rootPath.value,
-                getRootPaths().map {
-                    FileInfo(
-                        name = it,
-                        description = "",
-                        isDirectory = true,
-                        isHidden = false,
-                        path = it,
-                        mineType = "",
-                        size = 0,
-                        permissions = 0,
-                        user = "",
-                        userGroup = "",
-                        createdDate = 0,
-                        updatedDate = 0
-                    )
-                },
-                onClick = {
-                    mainState.updatePath(mainState.rootPath.value)
-                },
-                onSelected = {
-                    mainState.updateRootPath(it)
-                    mainState.updatePath(it)
-                }
-            )
-        }
-        itemsIndexed(paths) { index, text ->
-            val nowPath = rootPath + paths.subList(0, index).joinToString(PathUtils.getPathSeparator())
-            PathSwitch(
-                text,
-                nowPath.getFileAndFolder().filter { it.isDirectory }
-                    .sortedWith(NaturalOrderComparator()),
-                onClick = {
-                    val newPath = rootPath + paths.subList(0, index + 1)
-                        .joinToString(PathUtils.getPathSeparator())
-                    mainState.updatePath(newPath)
-                },
-                onSelected = { mainState.updatePath(it) }
-            )
-        }
-    }
-
-    LaunchedEffect(paths) {
-        listState.scrollToItem(paths.size)
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PathSwitch(
-    name: String,
-    fileInfos: List<FileInfo>,
-    selected: Boolean = false,
-    onClick: () -> Unit,
-    onSelected: (String) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
-        FilterChip(
-            selected = selected,
-            label = { Text(name) },
-            border = null,
-            shape = RoundedCornerShape(25.dp),
-            trailingIcon = if (fileInfos.size > 1) {
-                {
-                    Icon(
-                        if (expanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
-                        null,
-                        Modifier.clip(RoundedCornerShape(25.dp)).clickable { expanded = !expanded }
-                    )
-                }
-            } else {
-                null
-            },
-            onClick = onClick
-        )
-
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            for (fileInfo in fileInfos) {
-                DropdownMenuItem(
-                    text = { Text(fileInfo.name) },
-                    onClick = {
-                        onSelected(fileInfo.path)
-                        expanded = false
-                    })
-            }
         }
     }
 }
