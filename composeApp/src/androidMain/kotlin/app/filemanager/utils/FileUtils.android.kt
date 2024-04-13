@@ -1,16 +1,16 @@
 package app.filemanager.utils
 
 import app.filemanager.AppActivity
-import app.filemanager.data.file.FileInfo
-import app.filemanager.extensions.toFileInfo
+import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.extensions.toFileSimpleInfo
 import io.github.aakira.napier.Napier
 import java.io.File
 import java.io.RandomAccessFile
 
 internal actual object FileUtils {
-    actual fun getFile(path: String): FileInfo = File(path).toFileInfo()
+    actual fun getFile(path: String): FileSimpleInfo = File(path).toFileSimpleInfo()
 
-    actual fun getFile(path: String, fileName: String): FileInfo = File(path, fileName).toFileInfo()
+    actual fun getFile(path: String, fileName: String): FileSimpleInfo = File(path, fileName).toFileSimpleInfo()
     actual fun openFile(file: String) {
         AppActivity.openFile(file)
     }
