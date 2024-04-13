@@ -1,17 +1,19 @@
 package app.filemanager.utils
 
 import app.filemanager.data.file.FileInfo
+import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.main.DrawerBookmark
 import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.extensions.toFileInfo
+import app.filemanager.extensions.toFileSimpleInfo
 import java.io.File
 import java.io.File.separator
 
 internal actual object PathUtils {
     // 获取目录下所有文件和文件夹
-    actual fun getFileAndFolder(path: String): List<FileInfo> =
+    actual fun getFileAndFolder(path: String): List<FileSimpleInfo> =
         (File(path).listFiles() ?: emptyArray<File>()).map { file ->
-            file.toFileInfo()
+            file.toFileSimpleInfo()
         }
 
     // 获取用户目录
@@ -27,15 +29,15 @@ internal actual object PathUtils {
     actual fun getRootPaths(): List<String> = File.listRoots().map { it.path }
 
     // 遍历目录
-    actual fun traverse(path: String): List<FileInfo> {
-        val fileList = mutableListOf<FileInfo>()
+    actual fun traverse(path: String): List<FileSimpleInfo> {
+        val fileList = mutableListOf<FileSimpleInfo>()
         val directory = File(path)
         if (directory.exists()) {
             if (directory.isDirectory) {
                 val files = directory.listFiles() ?: emptyArray()
                 for (file in files) {
                     try {
-                        fileList.add(file.toFileInfo())
+                        fileList.add(file.toFileSimpleInfo())
                         if (file.isDirectory) {
                             fileList.addAll(traverse(file.path))
                         }
@@ -43,10 +45,10 @@ internal actual object PathUtils {
                     }
                 }
                 if (files.isEmpty()) {
-                    fileList.add(directory.toFileInfo())
+                    fileList.add(directory.toFileSimpleInfo())
                 }
             } else {
-                fileList.add(directory.toFileInfo())
+                fileList.add(directory.toFileSimpleInfo())
             }
         }
 

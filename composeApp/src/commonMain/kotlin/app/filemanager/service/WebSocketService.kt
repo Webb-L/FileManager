@@ -1,9 +1,7 @@
 package app.filemanager.service
 
-import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.FileProtocol
-import app.filemanager.data.main.Device
-import app.filemanager.data.main.DeviceType
+import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.FileUtils
@@ -15,12 +13,15 @@ import io.ktor.utils.io.core.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.encodeToHexString
 import kotlinx.serialization.protobuf.ProtoBuf
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import kotlin.random.Random
 
 expect class WebSocketService() {
     fun getNetworkIp(): List<String>
@@ -29,10 +30,11 @@ expect class WebSocketService() {
     fun stopService()
 }
 
-const val SEND_SPLITE = "\n\n"
+const val SEND_SPLIT = "\n\n"
 
 class WebSocketConnectService() : KoinComponent {
-    private val manager by inject<WebSocketServiceManager>()
+    private val replyMessage = mutableMapOf<Long, Any>()
+
     private val deviceState by inject<DeviceState>()
     private var deviceId: String = ""
     private var deviceName: String = ""
@@ -59,7 +61,7 @@ class WebSocketConnectService() : KoinComponent {
             session = this
             launch {
                 delay(10)
-                send("/devices${SEND_SPLITE}")
+                send("/devices${SEND_SPLIT}")
                 isConnected = true
             }
             launch {
@@ -69,7 +71,7 @@ class WebSocketConnectService() : KoinComponent {
                         parseMessage(message.readText())
                     }
                 } catch (e: Exception) {
-                    manager.services.remove(this@WebSocketConnectService)
+                    isConnected = false
                     println(e)
                     close()
                 }
@@ -84,8 +86,31 @@ class WebSocketConnectService() : KoinComponent {
     }
 
     @OptIn(ExperimentalSerializationApi::class)
-    suspend fun sendReplyList(id: String, content: List<FileInfo>) {
-        send("/reply_list $id${SEND_SPLITE}${ProtoBuf.encodeToHexString(content)}".toByteArray())
+    suspend fun sendReplyList(id: String, replyKey: Long, directory: String) {
+        val sendFileSimpleInfos = mutableMapOf<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>().apply {
+            directory.getFileAndFolder().forEach { fileSimpleInfo ->
+                val key = if (fileSimpleInfo.protocol == FileProtocol.Local)
+                    Pair(FileProtocol.Device, fileSimpleInfo.protocolId)
+                else
+                    Pair(fileSimpleInfo.protocol, fileSimpleInfo.protocolId)
+
+                if (!containsKey(key)) {
+                    put(key, mutableListOf(fileSimpleInfo.apply {
+                        this.path = this.path.replace(directory, "")
+                        this.protocol = FileProtocol.Local
+                        this.protocolId = ""
+                    }))
+                } else {
+                    get(key)?.add(fileSimpleInfo.apply {
+                        this.path = this.path.replace(directory, "")
+                        this.protocol = FileProtocol.Local
+                        this.protocolId = ""
+                    })
+                }
+            }
+        }
+
+        send("/reply_list $id $replyKey${SEND_SPLIT}${ProtoBuf.encodeToHexString(sendFileSimpleInfos)}".toByteArray())
     }
 
     suspend fun sendFile(id: String, fileName: String) {
@@ -98,8 +123,34 @@ class WebSocketConnectService() : KoinComponent {
      * @param path 要获取列表的路径。
      * @param remoteId 远程设备的ID。
      */
-    suspend fun getList(path: String, remoteId: String) {
-        send("/list $path $remoteId\n\n".toByteArray())
+    suspend fun getList(path: String, remoteId: String, replyListCallback: (List<FileSimpleInfo>) -> Unit) {
+        val currentInstant: Instant = Clock.System.now()
+        val replyKey = currentInstant.toEpochMilliseconds() + Random.nextInt()
+        send("/list $path $remoteId $replyKey\n\n".toByteArray())
+
+        for (i in 0..100) {
+            delay(100)
+            if (replyMessage.contains(replyKey)) {
+                break
+            }
+        }
+
+        val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
+        if (replyMessage[replyKey] != null) {
+            val tempMap = replyMessage[replyKey] as Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>
+            tempMap.forEach {
+                it.value.forEach { fileSimpleInfo ->
+                    fileSimpleInfos.add(fileSimpleInfo.apply {
+                        protocol = it.key.first
+                        protocolId = it.key.second
+                        this.path = path + this.path
+                    })
+                }
+            }
+        }
+
+        replyListCallback(fileSimpleInfos)
+        replyMessage.remove(replyKey)
     }
 
 
@@ -111,32 +162,24 @@ class WebSocketConnectService() : KoinComponent {
         when (header[0]) {
             "/reply_devices" -> {
                 for (message in content.split("\n")) {
-                    val line = message.split(" ")
-                    deviceState.devices.add(
-                        Device(
-                            id = line[0],
-                            name = line[1],
-                            host = line[2],
-                            type = DeviceType.IOS
-                        )
+                    deviceState.addDevices(
+                        message,
+                        this,
                     )
-
-                    getList("/", line[0])
                 }
             }
 
             // 远程设备需要我本地文件
             // TODO 检查权限
-            "/list" -> sendReplyList(header[2], header[1].getFileAndFolder().map { fileInfo ->
-                fileInfo.protocol = FileProtocol.Device
-                fileInfo.protocolId = deviceId
-                fileInfo
-            })
+            "/list" -> sendReplyList(
+                header[2],
+                header[3].toLong(),
+                header[1]
+            )
 
             // 收到对方返回的文件文件夹信息
-            "/reply_list" -> {
-                println(ProtoBuf.decodeFromHexString<List<FileInfo>>(content))
-            }
+            "/reply_list" -> replyMessage[header[1].toLong()] =
+                ProtoBuf.decodeFromHexString<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>(content)
 
             else -> {
                 println(header[0])

@@ -36,8 +36,10 @@ fun DiskSwitchButton(
     val deviceState = koinInject<DeviceState>()
     val networkState = koinInject<NetworkState>()
 
+    val devices by deviceState.devices.collectAsState()
+
     if (
-        deviceState.devices.isEmpty() &&
+        devices.isEmpty() &&
         networkState.networks.isEmpty()
     ) return
 
@@ -76,10 +78,10 @@ fun DiskSwitchButton(
             },
         )
 
-        if (deviceState.devices.isNotEmpty()) {
+        if (devices.isNotEmpty()) {
             DeskDeviceMenuButton(
                 expandedDevice,
-                deviceState.devices,
+                devices,
                 onSelect = {
                     scope.launch {
                         onSelectDesk(FileProtocol.Device, it)

@@ -1,10 +1,11 @@
 package app.filemanager.utils
 
 import app.filemanager.data.file.FileInfo
+import app.filemanager.data.file.FileSimpleInfo
 
 internal expect object FileUtils {
-    fun getFile(path: String): FileInfo
-    fun getFile(path: String, fileName: String): FileInfo
+    fun getFile(path: String): FileSimpleInfo
+    fun getFile(path: String, fileName: String): FileSimpleInfo
     fun openFile(file: String)
     fun copyFile(src: String, dest: String): Boolean
     fun moveFile(src: String, dest: String): Boolean

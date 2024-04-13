@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileInfo
+import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.buttons.DiskSwitchButton
 import app.filemanager.ui.state.file.FileFilterState
@@ -107,7 +108,7 @@ fun RootPathSwitch(
     onSelected: (String) -> Unit
 ) {
     val fileInfos = getRootPaths().map {
-        FileInfo.pathFileInfo(it)
+        FileSimpleInfo.pathFileSimpleInfo(it)
     }
 
     renderPathSwitch(name, fileInfos, selected, onClick, onSelected)
@@ -131,7 +132,7 @@ fun PathSwitch(
     onSelected: (String) -> Unit
 ) {
     val fileState = koinInject<FileState>()
-    var fileInfos by remember { mutableStateOf<List<FileInfo>>(listOf()) }
+    var fileInfos by remember { mutableStateOf<List<FileSimpleInfo>>(listOf()) }
 
     val fileFilterState = koinInject<FileFilterState>()
 
@@ -159,7 +160,7 @@ fun PathSwitch(
 @Composable
 private fun renderPathSwitch(
     name: String,
-    fileInfos: List<FileInfo>,
+    fileInfos: List<FileSimpleInfo>,
     selected: Boolean,
     onClick: () -> Unit,
     onSelected: (String) -> Unit

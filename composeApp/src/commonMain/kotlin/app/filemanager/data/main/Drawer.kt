@@ -1,5 +1,9 @@
 package app.filemanager.data.main
 
+import app.filemanager.data.file.FileInfo
+import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.extensions.isPrivateIPAddress
+import app.filemanager.service.WebSocketConnectService
 import kotlinx.serialization.Serializable
 
 enum class DrawerBookmarkType {
@@ -39,9 +43,22 @@ enum class DeviceType(type: String) {
 data class Device(
     val id: String,
     override val name: String,
-    val host: String,
+    val host: MutableMap<String, WebSocketConnectService>,
     val type: DeviceType
-) : DiskBase()
+) : DiskBase() {
+    fun getConnect(): WebSocketConnectService? {
+        for (key in host.keys) {
+            if (key.isPrivateIPAddress()) {
+                return host[key]
+            }
+        }
+        return host.values.first()
+    }
+
+    suspend fun getFileList(path: String, replyListCallback: (List<FileSimpleInfo>) -> Unit) {
+        getConnect()?.getList(path, id, replyListCallback)
+    }
+}
 
 enum class NetworkProtocol {
     FTP,

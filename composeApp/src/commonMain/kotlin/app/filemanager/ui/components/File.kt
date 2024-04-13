@@ -14,6 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.FileProtocol
+import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.getFileFilterType
 import app.filemanager.db.FileFavorite
 import app.filemanager.db.FileManagerDatabase
@@ -28,7 +29,7 @@ import org.koin.compose.koinInject
 
 @Composable
 fun FileCard(
-    file: FileInfo,
+    file: FileSimpleInfo,
     onClick: () -> Unit,
     onRemove: (String) -> Unit,
 ) {
@@ -121,7 +122,7 @@ fun FileFavoriteCard(
         ),
         leadingContent = {
             FileIcon(
-                FileInfo(
+                FileSimpleInfo(
                     name = "",
                     description = "",
                     isDirectory = favorite.isDirectory,
@@ -129,9 +130,6 @@ fun FileFavoriteCard(
                     path = "",
                     mineType = favorite.mineType,
                     size = 0,
-                    permissions = 0,
-                    user = "",
-                    userGroup = "",
                     createdDate = 0,
                     updatedDate = 0
                 )
@@ -143,7 +141,7 @@ fun FileFavoriteCard(
 }
 
 @Composable
-fun FileIcon(file: FileInfo) {
+fun FileIcon(file: FileSimpleInfo) {
     val fileFilterState = koinInject<FileFilterState>()
 
     if (file.isDirectory) {
@@ -167,7 +165,7 @@ fun FileIcon(file: FileInfo) {
 
 @Composable
 fun FileCardMenu(
-    file: FileInfo,
+    file: FileSimpleInfo,
     onRemove: (String) -> Unit
 ) {
     val fileState = koinInject<FileState>()

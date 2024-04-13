@@ -2,6 +2,7 @@ package app.filemanager.ui.state.file
 
 import androidx.compose.runtime.mutableStateListOf
 import app.filemanager.data.file.FileInfo
+import app.filemanager.data.file.FileSimpleInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -21,7 +22,7 @@ class FileOperationState {
         _isOperationDialog.value = value
     }
 
-    val fileInfos = mutableListOf<FileInfo>()
+    val fileInfos = mutableListOf<FileSimpleInfo>()
 
     private val _currentIndex: MutableStateFlow<Int> = MutableStateFlow(0)
     val currentIndex: StateFlow<Int> = _currentIndex
@@ -52,7 +53,7 @@ class FileOperationState {
 
     val logs = mutableStateListOf<String>()
 
-    fun updateFileInfos(value: List<FileInfo>) {
+    fun updateFileInfos(value: List<FileSimpleInfo>) {
         _currentIndex.value = 0
         _isFinished.value = false
         isStop = false
@@ -73,10 +74,10 @@ class FileOperationState {
         _isWarningOperationDialog.value = value
     }
 
-    private val _warningFiles: MutableStateFlow<Pair<FileInfo, FileInfo>> =
-        MutableStateFlow(Pair(FileInfo.nullFileInfo(), FileInfo.nullFileInfo()))
-    val warningFiles: StateFlow<Pair<FileInfo, FileInfo>> = _warningFiles
-    fun updateWarningFiles(value: Pair<FileInfo, FileInfo>) {
+    private val _warningFiles: MutableStateFlow<Pair<FileSimpleInfo, FileSimpleInfo>> =
+        MutableStateFlow(Pair(FileSimpleInfo.nullFileSimpleInfo(), FileSimpleInfo.nullFileSimpleInfo()))
+    val warningFiles: StateFlow<Pair<FileSimpleInfo, FileSimpleInfo>> = _warningFiles
+    fun updateWarningFiles(value: Pair<FileSimpleInfo, FileSimpleInfo>) {
         _warningFiles.value = value
         _isWarningOperationDialog.value = true
         _warningOperationType.value = FileOperationType.Reserve

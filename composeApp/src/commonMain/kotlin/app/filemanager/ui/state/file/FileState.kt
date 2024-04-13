@@ -3,6 +3,7 @@ package app.filemanager.ui.state.file
 import androidx.compose.runtime.mutableStateListOf
 import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.FileProtocol
+import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DiskBase
 import app.filemanager.data.main.Local
@@ -17,8 +18,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-class FileState {
-    val fileAndFolder = mutableStateListOf<FileInfo>()
+class FileState() {
+    val fileAndFolder = mutableStateListOf<FileSimpleInfo>()
 
     private val _rootPath: MutableStateFlow<String> = MutableStateFlow(PathUtils.getRootPaths().first())
     val rootPath: StateFlow<String> = _rootPath
@@ -61,11 +62,29 @@ class FileState {
         updateFileAndFolder()
     }
 
-    suspend fun getFileAndFolder(path: String): List<FileInfo> {
-        return when (_deskType.value) {
-            is Local -> path.getFileAndFolder()
-            else -> listOf()
+    suspend fun getFileAndFolder(path: String): List<FileSimpleInfo> {
+        if (_deskType.value is Local) {
+            return path.getFileAndFolder()
         }
+
+        var isReturn = false
+
+        if (_deskType.value is Device) {
+            val device = _deskType.value as Device
+            val temp = mutableListOf<FileSimpleInfo>()
+            device.getFileList(path) {
+                temp.addAll(it)
+                isReturn = true
+            }
+
+            while (!isReturn) {
+                delay(100L)
+                return temp
+            }
+            return temp
+        }
+
+        return listOf()
     }
 
     suspend fun updateFileAndFolder() {
@@ -232,7 +251,7 @@ class FileState {
     suspend fun deleteFile(fileOperationState: FileOperationState, path: String) {
         fileOperationState.title = "删除中..."
         val fileInfos = PathUtils.traverse(path)
-            .sortedWith(compareBy<FileInfo> { it.isDirectory }.thenByDescending { it.path })
+            .sortedWith(compareBy<FileSimpleInfo> { it.isDirectory }.thenByDescending { it.path })
         fileOperationState.updateFileInfos(fileInfos)
         for (fileInfo in fileInfos) {
             if (fileOperationState.isCancel) return
@@ -250,15 +269,15 @@ class FileState {
         fileOperationState.updateFinished(true)
     }
 
-    private val _fileInfo: MutableStateFlow<FileInfo?> = MutableStateFlow(null)
-    val fileInfo: StateFlow<FileInfo?> = _fileInfo
-    fun updateFileInfo(data: FileInfo?) {
+    private val _fileInfo: MutableStateFlow<FileSimpleInfo?> = MutableStateFlow(null)
+    val fileInfo: StateFlow<FileSimpleInfo?> = _fileInfo
+    fun updateFileInfo(data: FileSimpleInfo?) {
         _fileInfo.value = data
     }
 
     private suspend fun generateNewName(
-        srcFileInfo: FileInfo,
-        destFileInfo: FileInfo,
+        srcFileInfo: FileSimpleInfo,
+        destFileInfo: FileSimpleInfo,
         fileOperationState: FileOperationState,
     ): String {
         var newDestFileInfo = destFileInfo

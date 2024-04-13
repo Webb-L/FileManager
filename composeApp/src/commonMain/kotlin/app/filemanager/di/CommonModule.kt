@@ -2,7 +2,7 @@ package app.filemanager.di
 
 import app.filemanager.createSettings
 import app.filemanager.service.DriverFactory
-import app.filemanager.service.WebSocketServiceManager
+import app.filemanager.service.WebSocketConnectService
 import app.filemanager.service.createDatabase
 import app.filemanager.ui.state.file.FileFavoriteState
 import app.filemanager.ui.state.file.FileFilterState
@@ -16,7 +16,6 @@ import org.koin.dsl.module
 
 val commonModule = module {
     single { createSettings() }
-    single { WebSocketServiceManager() }
 }
 
 val commonScreenModule = module {

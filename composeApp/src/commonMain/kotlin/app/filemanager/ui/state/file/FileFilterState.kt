@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableStateListOf
 import app.filemanager.data.file.FileFilterSort
 import app.filemanager.data.file.FileFilterType
 import app.filemanager.data.file.FileInfo
+import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.db.FileFilter
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.utils.NaturalOrderComparator
@@ -58,7 +59,7 @@ class FileFilterState : KoinComponent {
         _updateKey.value++
     }
 
-    fun filter(fileInfos: List<FileInfo>, updateKey: Int): List<FileInfo> {
+    fun filter(fileInfos: List<FileSimpleInfo>, updateKey: Int): List<FileSimpleInfo> {
         var files = fileInfos
         if (_isHideFile.value) {
             files = files.filter { !it.isHidden }
@@ -81,34 +82,34 @@ class FileFilterState : KoinComponent {
 
         return when (_sortType.value) {
             FileFilterSort.NameAsc -> files
-                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.then(NaturalOrderComparator()))
+                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.then(NaturalOrderComparator()))
 
             FileFilterSort.NameDesc -> files
-                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenDescending(NaturalOrderComparator()))
+                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.thenDescending(NaturalOrderComparator()))
 
             FileFilterSort.SizeAsc -> files
-                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenBy { it.size })
+                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.thenBy { it.size })
 
             FileFilterSort.SizeDesc -> files
-                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.size })
+                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.thenByDescending { it.size })
 
             FileFilterSort.TypeAsc -> files
-                .sortedWith(compareBy<FileInfo> { it.isDirectory }.then(NaturalOrderComparator()))
+                .sortedWith(compareBy<FileSimpleInfo> { it.isDirectory }.then(NaturalOrderComparator()))
 
             FileFilterSort.TypeDesc -> files
-                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.then(NaturalOrderComparator()))
+                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.then(NaturalOrderComparator()))
 
             FileFilterSort.CreatedDateAsc -> files
-                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenBy { it.createdDate })
+                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.thenBy { it.createdDate })
 
             FileFilterSort.CreatedDateDesc -> files
-                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.createdDate })
+                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.thenByDescending { it.createdDate })
 
             FileFilterSort.UpdatedDateAsc -> files
-                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenBy { it.updatedDate })
+                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.thenBy { it.updatedDate })
 
             FileFilterSort.UpdatedDateDesc -> files
-                .sortedWith(compareByDescending<FileInfo> { it.isDirectory }.thenByDescending { it.updatedDate })
+                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.thenByDescending { it.updatedDate })
         }
     }
 

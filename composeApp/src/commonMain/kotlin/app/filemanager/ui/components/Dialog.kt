@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileInfo
+import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
 import app.filemanager.ui.state.file.FileFilterState
@@ -39,7 +40,7 @@ import org.koin.compose.koinInject
 
 
 @Composable
-fun FileInfoDialog(fileInfo: FileInfo, onCancel: () -> Unit) {
+fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
     val fileState = koinInject<FileState>()
     val rootPath by fileState.rootPath.collectAsState()
     val rootPathTotalSpace = FileUtils.totalSpace(rootPath)
@@ -194,7 +195,7 @@ fun FileInfoDialog(fileInfo: FileInfo, onCancel: () -> Unit) {
 
 @Composable
 fun FileRenameDialog(
-    fileInfo: FileInfo,
+    fileInfo: FileSimpleInfo,
     verifyFun: (String) -> Pair<Boolean, String>,
     onCancel: (String) -> Unit
 ) {
@@ -545,7 +546,7 @@ fun FileWarningOperationDialog() {
 }
 
 @Composable
-private fun FileWarningDialogItem(newFile: FileInfo) {
+private fun FileWarningDialogItem(newFile: FileSimpleInfo) {
     Row {
         if (newFile.isDirectory) {
             Text("${newFile.size}项", style = MaterialTheme.typography.bodySmall)

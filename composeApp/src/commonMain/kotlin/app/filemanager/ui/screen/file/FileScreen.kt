@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileFilterType
 import app.filemanager.data.file.FileInfo
+import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.getFileFilterType
 import app.filemanager.ui.components.*
 import app.filemanager.ui.screen.file.filter.FileFilterScreen
@@ -113,7 +114,7 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FileFilterButtons(fileAndFolder: List<FileInfo>, onToFilterScreen: () -> Unit) {
+fun FileFilterButtons(fileAndFolder: List<FileSimpleInfo>, onToFilterScreen: () -> Unit) {
     val fileFilterState = koinInject<FileFilterState>()
     val extensions =
         fileAndFolder
@@ -170,7 +171,6 @@ fun FileFilterButtons(fileAndFolder: List<FileInfo>, onToFilterScreen: () -> Uni
             }
 
             itemsIndexed(filterExtensions) { index, fileFilter ->
-                println(fileFilter)
                 val isSelected = fileFilterState.filterFileExtensions.contains(fileFilter.type)
                 val fileCount = fileFilter.extensions.intersect(extensions.keys).sumOf { key ->
                     extensions.filterKeys { it == key }.values.sum()

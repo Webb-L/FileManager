@@ -1,6 +1,6 @@
 package app.filemanager.utils
 
-import app.filemanager.data.file.FileInfo
+import app.filemanager.data.file.FileSimpleInfo
 
 /**
  * 自然排序比较器的抽象基类。
@@ -167,7 +167,7 @@ abstract class BaseNaturalOrderComparator<T> : Comparator<T> {
 /**
  * FileInfo对象按名称的自然顺序比较器。
  */
-class NaturalOrderComparator : BaseNaturalOrderComparator<FileInfo>() {
+class NaturalOrderComparator : BaseNaturalOrderComparator<FileSimpleInfo>() {
 
     /**
      * 从FileInfo对象中提取可比较的字符串。
@@ -175,7 +175,7 @@ class NaturalOrderComparator : BaseNaturalOrderComparator<FileInfo>() {
      * @param obj 要从中提取可比较字符串的FileInfo对象。
      * @return FileInfo对象的名称作为可比较字符串。
      */
-    override fun extractComparableString(obj: FileInfo): String {
+    override fun extractComparableString(obj: FileSimpleInfo): String {
         return obj.name
     }
 }

@@ -1,10 +1,10 @@
 package app.filemanager.utils
 
-import app.filemanager.data.file.FileInfo
+import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.db.FileFilter
 
 object VerificationUtils {
-    fun folder(text: String, fileInfos: List<FileInfo>, ignoreName: List<String> = emptyList()): Pair<Boolean, String> {
+    fun folder(text: String, fileInfos: List<FileSimpleInfo>, ignoreName: List<String> = emptyList()): Pair<Boolean, String> {
         val nameRegex = "[\\\\/:*?\"<>|]".toRegex()
         val filter = fileInfos.filter { if (ignoreName.contains(it.name)) false else it.name == text }
         return if (filter.isNotEmpty()) {
