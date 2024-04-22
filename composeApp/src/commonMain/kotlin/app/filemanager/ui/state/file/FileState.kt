@@ -1,7 +1,6 @@
 package app.filemanager.ui.state.file
 
 import androidx.compose.runtime.mutableStateListOf
-import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.main.Device
@@ -189,8 +188,7 @@ class FileState() {
             }
         }
         fileOperationState.updateFinished(true)
-        _isPasteCopyFile.value = false
-        srcPath = ""
+        updateFileAndFolder()
     }
 
     fun cancelCopyFile() {
@@ -261,8 +259,7 @@ class FileState() {
         }
         FileUtils.deleteFile(srcPath)
         fileOperationState.updateFinished(true)
-        _isPasteMoveFile.value = false
-        srcPath = ""
+        updateFileAndFolder()
     }
 
     fun cancelMoveFile() {
