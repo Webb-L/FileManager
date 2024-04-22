@@ -1,0 +1,8 @@
+<network-security-config>
+	<base-config cleartextTrafficPermitted="true">
+		<!--允许应用发送明文 HTTP 请求-->
+		<trust-anchors>
+			<!-- 在此处添加任何自定义的信任锚点 -->
+		</trust-anchors>
+	</base-config>
+</network-security-config>

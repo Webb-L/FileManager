@@ -29,7 +29,6 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 
-
 @Composable
 fun AppBarPath() {
     val scope = rememberCoroutineScope()
@@ -50,20 +49,7 @@ fun AppBarPath() {
         }
 
         item {
-            RootPathSwitch(
-                fileState.rootPath.value,
-                onClick = {
-                    scope.launch {
-                        fileState.updatePath(fileState.rootPath.value)
-                    }
-                },
-                onSelected = {
-                    scope.launch {
-                        fileState.updateRootPath(it)
-                        fileState.updatePath(it)
-                    }
-                }
-            )
+            RootPathSwitch()
         }
 
         itemsIndexed(paths) { index, text ->
@@ -94,24 +80,36 @@ fun AppBarPath() {
 
 /**
  * 根路径切换组件，用于显示根路径的切换按钮
- *
- * @param name 组件显示的名称
- * @param selected 是否选中状态，默认为false
- * @param onClick 点击事件回调函数
- * @param onSelected 选中回调函数，参数为选中的路径
  */
 @Composable
-fun RootPathSwitch(
-    name: String,
-    selected: Boolean = false,
-    onClick: () -> Unit,
-    onSelected: (String) -> Unit
-) {
-    val fileInfos = getRootPaths().map {
-        FileSimpleInfo.pathFileSimpleInfo(it)
+fun RootPathSwitch() {
+    val scope = rememberCoroutineScope()
+
+    val fileState = koinInject<FileState>()
+    val rootPath by fileState.rootPath.collectAsState()
+    val fileInfos = mutableStateListOf<FileSimpleInfo>()
+
+    LaunchedEffect(fileState.deskType.value) {
+        fileInfos.clear()
+        fileInfos.addAll(fileState.getRootPaths())
     }
 
-    renderPathSwitch(name, fileInfos, selected, onClick, onSelected)
+    renderPathSwitch(
+        name = rootPath,
+        fileInfos = fileInfos,
+        selected = false,
+        onClick = {
+            scope.launch {
+                fileState.updatePath(rootPath)
+            }
+        },
+        onSelected = {
+            scope.launch {
+                fileState.updateRootPath(it)
+                fileState.updatePath(it)
+            }
+        }
+    )
 }
 
 /**

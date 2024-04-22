@@ -84,6 +84,7 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
                                         fileOperationState,
                                         deletePath
                                     )
+                                    fileState.updateFileAndFolder()
                                     fileFilterState.updateFilerKey()
                                 }
                             }

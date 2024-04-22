@@ -2,9 +2,11 @@ package app.filemanager.service
 
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.data.main.DrawerBookmark
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.FileUtils
+import app.filemanager.utils.PathUtils
 import com.russhwolf.settings.Settings
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
@@ -113,8 +115,21 @@ class WebSocketConnectService() : KoinComponent {
         send("/reply_list $id $replyKey${SEND_SPLIT}${ProtoBuf.encodeToHexString(sendFileSimpleInfos)}".toByteArray())
     }
 
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun sendReplyBookmark(id: String, replyKey: Long) {
+        val bookmarks = PathUtils.getBookmarks()
+        send("/reply_bookmark $id $replyKey${SEND_SPLIT}${ProtoBuf.encodeToHexString(bookmarks)}".toByteArray())
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun sendReplyRootPaths(id: String, replyKey: Long) {
+        val rootPaths = PathUtils.getRootPaths()
+        send("/reply_root_paths $id $replyKey${SEND_SPLIT}${ProtoBuf.encodeToHexString(rootPaths)}".toByteArray())
+    }
+
+
     suspend fun sendFile(id: String, fileName: String) {
-        send("/upload 12132 $id\n\n".toByteArray().plus(FileUtils.getData(fileName, 0, 300)))
+        send("/upload 12132 $id$SEND_SPLIT".toByteArray().plus(FileUtils.getData(fileName, 0, 300)))
     }
 
     /**
@@ -123,10 +138,9 @@ class WebSocketConnectService() : KoinComponent {
      * @param path 要获取列表的路径。
      * @param remoteId 远程设备的ID。
      */
-    suspend fun getList(path: String, remoteId: String, replyListCallback: (List<FileSimpleInfo>) -> Unit) {
-        val currentInstant: Instant = Clock.System.now()
-        val replyKey = currentInstant.toEpochMilliseconds() + Random.nextInt()
-        send("/list $path $remoteId $replyKey\n\n".toByteArray())
+    suspend fun getList(path: String, remoteId: String, replyCallback: (List<FileSimpleInfo>) -> Unit) {
+        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
+        send("/list $path $remoteId $replyKey$SEND_SPLIT".toByteArray())
 
         for (i in 0..100) {
             delay(100)
@@ -149,7 +163,47 @@ class WebSocketConnectService() : KoinComponent {
             }
         }
 
-        replyListCallback(fileSimpleInfos)
+        replyCallback(fileSimpleInfos)
+        replyMessage.remove(replyKey)
+    }
+
+    suspend fun getBookmark(remoteId: String, replyCallback: (List<DrawerBookmark>) -> Unit) {
+        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
+        send("/bookmark $remoteId $replyKey$SEND_SPLIT".toByteArray())
+
+        for (i in 0..100) {
+            delay(100)
+            if (replyMessage.contains(replyKey)) {
+                break
+            }
+        }
+
+        val bookmarks: MutableList<DrawerBookmark> = mutableListOf()
+        if (replyMessage[replyKey] != null) {
+            bookmarks.addAll(replyMessage[replyKey] as List<DrawerBookmark>)
+        }
+
+        replyCallback(bookmarks)
+        replyMessage.remove(replyKey)
+    }
+
+    suspend fun getRootPaths(remoteId: String, replyCallback: (List<String>) -> Unit) {
+        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
+        send("/root_paths $remoteId $replyKey$SEND_SPLIT".toByteArray())
+
+        for (i in 0..100) {
+            delay(100)
+            if (replyMessage.contains(replyKey)) {
+                break
+            }
+        }
+
+        val paths: MutableList<String> = mutableListOf()
+        if (replyMessage[replyKey] != null) {
+            paths.addAll(replyMessage[replyKey] as List<String>)
+        }
+
+        replyCallback(paths)
         replyMessage.remove(replyKey)
     }
 
@@ -181,10 +235,31 @@ class WebSocketConnectService() : KoinComponent {
             "/reply_list" -> replyMessage[header[1].toLong()] =
                 ProtoBuf.decodeFromHexString<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>(content)
 
-            else -> {
-                println(header[0])
-            }
+            // 远程设备需要我本地的书签
+            // TODO 检查权限
+            "/bookmark" -> sendReplyBookmark(
+                header[1],
+                header[2].toLong(),
+            )
+
+            // 收到对方返回的文件文件夹信息
+            "/reply_bookmark" -> replyMessage[header[1].toLong()] =
+                ProtoBuf.decodeFromHexString<List<DrawerBookmark>>(content)
+
+            // 远程设备需要我本地的书签
+            // TODO 检查权限
+            "/root_paths" -> sendReplyRootPaths(
+                header[1],
+                header[2].toLong(),
+            )
+
+            // 收到对方返回的文件文件夹信息
+            "/reply_root_paths" -> replyMessage[header[1].toLong()] =
+                ProtoBuf.decodeFromHexString<List<String>>(content)
+
+            else -> println(header[0])
         }
+        println(header)
     }
 
     fun close() = client.close()

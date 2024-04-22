@@ -44,6 +44,7 @@ class FileState() {
     private val _deskType: MutableStateFlow<DiskBase> = MutableStateFlow(Local())
     val deskType: StateFlow<DiskBase> = _deskType
     suspend fun updateDesk(protocol: FileProtocol, type: DiskBase) {
+
         _deskType.value = type
         when (protocol) {
             FileProtocol.Local -> {
@@ -58,6 +59,7 @@ class FileState() {
                 val network = type as Network
             }
         }
+        _rootPath.value = getRootPaths().first().path
 
         updateFileAndFolder()
     }
@@ -90,6 +92,33 @@ class FileState() {
     suspend fun updateFileAndFolder() {
         fileAndFolder.clear()
         fileAndFolder.addAll(getFileAndFolder(_path.value))
+    }
+
+
+    suspend fun getRootPaths(): List<FileSimpleInfo> {
+        if (_deskType.value is Local) {
+            return PathUtils.getRootPaths().map {
+                FileSimpleInfo.pathFileSimpleInfo(it)
+            }
+        }
+
+        var isReturn = false
+
+        if (_deskType.value is Device) {
+            val device = _deskType.value as Device
+            val temp = mutableListOf<FileSimpleInfo>()
+            device.getRootPaths {
+                temp.addAll(it.map { FileSimpleInfo.pathFileSimpleInfo(it) })
+                isReturn = true
+            }
+            while (!isReturn) {
+                delay(100L)
+                return temp
+            }
+            return temp
+        }
+
+        return listOf()
     }
 
 

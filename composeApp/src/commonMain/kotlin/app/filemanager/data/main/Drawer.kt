@@ -55,8 +55,17 @@ data class Device(
         return host.values.first()
     }
 
-    suspend fun getFileList(path: String, replyListCallback: (List<FileSimpleInfo>) -> Unit) {
-        getConnect()?.getList(path, id, replyListCallback)
+    suspend fun getRootPaths(replyCallback: (List<String>) -> Unit){
+        getConnect()?.getRootPaths(id,replyCallback)
+    }
+
+    suspend fun getFileList(path: String, replyCallback: (List<FileSimpleInfo>) -> Unit) {
+        getConnect()?.getList(path, id, replyCallback)
+    }
+
+
+    suspend fun getBookmark(replyCallback: (List<DrawerBookmark>) -> Unit) {
+        getConnect()?.getBookmark(id, replyCallback)
     }
 }
 
