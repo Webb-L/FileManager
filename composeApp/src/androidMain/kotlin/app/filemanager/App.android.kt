@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.webkit.MimeTypeMap
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.core.content.FileProvider
 import java.io.File
 
 
@@ -24,7 +25,7 @@ class AndroidApp : Application() {
 class AppActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        action = this@AppActivity
+        activity = this@AppActivity
 //        startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
 
         setContent {
@@ -33,19 +34,23 @@ class AppActivity : ComponentActivity() {
     }
 
     companion object {
-        var action: AppActivity? = null
+        var activity: AppActivity? = null
         fun openFile(path: String) {
             var mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(File(path).extension)
             if (mimeType == null) {
                 mimeType = "application/octet-stream"
             }
+
+            val uri = FileProvider.getUriForFile(activity!!, "app.filemanager.provider", File(path))
             val intent = Intent().apply {
                 action = Intent.ACTION_VIEW
-                setDataAndType(Uri.parse(path), mimeType)
+                setDataAndType(uri, mimeType)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            action!!.startActivity(Intent.createChooser(intent, null))
+            activity!!.startActivity(Intent.createChooser(intent, null))
         }
+
     }
 }
 

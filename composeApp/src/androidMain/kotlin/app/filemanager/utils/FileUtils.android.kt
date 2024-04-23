@@ -88,14 +88,10 @@ internal actual object FileUtils {
         return true
     }
 
-
-    actual fun renameFile(path: String, name: String) {
-    }
-
     actual fun totalSpace(path: String): Long = File(path).totalSpace
     actual fun freeSpace(path: String): Long = File(path).freeSpace
     actual fun createFolder(path: String, name: String) = File(path, name).mkdir()
-    actual fun renameFolder(path: String, oldName: String, newName: String): Boolean {
+    actual fun rename(path: String, oldName: String, newName: String): Boolean {
         val oldFile = File(path, oldName)
         val newFile = File(path, newName)
         return oldFile.renameTo(newFile)

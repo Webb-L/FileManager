@@ -18,7 +18,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileFilterType
-import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.getFileFilterType
 import app.filemanager.ui.components.*
@@ -100,10 +99,12 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
             VerificationUtils.folder(it, fileState.fileAndFolder, listOf(fileInfo!!.name))
         }) {
             fileState.updateRenameFile(false)
-            fileState.updateFileInfo(null)
             if (it.isEmpty()) return@FileRenameDialog
-            FileUtils.renameFolder(path, fileInfo!!.name, it)
-            fileFilterState.updateFilerKey()
+            scope.launch {
+                fileState.rename(path, fileInfo!!.name, it)
+                fileFilterState.updateFilerKey()
+                fileState.updateFileInfo(null)
+            }
         }
     } else if (fileInfo != null) {
         FileInfoDialog(fileInfo!!) {

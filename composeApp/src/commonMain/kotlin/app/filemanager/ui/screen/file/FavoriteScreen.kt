@@ -62,7 +62,11 @@ class FavoriteScreen : Screen {
                     FileFavoriteCard(favorite = favorite,
                         onClick = {
                             scope.launch {
-                                fileState.updatePath(favorite.path)
+                                var path = favorite.path
+                                if (!favorite.isDirectory) {
+                                    path = path.replace(favorite.name, "")
+                                }
+                                fileState.updatePath(path)
                             }
                             mainState.updateFavorite(false)
                             navigator.pop()

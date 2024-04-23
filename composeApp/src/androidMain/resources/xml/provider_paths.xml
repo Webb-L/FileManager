@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    这个XML文件定义了访问不同类型存储位置的路径。
+    每个路径元素指定了一个逻辑名称和对应的设备上物理位置。
+-->
+<paths>
+	<!--
+        external-path元素定义了一个路径，用于访问外部存储的根目录。
+        通常用于存储与其他应用共享的公共文件。
+    -->
+	<external-path
+			name="external_storage_root"
+			path="."/>
+	<!--
+        files-path元素定义了一个路径，用于存储属于应用的私有文件。
+        这些文件仅对应用可访问，并在卸载应用时删除。
+    -->
+	<files-path
+			name="files-path"
+			path="."/>
+	<!--
+        cache-path元素定义了一个路径，用于存储临时缓存文件。
+        当存储空间不足时，系统可能会删除这些文件。
+    -->
+	<cache-path
+			name="cache-path"
+			path="."/>
+	<!--
+        external-files-path元素定义了一个路径，用于在外部存储上存储文件。
+        这些文件对应用私有，并且其他应用无法访问。
+    -->
+	<external-files-path
+			name="external_file_path"
+			path="."/>
+	<!--
+        external-cache-path元素定义了一个路径，用于在外部存储上存储临时缓存文件。
+        当存储空间不足时，系统可能会删除这些文件。
+    -->
+	<external-cache-path
+			name="external_cache_path"
+			path="."/>
+	<!--
+        root-path元素定义了根目录路径。
+        通常用于访问特定存储位置的根目录。
+    -->
+	<root-path
+			name="root-path"
+			path=""/>
+</paths>

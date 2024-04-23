@@ -43,7 +43,6 @@ class FileState() {
     private val _deskType: MutableStateFlow<DiskBase> = MutableStateFlow(Local())
     val deskType: StateFlow<DiskBase> = _deskType
     suspend fun updateDesk(protocol: FileProtocol, type: DiskBase) {
-
         _deskType.value = type
         when (protocol) {
             FileProtocol.Local -> {
@@ -120,6 +119,20 @@ class FileState() {
         return listOf()
     }
 
+    suspend fun rename(path: String, oldName: String, newName: String) {
+        if (_deskType.value is Local) {
+            FileUtils.rename(path, oldName, newName)
+        }
+
+        var isReturn = false
+
+        if (_deskType.value is Device) {
+            val device = _deskType.value as Device
+            device.rename(path, oldName, newName)
+        }
+
+        return
+    }
 
     init {
         MainScope().launch {
