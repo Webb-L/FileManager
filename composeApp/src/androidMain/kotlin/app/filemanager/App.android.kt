@@ -5,7 +5,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.webkit.MimeTypeMap
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.core.content.FileProvider
 import java.io.File
@@ -23,10 +25,17 @@ class AndroidApp : Application() {
 }
 
 class AppActivity : ComponentActivity() {
+    private val backPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            Toast.makeText(baseContext, "获取是否是在首页", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         activity = this@AppActivity
 //        startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+        onBackPressedDispatcher.addCallback(this, backPressedCallback)
 
         setContent {
             App()
@@ -50,7 +59,6 @@ class AppActivity : ComponentActivity() {
             }
             activity!!.startActivity(Intent.createChooser(intent, null))
         }
-
     }
 }
 
