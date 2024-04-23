@@ -1,6 +1,5 @@
 package app.filemanager.data.main
 
-import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.extensions.isPrivateIPAddress
 import app.filemanager.service.WebSocketConnectService
@@ -55,17 +54,20 @@ data class Device(
         return host.values.first()
     }
 
-    suspend fun getRootPaths(replyCallback: (List<String>) -> Unit){
-        getConnect()?.getRootPaths(id,replyCallback)
+    suspend fun getRootPaths(replyCallback: (List<String>) -> Unit) {
+        getConnect()?.getRootPaths(id, replyCallback)
     }
 
     suspend fun getFileList(path: String, replyCallback: (List<FileSimpleInfo>) -> Unit) {
         getConnect()?.getList(path, id, replyCallback)
     }
 
-
     suspend fun getBookmark(replyCallback: (List<DrawerBookmark>) -> Unit) {
         getConnect()?.getBookmark(id, replyCallback)
+    }
+
+    suspend fun rename(path: String, oldName: String, newName: String) {
+        getConnect()?.rename(id, path, oldName, newName)
     }
 }
 

@@ -16,7 +16,6 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.encodeToHexString
@@ -207,6 +206,9 @@ class WebSocketConnectService() : KoinComponent {
         replyMessage.remove(replyKey)
     }
 
+    suspend fun rename(remoteId: String, path: String, oldName: String, newName: String) {
+        send("/rename $remoteId$SEND_SPLIT$path $oldName $newName".toByteArray())
+    }
 
     @OptIn(ExperimentalSerializationApi::class)
     private suspend fun parseMessage(msg: String) {
@@ -256,6 +258,14 @@ class WebSocketConnectService() : KoinComponent {
             // 收到对方返回的文件文件夹信息
             "/reply_root_paths" -> replyMessage[header[1].toLong()] =
                 ProtoBuf.decodeFromHexString<List<String>>(content)
+
+            // 重命名文件和文件夹
+            // TODO 检查权限
+            "/rename" -> {
+                val renameArgs = content.split(" ")
+                if (renameArgs.size > 2)
+                    FileUtils.rename(renameArgs[0], renameArgs[1], renameArgs[2])
+            }
 
             else -> println(header[0])
         }
