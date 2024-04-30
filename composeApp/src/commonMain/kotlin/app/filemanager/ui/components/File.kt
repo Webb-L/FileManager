@@ -2,6 +2,7 @@ package app.filemanager.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -11,8 +12,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.getFileFilterType
@@ -30,6 +31,8 @@ import org.koin.compose.koinInject
 @Composable
 fun FileCard(
     file: FileSimpleInfo,
+    checkedState: Boolean,
+    onStateChange: (Boolean) -> Unit,
     onClick: () -> Unit,
     onRemove: (String) -> Unit,
 ) {
@@ -85,7 +88,24 @@ fun FileCard(
                 Text(file.createdDate.timestampToSyncDate(), style = MaterialTheme.typography.bodySmall)
             }
         },
-        leadingContent = { FileIcon(file) },
+        leadingContent = {
+            Box(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .toggleable(
+                        value = checkedState,
+                        onValueChange = { onStateChange(!checkedState) },
+                        role = Role.Checkbox,
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!checkedState) {
+                    FileIcon(file)
+                } else {
+                    Checkbox(checkedState, onCheckedChange = null)
+                }
+            }
+        },
         trailingContent = { FileCardMenu(file, onRemove) },
         modifier = Modifier.clickable(onClick = onClick)
     )
@@ -184,8 +204,8 @@ fun FileCardMenu(
             modifier = Modifier
                 .clip(RoundedCornerShape(25.dp))
                 .clickable {
-                expanded = true
-            }
+                    expanded = true
+                }
         )
         DropdownMenu(
             expanded = expanded,

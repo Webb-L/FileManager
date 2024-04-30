@@ -141,6 +141,8 @@ class FileState() {
     }
 
 
+    val checkedPath = mutableStateListOf<String>()
+
     var srcPath = ""
 
     // 是否在复制文件

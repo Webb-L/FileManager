@@ -57,6 +57,14 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
         items(files, key = { it.path }) {
             FileCard(
                 file = it,
+                checkedState = fileState.checkedPath.contains(it.path),
+                onStateChange = { status ->
+//                    if (status) {
+//                        fileState.checkedPath.add(it.path)
+//                    } else {
+//                        fileState.checkedPath.remove(it.path)
+//                    }
+                },
                 onClick = {
                     scope.launch {
                         if (it.isDirectory) {
@@ -99,7 +107,10 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
             VerificationUtils.folder(it, fileState.fileAndFolder, listOf(fileInfo!!.name))
         }) {
             fileState.updateRenameFile(false)
-            if (it.isEmpty()) return@FileRenameDialog
+            if (it.isEmpty()) {
+                fileState.updateFileInfo(null)
+                return@FileRenameDialog
+            }
             scope.launch {
                 fileState.rename(path, fileInfo!!.name, it)
                 fileFilterState.updateFilerKey()
