@@ -1,7 +1,6 @@
 package app.filemanager.ui.state.file
 
 import androidx.compose.runtime.mutableStateListOf
-import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.FileSimpleInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -80,7 +79,7 @@ class FileOperationState {
     fun updateWarningFiles(value: Pair<FileSimpleInfo, FileSimpleInfo>) {
         _warningFiles.value = value
         _isWarningOperationDialog.value = true
-        _warningOperationType.value = FileOperationType.Reserve
+        _warningOperationType.value = FileOperationType.Replace
         _warningUseAll.value = false
     }
 

@@ -26,7 +26,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
@@ -540,6 +539,7 @@ fun FileWarningOperationDialog() {
             TextButton({
                 operationState.updateWarningOperationDialog(false)
                 operationState.isCancel = true
+                operationState.updateOperationDialog(false)
             }) { Text("取消") }
         }
     )
