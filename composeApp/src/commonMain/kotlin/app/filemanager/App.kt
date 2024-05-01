@@ -22,10 +22,7 @@ internal fun App() = KoinApplication(application = {
     }
 
     LaunchedEffect(Unit) {
-        try {
-            WebSocketConnectService().connect("127.0.0.1")
-        } catch (e: Exception) {
-        }
+        WebSocketConnectService().connect("127.0.0.1")
     }
 }
 

@@ -46,8 +46,6 @@ class WebSocketConnectService() : KoinComponent {
     }
     private var session: DefaultClientWebSocketSession? = null
 
-    var isConnected = false
-
     suspend fun connect(host: String) {
         val settings by inject<Settings>()
         deviceId = settings.getString("deviceId", "")
@@ -57,13 +55,12 @@ class WebSocketConnectService() : KoinComponent {
             method = HttpMethod.Get,
             host = host,
             port = 12040,
-            path = "/?id=$deviceId&name=$deviceName"
+            path = "/?id=$deviceId&name=$deviceName",
         ) {
             session = this
             launch {
                 delay(10)
-                send("/devices${SEND_SPLIT}")
-                isConnected = true
+                send("/devices", value = "")
             }
             launch {
                 try {
@@ -72,7 +69,6 @@ class WebSocketConnectService() : KoinComponent {
                         parseMessage(message.readText())
                     }
                 } catch (e: Exception) {
-                    isConnected = false
                     println(e)
                     close()
                 }
@@ -80,13 +76,6 @@ class WebSocketConnectService() : KoinComponent {
         }
     }
 
-    private suspend fun send(content: ByteArray) {
-        if (isConnected) {
-            session?.send(String(content))
-        }
-    }
-
-    @OptIn(ExperimentalSerializationApi::class)
     suspend fun sendReplyList(id: String, replyKey: Long, directory: String) {
         val sendFileSimpleInfos = mutableMapOf<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>().apply {
             directory.getFileAndFolder().forEach { fileSimpleInfo ->
@@ -111,24 +100,27 @@ class WebSocketConnectService() : KoinComponent {
             }
         }
 
-        send("/reply_list $id $replyKey${SEND_SPLIT}${ProtoBuf.encodeToHexString(sendFileSimpleInfos)}".toByteArray())
+        send(
+            "/reply_list",
+            "$id $replyKey",
+            "false",
+            sendFileSimpleInfos
+        )
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     suspend fun sendReplyBookmark(id: String, replyKey: Long) {
         val bookmarks = PathUtils.getBookmarks()
-        send("/reply_bookmark $id $replyKey${SEND_SPLIT}${ProtoBuf.encodeToHexString(bookmarks)}".toByteArray())
+        send(command = "/reply_bookmark", header = "$id $replyKey", value = bookmarks)
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     suspend fun sendReplyRootPaths(id: String, replyKey: Long) {
         val rootPaths = PathUtils.getRootPaths()
-        send("/reply_root_paths $id $replyKey${SEND_SPLIT}${ProtoBuf.encodeToHexString(rootPaths)}".toByteArray())
+        send(command = "/reply_root_paths", header = "$id $replyKey", value = rootPaths)
     }
 
 
     suspend fun sendFile(id: String, fileName: String) {
-        send("/upload 12132 $id$SEND_SPLIT".toByteArray().plus(FileUtils.getData(fileName, 0, 300)))
+//        send("/upload 12132 $id$SEND_SPLIT".toByteArray().plus(FileUtils.getData(fileName, 0, 300)))
     }
 
     /**
@@ -139,7 +131,7 @@ class WebSocketConnectService() : KoinComponent {
      */
     suspend fun getList(path: String, remoteId: String, replyCallback: (List<FileSimpleInfo>) -> Unit) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        send("/list $path $remoteId $replyKey$SEND_SPLIT".toByteArray())
+        send(command = "/list", header = "$remoteId $replyKey", params = path, value = "")
 
         for (i in 0..100) {
             delay(100)
@@ -168,7 +160,7 @@ class WebSocketConnectService() : KoinComponent {
 
     suspend fun getBookmark(remoteId: String, replyCallback: (List<DrawerBookmark>) -> Unit) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        send("/bookmark $remoteId $replyKey$SEND_SPLIT".toByteArray())
+        send(command = "/bookmark", header = "$remoteId $replyKey", value = "")
 
         for (i in 0..100) {
             delay(100)
@@ -188,7 +180,7 @@ class WebSocketConnectService() : KoinComponent {
 
     suspend fun getRootPaths(remoteId: String, replyCallback: (List<String>) -> Unit) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        send("/root_paths $remoteId $replyKey$SEND_SPLIT".toByteArray())
+        send(command = "/root_paths", header = "$remoteId $replyKey", value = "")
 
         for (i in 0..100) {
             delay(100)
@@ -207,15 +199,26 @@ class WebSocketConnectService() : KoinComponent {
     }
 
     suspend fun rename(remoteId: String, path: String, oldName: String, newName: String) {
-        send("/rename $remoteId$SEND_SPLIT$path $oldName $newName".toByteArray())
+        send(command = "/rename", header = "$remoteId ", params = "$path $oldName $newName", value = "")
     }
 
     @OptIn(ExperimentalSerializationApi::class)
     private suspend fun parseMessage(msg: String) {
-        val messages = msg.split("\n")
+        val messages = msg.split(SEND_SPLIT)
         val header = messages[0].split(" ")
-        val content = messages[1]
-        when (header[0]) {
+        println("header = $header")
+        val headerCommand = header[0]
+        val headerDevices = mutableListOf<String>()
+        if (header.size > 1) {
+            headerDevices.addAll(header[1].split(","))
+        }
+        val headerKey = if (header.size > 2) header[2].toLong() else -1
+
+        val params = messages[1].split(" ")
+        println("params = $params")
+
+        val content = messages[2]
+        when (headerCommand) {
             "/reply_devices" -> {
                 for (message in content.split("\n")) {
                     deviceState.addDevices(
@@ -228,36 +231,37 @@ class WebSocketConnectService() : KoinComponent {
             // 远程设备需要我本地文件
             // TODO 检查权限
             "/list" -> sendReplyList(
-                header[2],
-                header[3].toLong(),
-                header[1]
+                "",
+                headerKey,
+                params[0]
             )
 
             // 收到对方返回的文件文件夹信息
-            "/reply_list" -> replyMessage[header[1].toLong()] =
-                ProtoBuf.decodeFromHexString<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>(content)
+            "/reply_list" -> {
+                replyMessage[headerKey] =
+                    ProtoBuf.decodeFromHexString<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>(content)
+            }
 
             // 远程设备需要我本地的书签
             // TODO 检查权限
             "/bookmark" -> sendReplyBookmark(
                 header[1],
-                header[2].toLong(),
+                headerKey,
             )
 
             // 收到对方返回的文件文件夹信息
-            "/reply_bookmark" -> replyMessage[header[1].toLong()] =
+            "/reply_bookmark" -> replyMessage[headerKey] =
                 ProtoBuf.decodeFromHexString<List<DrawerBookmark>>(content)
 
             // 远程设备需要我本地的书签
             // TODO 检查权限
             "/root_paths" -> sendReplyRootPaths(
                 header[1],
-                header[2].toLong(),
+                headerKey,
             )
 
             // 收到对方返回的文件文件夹信息
-            "/reply_root_paths" -> replyMessage[header[1].toLong()] =
-                ProtoBuf.decodeFromHexString<List<String>>(content)
+            "/reply_root_paths" -> replyMessage[headerKey] = ProtoBuf.decodeFromHexString<List<String>>(content)
 
             // 重命名文件和文件夹
             // TODO 检查权限
@@ -267,9 +271,31 @@ class WebSocketConnectService() : KoinComponent {
                     FileUtils.rename(renameArgs[0], renameArgs[1], renameArgs[2])
             }
 
-            else -> println(header[0])
+            else -> {
+                println("匹配不到指令：\n${header[0]}")
+            }
         }
-        println(header)
+    }
+
+
+    /**
+     * 发送消息
+     * 使用：send(指令, 设备1,设备2,... 消息标识, 参数, 发送的消息)
+     *
+     * @param command 消息指令
+     * @param header 消息头 设备, 消息标识
+     * @param params 消息参数 /home/user1/1.txt /home/user2/2.txt
+     * @param value 内容
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    private suspend inline fun <reified T> send(
+        command: String,
+        header: String = " ",
+        params: String = "",
+        value: T
+    ) {
+        val content = if (value == null) "" else ProtoBuf.encodeToHexString(value)
+        session?.send("$command $header${SEND_SPLIT}$params${SEND_SPLIT}${content}".toByteArray())
     }
 
     fun close() = client.close()
