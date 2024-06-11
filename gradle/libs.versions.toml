@@ -1,19 +1,19 @@
 [versions]
 
-kotlin = "1.9.21"
+kotlin = "2.0.0"
 agp = "8.2.0"
-compose = "1.5.11"
+compose = "1.6.10"
 androidx-appcompat = "1.6.1"
-androidx-activityCompose = "1.8.2"
-compose-uitooling = "1.6.5"
+androidx-activityCompose = "1.9.0"
+compose-uitooling = "1.6.7"
 libres = "1.2.2"
 securityCrypto = "1.1.0-alpha06"
 voyager = "1.0.0-rc10"
 composeImageLoader = "1.7.1"
 napier = "2.6.1"
 buildConfig = "4.1.1"
-kotlinx-coroutines = "1.7.3"
-ktor = "2.3.7"
+kotlinx-coroutines = "1.8.0"
+ktor = "2.3.10"
 kotlinx-serialization = "1.6.2"
 kotlinx-datetime = "0.5.0"
 multiplatformSettings = "1.1.1"
@@ -54,6 +54,7 @@ jasypt = { module = "org.jasypt:jasypt", version.ref = "jasypt" }
 
 [plugins]
 
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 compose = { id = "org.jetbrains.compose", version.ref = "compose" }
 android-application = { id = "com.android.application", version.ref = "agp" }
