@@ -1,12 +1,15 @@
 package app.filemanager.service
 
-import app.filemanager.data.file.FileProtocol
-import app.filemanager.data.file.FileSimpleInfo
-import app.filemanager.data.main.DrawerBookmark
-import app.filemanager.extensions.getFileAndFolder
+import app.filemanager.service.handle.BookmarkHandle
+import app.filemanager.service.handle.FileHandle
+import app.filemanager.service.handle.PathHandle
+import app.filemanager.service.request.BookmarkRequest
+import app.filemanager.service.request.FileRequest
+import app.filemanager.service.request.PathRequest
+import app.filemanager.service.response.BookmarkResponse
+import app.filemanager.service.response.DeviceResponse
+import app.filemanager.service.response.PathResponse
 import app.filemanager.ui.state.main.DeviceState
-import app.filemanager.utils.FileUtils
-import app.filemanager.utils.PathUtils
 import com.russhwolf.settings.Settings
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
@@ -15,14 +18,11 @@ import io.ktor.utils.io.core.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.encodeToHexString
 import kotlinx.serialization.protobuf.ProtoBuf
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import kotlin.random.Random
 
 expect class WebSocketService() {
     fun getNetworkIp(): List<String>
@@ -33,18 +33,37 @@ expect class WebSocketService() {
 
 const val SEND_SPLIT = "\n\n"
 
-class WebSocketConnectService() : KoinComponent {
-    private val replyMessage = mutableMapOf<Long, Any>()
+// 接受数据超时时间
+const val TIMEOUT = 10_000
+const val MAX_LENGTH = 10240
 
-    private val deviceState by inject<DeviceState>()
+class WebSocketConnectService() : KoinComponent {
+    internal val replyMessage = mutableMapOf<Long, Any>()
+
+    internal val deviceState by inject<DeviceState>()
     private var deviceId: String = ""
     private var deviceName: String = ""
 
 
     private val client = HttpClient {
         install(WebSockets)
+//        engine {
+//            proxy = ProxyBuilder.http("http://127.0.0.1:8080")
+//        }
     }
     private var session: DefaultClientWebSocketSession? = null
+
+    internal val pathHandle by lazy { PathHandle(this) }
+    internal val fileHandle by lazy { FileHandle(this) }
+    internal val bookmarkHandle by lazy { BookmarkHandle(this) }
+
+    private val pathRequest by lazy { PathRequest(this) }
+    private val fileRequest by lazy { FileRequest(this) }
+    private val bookmarkRequest by lazy { BookmarkRequest(this) }
+
+    private val deviceResponse by lazy { DeviceResponse(this) }
+    private val pathResponse by lazy { PathResponse(this) }
+    private val bookmarkResponse by lazy { BookmarkResponse(this) }
 
     suspend fun connect(host: String) {
         val settings by inject<Settings>()
@@ -76,134 +95,11 @@ class WebSocketConnectService() : KoinComponent {
         }
     }
 
-    suspend fun sendReplyList(id: String, replyKey: Long, directory: String) {
-        val sendFileSimpleInfos = mutableMapOf<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>().apply {
-            directory.getFileAndFolder().forEach { fileSimpleInfo ->
-                val key = if (fileSimpleInfo.protocol == FileProtocol.Local)
-                    Pair(FileProtocol.Device, fileSimpleInfo.protocolId)
-                else
-                    Pair(fileSimpleInfo.protocol, fileSimpleInfo.protocolId)
-
-                if (!containsKey(key)) {
-                    put(key, mutableListOf(fileSimpleInfo.apply {
-                        this.path = this.path.replace(directory, "")
-                        this.protocol = FileProtocol.Local
-                        this.protocolId = ""
-                    }))
-                } else {
-                    get(key)?.add(fileSimpleInfo.apply {
-                        this.path = this.path.replace(directory, "")
-                        this.protocol = FileProtocol.Local
-                        this.protocolId = ""
-                    })
-                }
-            }
-        }
-
-        send(
-            "/reply_list",
-            "$id $replyKey",
-            "false",
-            sendFileSimpleInfos
-        )
-    }
-
-    suspend fun sendReplyBookmark(id: String, replyKey: Long) {
-        val bookmarks = PathUtils.getBookmarks()
-        send(command = "/reply_bookmark", header = "$id $replyKey", value = bookmarks)
-    }
-
-    suspend fun sendReplyRootPaths(id: String, replyKey: Long) {
-        val rootPaths = PathUtils.getRootPaths()
-        send(command = "/reply_root_paths", header = "$id $replyKey", value = rootPaths)
-    }
-
-
     suspend fun sendFile(id: String, fileName: String) {
 //        send("/upload 12132 $id$SEND_SPLIT".toByteArray().plus(FileUtils.getData(fileName, 0, 300)))
     }
 
-    /**
-     * 从远程设备获取指定路径下的文件和文件夹列表。
-     *
-     * @param path 要获取列表的路径。
-     * @param remoteId 远程设备的ID。
-     */
-    suspend fun getList(path: String, remoteId: String, replyCallback: (List<FileSimpleInfo>) -> Unit) {
-        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        send(command = "/list", header = "$remoteId $replyKey", params = path, value = "")
-
-        for (i in 0..100) {
-            delay(100)
-            if (replyMessage.contains(replyKey)) {
-                break
-            }
-        }
-
-        val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
-        if (replyMessage[replyKey] != null) {
-            val tempMap = replyMessage[replyKey] as Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>
-            tempMap.forEach {
-                it.value.forEach { fileSimpleInfo ->
-                    fileSimpleInfos.add(fileSimpleInfo.apply {
-                        protocol = it.key.first
-                        protocolId = it.key.second
-                        this.path = path + this.path
-                    })
-                }
-            }
-        }
-
-        replyCallback(fileSimpleInfos)
-        replyMessage.remove(replyKey)
-    }
-
-    suspend fun getBookmark(remoteId: String, replyCallback: (List<DrawerBookmark>) -> Unit) {
-        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        send(command = "/bookmark", header = "$remoteId $replyKey", value = "")
-
-        for (i in 0..100) {
-            delay(100)
-            if (replyMessage.contains(replyKey)) {
-                break
-            }
-        }
-
-        val bookmarks: MutableList<DrawerBookmark> = mutableListOf()
-        if (replyMessage[replyKey] != null) {
-            bookmarks.addAll(replyMessage[replyKey] as List<DrawerBookmark>)
-        }
-
-        replyCallback(bookmarks)
-        replyMessage.remove(replyKey)
-    }
-
-    suspend fun getRootPaths(remoteId: String, replyCallback: (List<String>) -> Unit) {
-        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        send(command = "/root_paths", header = "$remoteId $replyKey", value = "")
-
-        for (i in 0..100) {
-            delay(100)
-            if (replyMessage.contains(replyKey)) {
-                break
-            }
-        }
-
-        val paths: MutableList<String> = mutableListOf()
-        if (replyMessage[replyKey] != null) {
-            paths.addAll(replyMessage[replyKey] as List<String>)
-        }
-
-        replyCallback(paths)
-        replyMessage.remove(replyKey)
-    }
-
-    suspend fun rename(remoteId: String, path: String, oldName: String, newName: String) {
-        send(command = "/rename", header = "$remoteId ", params = "$path $oldName $newName", value = "")
-    }
-
-    @OptIn(ExperimentalSerializationApi::class)
-    private suspend fun parseMessage(msg: String) {
+    private fun parseMessage(msg: String) {
         val messages = msg.split(SEND_SPLIT)
         val header = messages[0].split(" ")
         println("header = $header")
@@ -218,58 +114,30 @@ class WebSocketConnectService() : KoinComponent {
         println("params = $params")
 
         val content = messages[2]
+//        println("content = $content")
         when (headerCommand) {
-            "/reply_devices" -> {
-                for (message in content.split("\n")) {
-                    deviceState.addDevices(
-                        message,
-                        this,
-                    )
-                }
-            }
+            "/reply_devices" -> deviceResponse.deviceList(content)
 
             // 远程设备需要我本地文件
-            // TODO 检查权限
-            "/list" -> sendReplyList(
-                "",
-                headerKey,
-                params[0]
-            )
+            "/list" -> pathRequest.sendList("", headerKey, params[0])
 
             // 收到对方返回的文件文件夹信息
-            "/reply_list" -> {
-                replyMessage[headerKey] =
-                    ProtoBuf.decodeFromHexString<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>(content)
-            }
+            "/reply_list" -> pathResponse.replyList(headerKey, params, content)
 
             // 远程设备需要我本地的书签
-            // TODO 检查权限
-            "/bookmark" -> sendReplyBookmark(
-                header[1],
-                headerKey,
-            )
+            "/bookmark" -> bookmarkRequest.sendBookmark(header[1], headerKey)
 
             // 收到对方返回的文件文件夹信息
-            "/reply_bookmark" -> replyMessage[headerKey] =
-                ProtoBuf.decodeFromHexString<List<DrawerBookmark>>(content)
+            "/reply_bookmark" -> bookmarkResponse.replyBookmark(headerKey, content)
 
             // 远程设备需要我本地的书签
-            // TODO 检查权限
-            "/root_paths" -> sendReplyRootPaths(
-                header[1],
-                headerKey,
-            )
+            "/root_paths" -> pathRequest.sendRootPaths(header[1], headerKey)
 
             // 收到对方返回的文件文件夹信息
-            "/reply_root_paths" -> replyMessage[headerKey] = ProtoBuf.decodeFromHexString<List<String>>(content)
+            "/reply_root_paths" -> pathResponse.replyRootPaths(headerKey, content)
 
             // 重命名文件和文件夹
-            // TODO 检查权限
-            "/rename" -> {
-                val renameArgs = content.split(" ")
-                if (renameArgs.size > 2)
-                    FileUtils.rename(renameArgs[0], renameArgs[1], renameArgs[2])
-            }
+            "/rename" -> fileRequest.sendRename(content)
 
             else -> {
                 println("匹配不到指令：\n${header[0]}")
@@ -288,13 +156,17 @@ class WebSocketConnectService() : KoinComponent {
      * @param value 内容
      */
     @OptIn(ExperimentalSerializationApi::class)
-    private suspend inline fun <reified T> send(
+    internal suspend inline fun <reified T> send(
         command: String,
         header: String = " ",
         params: String = "",
         value: T
     ) {
-        val content = if (value == null) "" else ProtoBuf.encodeToHexString(value)
+        val content: Any = if (value is String) {
+            value
+        } else {
+            if (value == null) "" else ProtoBuf.encodeToHexString(value)
+        }
         session?.send("$command $header${SEND_SPLIT}$params${SEND_SPLIT}${content}".toByteArray())
     }
 

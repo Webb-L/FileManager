@@ -55,19 +55,19 @@ data class Device(
     }
 
     suspend fun getRootPaths(replyCallback: (List<String>) -> Unit) {
-        getConnect()?.getRootPaths(id, replyCallback)
+        getConnect()?.pathHandle?.getRootPaths(id, replyCallback)
     }
 
     suspend fun getFileList(path: String, replyCallback: (List<FileSimpleInfo>) -> Unit) {
-        getConnect()?.getList(path, id, replyCallback)
+        getConnect()?.pathHandle?.getList(path, id, replyCallback)
     }
 
     suspend fun getBookmark(replyCallback: (List<DrawerBookmark>) -> Unit) {
-        getConnect()?.getBookmark(id, replyCallback)
+        getConnect()?.bookmarkHandle?.getBookmark(id, replyCallback)
     }
 
     suspend fun rename(path: String, oldName: String, newName: String) {
-        getConnect()?.rename(id, path, oldName, newName)
+        getConnect()?.fileHandle?.rename(id, path, oldName, newName)
     }
 }
 
