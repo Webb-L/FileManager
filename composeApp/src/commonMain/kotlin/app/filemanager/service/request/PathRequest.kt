@@ -44,7 +44,6 @@ class PathRequest(private val webSocketConnectService: WebSocketConnectService) 
 
         val sendContent = ProtoBuf.encodeToHexString(sendFileSimpleInfos)
 
-        println("send length ${sendContent.length}")
         val count = if (sendContent.length > MAX_LENGTH) sendContent.length / MAX_LENGTH else 1
         val chunked = sendContent.chunked(sendContent.length / count)
 

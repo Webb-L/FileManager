@@ -2,9 +2,7 @@ package app.filemanager.service.handle
 
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
-import app.filemanager.service.TIMEOUT
 import app.filemanager.service.WebSocketConnectService
-import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromHexString
@@ -26,33 +24,17 @@ class PathHandle(private val webSocketConnectService: WebSocketConnectService) {
         var tempMap = mapOf<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>()
         val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
 
-        var startTime = Clock.System.now().toEpochMilliseconds()
-        var endTime = startTime + TIMEOUT
-
-        while (true) {
-            if (Clock.System.now().toEpochMilliseconds() < endTime) {
-                if (webSocketConnectService.replyMessage.contains(replyKey)) {
-                    startTime = Clock.System.now().toEpochMilliseconds()
-                    endTime = startTime + TIMEOUT
-                    val temp =
-                        webSocketConnectService.replyMessage[replyKey] as Triple<Int, Int, String>
-
-
-                    // 结束
-                    if (temp.first == temp.second) {
-                        println("length = ${temp.third.length}")
-                        tempMap =
-                            ProtoBuf.decodeFromHexString<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>(
-                                temp.third
-                            )
-                        break
-                    }
-                }
-            } else {
-                break
+        webSocketConnectService.waitFinish(replyKey, callback = {
+            val tempList = webSocketConnectService.replyMessage[replyKey] as Triple<Int, Int, String>
+            if (tempList.first != tempList.second) {
+                return@waitFinish false
             }
-            delay(100)
-        }
+
+            tempMap =
+                ProtoBuf.decodeFromHexString<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>(tempList.third)
+
+            return@waitFinish true
+        })
 
         tempMap.forEach {
             it.value.forEach { fileSimpleInfo ->
@@ -64,8 +46,6 @@ class PathHandle(private val webSocketConnectService: WebSocketConnectService) {
             }
         }
 
-        println("length = ${fileSimpleInfos.size}")
-
         replyCallback(fileSimpleInfos)
         webSocketConnectService.replyMessage.remove(replyKey)
     }
@@ -74,17 +54,11 @@ class PathHandle(private val webSocketConnectService: WebSocketConnectService) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
         webSocketConnectService.send(command = "/root_paths", header = "$remoteId $replyKey", value = "")
 
-        for (i in 0..100) {
-            delay(100)
-            if (webSocketConnectService.replyMessage.contains(replyKey)) {
-                break
-            }
-        }
-
         val paths: MutableList<String> = mutableListOf()
-        if (webSocketConnectService.replyMessage[replyKey] != null) {
+        webSocketConnectService.waitFinish(replyKey, callback = {
             paths.addAll(webSocketConnectService.replyMessage[replyKey] as List<String>)
-        }
+            true
+        })
 
         replyCallback(paths)
         webSocketConnectService.replyMessage.remove(replyKey)
