@@ -12,12 +12,14 @@ import app.filemanager.service.response.PathResponse
 import app.filemanager.ui.state.main.DeviceState
 import com.russhwolf.settings.Settings
 import io.ktor.client.*
+import io.ktor.client.engine.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.http.*
 import io.ktor.utils.io.core.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToHexString
 import kotlinx.serialization.protobuf.ProtoBuf
@@ -47,9 +49,9 @@ class WebSocketConnectService() : KoinComponent {
 
     private val client = HttpClient {
         install(WebSockets)
-//        engine {
-//            proxy = ProxyBuilder.http("http://127.0.0.1:8080")
-//        }
+        engine {
+            proxy = ProxyBuilder.http("http://127.0.0.1:8080")
+        }
     }
     private var session: DefaultClientWebSocketSession? = null
 
@@ -102,7 +104,6 @@ class WebSocketConnectService() : KoinComponent {
     private fun parseMessage(msg: String) {
         val messages = msg.split(SEND_SPLIT)
         val header = messages[0].split(" ")
-        println("header = $header")
         val headerCommand = header[0]
         val headerDevices = mutableListOf<String>()
         if (header.size > 1) {
@@ -111,10 +112,11 @@ class WebSocketConnectService() : KoinComponent {
         val headerKey = if (header.size > 2) header[2].toLong() else -1
 
         val params = messages[1].split(" ")
-        println("params = $params")
 
         val content = messages[2]
-//        println("content = $content")
+
+        println("<<<<<< -------------------\nheader = [${messages[0]}]\nparams = [${messages[1]}]\ncontent = [$content]\n")
+
         when (headerCommand) {
             "/reply_devices" -> deviceResponse.deviceList(content)
 
@@ -145,7 +147,6 @@ class WebSocketConnectService() : KoinComponent {
         }
     }
 
-
     /**
      * 发送消息
      * 使用：send(指令, 设备1,设备2,... 消息标识, 参数, 发送的消息)
@@ -168,6 +169,37 @@ class WebSocketConnectService() : KoinComponent {
             if (value == null) "" else ProtoBuf.encodeToHexString(value)
         }
         session?.send("$command $header${SEND_SPLIT}$params${SEND_SPLIT}${content}".toByteArray())
+        println(
+            "------------------- >>>>>>\nheader = $command [$header]\nparams = [$params]\ncontent = [$content]\n",
+        )
+    }
+
+    /**
+     * Wait finish
+     *
+     * @param replyKey
+     * @param callback
+     * @receiver
+     */
+    internal suspend fun waitFinish(replyKey: Long, callback: () -> Boolean) {
+        var startTime = Clock.System.now().toEpochMilliseconds()
+        var endTime = startTime + TIMEOUT
+
+        while (true) {
+            if (Clock.System.now().toEpochMilliseconds() < endTime) {
+                if (replyMessage.contains(replyKey)) {
+                    startTime = Clock.System.now().toEpochMilliseconds()
+                    endTime = startTime + TIMEOUT
+
+                    if (callback()) {
+                        break
+                    }
+                }
+            } else {
+                break
+            }
+            delay(100)
+        }
     }
 
     fun close() = client.close()
