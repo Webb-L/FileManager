@@ -8,6 +8,7 @@ import app.filemanager.service.request.FileRequest
 import app.filemanager.service.request.PathRequest
 import app.filemanager.service.response.BookmarkResponse
 import app.filemanager.service.response.DeviceResponse
+import app.filemanager.service.response.FileResponse
 import app.filemanager.service.response.PathResponse
 import app.filemanager.ui.state.main.DeviceState
 import com.russhwolf.settings.Settings
@@ -65,6 +66,7 @@ class WebSocketConnectService() : KoinComponent {
 
     private val deviceResponse by lazy { DeviceResponse(this) }
     private val pathResponse by lazy { PathResponse(this) }
+    private val fileResponse by lazy { FileResponse(this) }
     private val bookmarkResponse by lazy { BookmarkResponse(this) }
 
     suspend fun connect(host: String) {
@@ -118,28 +120,34 @@ class WebSocketConnectService() : KoinComponent {
         println("<<<<<< -------------------\nheader = [${messages[0]}]\nparams = [${messages[1]}]\ncontent = [$content]\n")
 
         when (headerCommand) {
-            "/reply_devices" -> deviceResponse.deviceList(content)
+            "/replyDevices" -> deviceResponse.deviceList(content)
 
             // 远程设备需要我本地文件
             "/list" -> pathRequest.sendList("", headerKey, params[0])
 
             // 收到对方返回的文件文件夹信息
-            "/reply_list" -> pathResponse.replyList(headerKey, params, content)
+            "/replyList" -> pathResponse.replyList(headerKey, params, content)
 
             // 远程设备需要我本地的书签
             "/bookmark" -> bookmarkRequest.sendBookmark(header[1], headerKey)
 
             // 收到对方返回的文件文件夹信息
-            "/reply_bookmark" -> bookmarkResponse.replyBookmark(headerKey, content)
+            "/replyBookmark" -> bookmarkResponse.replyBookmark(headerKey, content)
 
             // 远程设备需要我本地的书签
-            "/root_paths" -> pathRequest.sendRootPaths(header[1], headerKey)
+            "/rootPaths" -> pathRequest.sendRootPaths(header[1], headerKey)
 
             // 收到对方返回的文件文件夹信息
-            "/reply_root_paths" -> pathResponse.replyRootPaths(headerKey, content)
+            "/replyRootPaths" -> pathResponse.replyRootPaths(headerKey, content)
 
             // 重命名文件和文件夹
             "/rename" -> fileRequest.sendRename(content)
+
+            // 创建文件夹
+            "/createFolder" -> fileRequest.sendCreateFolder(header[1], headerKey, params)
+
+            // 收到对方返回创建文件夹结果
+            "/replyCreateFolder" -> fileResponse.replyCreateFolder(headerKey, content)
 
             else -> {
                 println("匹配不到指令：\n${header[0]}")
@@ -163,15 +171,36 @@ class WebSocketConnectService() : KoinComponent {
         params: String = "",
         value: T
     ) {
-        val content: Any = if (value is String) {
+        val content: String = if (value is String) {
             value
         } else {
             if (value == null) "" else ProtoBuf.encodeToHexString(value)
         }
-        session?.send("$command $header${SEND_SPLIT}$params${SEND_SPLIT}${content}".toByteArray())
-        println(
-            "------------------- >>>>>>\nheader = $command [$header]\nparams = [$params]\ncontent = [$content]\n",
-        )
+
+        if (content.length < MAX_LENGTH) {
+            session?.send("$command $header${SEND_SPLIT}$params${SEND_SPLIT}${content}".toByteArray())
+
+            println(
+                "------------------- >>>>>>\nheader = $command [$header]\nparams = [$params]\ncontent = [$content]\n",
+            )
+            return
+        }
+
+        var index = 1
+        val chunked = content.chunked(MAX_LENGTH)
+        chunked.forEach {
+            var newParam = "$index ${chunked.size}"
+            if (params.isNotEmpty()) {
+                newParam += " $params"
+            }
+
+            session?.send("$command $header${SEND_SPLIT}$newParam${SEND_SPLIT}${it}".toByteArray())
+
+            println(
+                "------------------- >>>>>>\nheader = $command [$header]\nparams = [$newParam]\ncontent = [$it]\n",
+            )
+            index++
+        }
     }
 
     /**

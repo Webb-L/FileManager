@@ -7,6 +7,7 @@ import app.filemanager.data.main.Device
 import app.filemanager.data.main.DiskBase
 import app.filemanager.data.main.Local
 import app.filemanager.data.main.Network
+import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.replaceLast
 import app.filemanager.utils.FileUtils
@@ -57,39 +58,58 @@ class FileState() {
                 val network = type as Network
             }
         }
-        _rootPath.value = getRootPaths().first().path
+        if (getRootPaths().isNotEmpty()) {
+            _rootPath.value = getRootPaths().first().path
+        }
 
         updateFileAndFolder()
     }
 
-    suspend fun getFileAndFolder(path: String): List<FileSimpleInfo> {
+    // 加载状态
+    private val _isLoading: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
+    // 错误信息
+    private val _exception: MutableStateFlow<Throwable?> = MutableStateFlow(null)
+    val exception: StateFlow<Throwable?> = _exception
+
+    suspend fun getFileAndFolder(path: String): Result<List<FileSimpleInfo>> {
         if (_deskType.value is Local) {
             return path.getFileAndFolder()
         }
 
         var isReturn = false
-
         if (_deskType.value is Device) {
             val device = _deskType.value as Device
-            val temp = mutableListOf<FileSimpleInfo>()
+            var result: Result<List<FileSimpleInfo>> = Result.success(emptyList())
             device.getFileList(path) {
-                temp.addAll(it)
+                result = it
                 isReturn = true
             }
 
             while (!isReturn) {
                 delay(100L)
-                return temp
             }
-            return temp
+            return result
         }
 
-        return listOf()
+        return Result.failure(EmptyDataException())
     }
 
     suspend fun updateFileAndFolder() {
+        _isLoading.value = true
+        _exception.value = null
         fileAndFolder.clear()
-        fileAndFolder.addAll(getFileAndFolder(_path.value))
+        val fileAndFolderResult = getFileAndFolder(_path.value)
+        if (fileAndFolderResult.isSuccess) {
+            fileAndFolder.addAll(fileAndFolderResult.getOrNull() ?: emptyList())
+        }
+
+        if (fileAndFolderResult.isFailure) {
+            _exception.value = fileAndFolderResult.exceptionOrNull()
+        }
+
+        _isLoading.value = false
     }
 
 
@@ -132,6 +152,30 @@ class FileState() {
         }
 
         return
+    }
+
+    suspend fun createFolder(path: String, name: String): Result<Boolean> {
+        if (_deskType.value is Local) {
+            return FileUtils.createFolder(path, name)
+        }
+
+        var isReturn = false
+        if (_deskType.value is Device) {
+            val device = _deskType.value as Device
+            var result: Result<Boolean> = Result.success(false)
+            device.createFolder(path, name) {
+                result = it
+                isReturn = true
+            }
+
+            while (!isReturn) {
+                delay(100L)
+            }
+            updateFileAndFolder()
+            return result
+        }
+
+        return Result.failure(Exception("创建失败"))
     }
 
     init {
@@ -354,8 +398,14 @@ class FileState() {
                 newDestFileInfo.name.replaceLast(newDestFileInfo.mineType, "")
 
             val fileNameRegex = "${Regex.escape(fileName)}(\\(\\d*\\))?".toRegex()
+
+            val fileAndFolderResult = getFileAndFolder(path)
+            if (fileAndFolderResult.isSuccess) {
+
+            }
+
             // 获取相同文件名
-            val files = getFileAndFolder(path)
+            val files = (fileAndFolderResult.getOrNull() ?: emptyList())
                 .asSequence()
                 .filter {
                     if (it.isDirectory) {

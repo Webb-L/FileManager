@@ -1,6 +1,5 @@
 package app.filemanager.extensions
 
-import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.utils.PathUtils
 
@@ -10,7 +9,7 @@ fun String.replaceLast(oldValue: String, newValue: String): String {
     return this.substring(0, lastIndex) + newValue + this.substring(lastIndex + oldValue.length)
 }
 
-fun String.getFileAndFolder(): List<FileSimpleInfo> = PathUtils.getFileAndFolder(this)
+fun String.getFileAndFolder(): Result<List<FileSimpleInfo>> = PathUtils.getFileAndFolder(this)
 
 fun String.isPrivateIPAddress(): Boolean {
     // 检测 IPv4 地址是否为内网地址
