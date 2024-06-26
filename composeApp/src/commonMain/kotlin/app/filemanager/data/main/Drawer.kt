@@ -45,7 +45,7 @@ data class Device(
     val host: MutableMap<String, WebSocketConnectService>,
     val type: DeviceType
 ) : DiskBase() {
-    fun getConnect(): WebSocketConnectService? {
+    private fun getConnect(): WebSocketConnectService? {
         for (key in host.keys) {
             if (key.isPrivateIPAddress()) {
                 return host[key]
@@ -54,21 +54,20 @@ data class Device(
         return host.values.first()
     }
 
-    suspend fun getRootPaths(replyCallback: (List<String>) -> Unit) {
+    suspend fun getRootPaths(replyCallback: (List<String>) -> Unit) =
         getConnect()?.pathHandle?.getRootPaths(id, replyCallback)
-    }
 
-    suspend fun getFileList(path: String, replyCallback: (List<FileSimpleInfo>) -> Unit) {
+    suspend fun getFileList(path: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) =
         getConnect()?.pathHandle?.getList(path, id, replyCallback)
-    }
 
-    suspend fun getBookmark(replyCallback: (List<DrawerBookmark>) -> Unit) {
+    suspend fun getBookmark(replyCallback: (List<DrawerBookmark>) -> Unit) =
         getConnect()?.bookmarkHandle?.getBookmark(id, replyCallback)
-    }
 
-    suspend fun rename(path: String, oldName: String, newName: String) {
+    suspend fun rename(path: String, oldName: String, newName: String) =
         getConnect()?.fileHandle?.rename(id, path, oldName, newName)
-    }
+
+    suspend fun createFolder(path: String, name: String, replyCallback: (Result<Boolean>) -> Unit) =
+        getConnect()?.fileHandle?.createFolder(id, path, name, replyCallback)
 }
 
 enum class NetworkProtocol {

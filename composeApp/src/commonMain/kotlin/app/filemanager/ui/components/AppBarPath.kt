@@ -16,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.buttons.DiskSwitchButton
@@ -24,7 +23,6 @@ import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.utils.NaturalOrderComparator
 import app.filemanager.utils.PathUtils
-import app.filemanager.utils.PathUtils.getRootPaths
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -135,11 +133,13 @@ fun PathSwitch(
     val fileFilterState = koinInject<FileFilterState>()
 
     LaunchedEffect(Unit) {
-        fileInfos = fileState
-            .getFileAndFolder(path)
-            .filter { it.isDirectory }
-            .filter { it.isHidden != fileFilterState.isHideFile.value }
-            .sortedWith(NaturalOrderComparator())
+        val fileAndFolder = fileState.getFileAndFolder(path)
+        if (fileAndFolder.isSuccess) {
+            fileInfos = (fileAndFolder.getOrNull() ?: emptyList())
+                .filter { it.isDirectory }
+                .filter { it.isHidden != fileFilterState.isHideFile.value }
+                .sortedWith(NaturalOrderComparator())
+        }
     }
 
     renderPathSwitch(name, fileInfos, selected, onClick, onSelected)
@@ -154,7 +154,6 @@ fun PathSwitch(
  * @param onClick 点击事件回调函数
  * @param onSelected 选中回调函数，参数为选中的路径
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun renderPathSwitch(
     name: String,

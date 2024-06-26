@@ -1,20 +1,27 @@
 package app.filemanager.utils
 
-import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.main.DrawerBookmark
 import app.filemanager.data.main.DrawerBookmarkType
-import app.filemanager.extensions.toFileInfo
+import app.filemanager.exception.AuthorityException
+import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.toFileSimpleInfo
 import java.io.File
 import java.io.File.separator
 
 internal actual object PathUtils {
     // 获取目录下所有文件和文件夹
-    actual fun getFileAndFolder(path: String): List<FileSimpleInfo> =
-        (File(path).listFiles() ?: emptyArray<File>()).map { file ->
+    actual fun getFileAndFolder(path: String): Result<List<FileSimpleInfo>> {
+        val file = File(path)
+        if (!file.canRead()) return Result.failure(AuthorityException("没有权限"))
+
+        val listFiles = file.listFiles() ?: return Result.failure(EmptyDataException())
+        if (listFiles.isEmpty()) return Result.failure(EmptyDataException())
+
+        return Result.success(listFiles.map { file ->
             file.toFileSimpleInfo()
-        }
+        })
+    }
 
     // 获取用户目录
     actual fun getAppPath(): String = System.getProperty("user.dir")
@@ -23,7 +30,7 @@ internal actual object PathUtils {
     actual fun getHomePath(): String = System.getProperty("user.home")
 
     // 获取路径分隔符
-    actual fun getPathSeparator(): String = File.separator
+    actual fun getPathSeparator(): String = separator
 
     // 获取根目录
     actual fun getRootPaths(): List<String> = File.listRoots().map { it.path }
