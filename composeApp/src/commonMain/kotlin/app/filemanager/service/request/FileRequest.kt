@@ -27,7 +27,7 @@ class FileRequest(private val webSocketConnectService: WebSocketConnectService) 
             MainScope().launch {
                 webSocketConnectService.send(
                     command = command,
-                    header = "$id $replyKey",
+                    header = listOf(id, replyKey.toString()),
                     value = WebSocketResult(
                         value = ParameterErrorException()
                     )
@@ -42,7 +42,7 @@ class FileRequest(private val webSocketConnectService: WebSocketConnectService) 
                 val exceptionOrNull = createFolder.exceptionOrNull() ?: EmptyDataException()
                 webSocketConnectService.send(
                     command = command,
-                    header = "$id $replyKey",
+                    header = listOf(id, replyKey.toString()),
                     value = WebSocketResult(
                         exceptionOrNull.message,
                         exceptionOrNull::class.simpleName,
@@ -56,7 +56,7 @@ class FileRequest(private val webSocketConnectService: WebSocketConnectService) 
         MainScope().launch {
             webSocketConnectService.send(
                 command = command,
-                header = "$id $replyKey",
+                header = listOf(id, replyKey.toString()),
                 value = WebSocketResult(
                     value = createFolder.getOrNull() ?: false
                 )

@@ -22,7 +22,12 @@ class PathHandle(private val webSocketConnectService: WebSocketConnectService) {
     @OptIn(ExperimentalSerializationApi::class)
     suspend fun getList(path: String, remoteId: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        webSocketConnectService.send(command = "/list", header = "$remoteId $replyKey", params = path, value = "")
+        webSocketConnectService.send(
+            command = "/list",
+            header = listOf(remoteId, replyKey.toString()),
+            params = listOf(path),
+            value = ""
+        )
 
         val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
 
@@ -47,6 +52,7 @@ class PathHandle(private val webSocketConnectService: WebSocketConnectService) {
                         })
                     }
                 }
+                println(fileSimpleInfos)
                 replyCallback(Result.success(fileSimpleInfos))
             } else {
                 replyCallback(Result.failure(decodeFromHexString.deSerializable()))
@@ -59,7 +65,7 @@ class PathHandle(private val webSocketConnectService: WebSocketConnectService) {
 
     suspend fun getRootPaths(remoteId: String, replyCallback: (List<String>) -> Unit) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        webSocketConnectService.send(command = "/rootPaths", header = "$remoteId $replyKey", value = "")
+        webSocketConnectService.send(command = "/rootPaths", header = listOf(remoteId, replyKey.toString()), value = "")
 
         val paths: MutableList<String> = mutableListOf()
         webSocketConnectService.waitFinish(replyKey, callback = {

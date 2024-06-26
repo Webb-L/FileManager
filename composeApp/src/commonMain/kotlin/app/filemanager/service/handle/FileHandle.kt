@@ -20,8 +20,8 @@ class FileHandle(private val webSocketConnectService: WebSocketConnectService) {
     suspend fun rename(remoteId: String, path: String, oldName: String, newName: String) {
         webSocketConnectService.send(
             command = "/rename",
-            header = remoteId,
-            params = "$path $oldName $newName",
+            header = listOf(remoteId.toString()),
+            params = listOf(path, oldName, newName),
             value = ""
         )
     }
@@ -40,8 +40,8 @@ class FileHandle(private val webSocketConnectService: WebSocketConnectService) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
         webSocketConnectService.send(
             command = "/createFolder",
-            header = "$remoteId $replyKey",
-            params = "$path $name",
+            header = listOf(remoteId, replyKey.toString()),
+            params = listOf(path, name),
             value = ""
         )
         webSocketConnectService.waitFinish(replyKey, callback = {

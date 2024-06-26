@@ -11,7 +11,11 @@ class BookmarkRequest(private val webSocketConnectService: WebSocketConnectServi
     fun sendBookmark(id: String, headerKey: Long) {
         val bookmarks = PathUtils.getBookmarks()
         MainScope().launch {
-            webSocketConnectService.send(command = "/replyBookmark", header = "$id $headerKey", value = bookmarks)
+            webSocketConnectService.send(
+                command = "/replyBookmark",
+                header = listOf(id, headerKey.toString()),
+                value = bookmarks
+            )
         }
     }
 }

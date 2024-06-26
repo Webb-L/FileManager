@@ -20,7 +20,7 @@ class PathRequest(private val webSocketConnectService: WebSocketConnectService) 
                 val exceptionOrNull = fileAndFolder.exceptionOrNull() ?: EmptyDataException()
                 webSocketConnectService.send(
                     command = "/replyList",
-                    header = "$id $replyKey",
+                    header = listOf(id, replyKey.toString()),
                     value = WebSocketResult(
                         exceptionOrNull.message,
                         exceptionOrNull::class.simpleName,
@@ -57,7 +57,7 @@ class PathRequest(private val webSocketConnectService: WebSocketConnectService) 
         MainScope().launch {
             webSocketConnectService.send(
                 command = "/replyList",
-                header = "$id $replyKey",
+                header = listOf(id, replyKey.toString()),
                 value = WebSocketResult(
                     value = sendFileSimpleInfos
                 )
@@ -70,7 +70,11 @@ class PathRequest(private val webSocketConnectService: WebSocketConnectService) 
     fun sendRootPaths(id: String, replyKey: Long) {
         MainScope().launch {
             val rootPaths = PathUtils.getRootPaths()
-            webSocketConnectService.send(command = "/replyRootPaths", header = "$id $replyKey", value = rootPaths)
+            webSocketConnectService.send(
+                command = "/replyRootPaths",
+                header = listOf(id, replyKey.toString()),
+                value = rootPaths
+            )
         }
     }
 }

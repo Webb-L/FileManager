@@ -26,6 +26,8 @@ import kotlinx.serialization.encodeToHexString
 import kotlinx.serialization.protobuf.ProtoBuf
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 expect class WebSocketService() {
     fun getNetworkIp(): List<String>
@@ -83,7 +85,7 @@ class WebSocketConnectService() : KoinComponent {
             session = this
             launch {
                 delay(10)
-                send("/devices", value = "")
+                send("/devices", header = listOf("", ""), params = listOf("", ""), value = "")
             }
             launch {
                 try {
@@ -103,6 +105,7 @@ class WebSocketConnectService() : KoinComponent {
 //        send("/upload 12132 $id$SEND_SPLIT".toByteArray().plus(FileUtils.getData(fileName, 0, 300)))
     }
 
+    @OptIn(ExperimentalEncodingApi::class)
     private fun parseMessage(msg: String) {
         val messages = msg.split(SEND_SPLIT)
         val header = messages[0].split(" ")
@@ -113,7 +116,7 @@ class WebSocketConnectService() : KoinComponent {
         }
         val headerKey = if (header.size > 2) header[2].toLong() else -1
 
-        val params = messages[1].split(" ")
+        val params = messages[1].split(" ").map { String(Base64.decode(it)) }
 
         val content = messages[2]
 
@@ -164,11 +167,11 @@ class WebSocketConnectService() : KoinComponent {
      * @param params 消息参数 /home/user1/1.txt /home/user2/2.txt
      * @param value 内容
      */
-    @OptIn(ExperimentalSerializationApi::class)
+    @OptIn(ExperimentalSerializationApi::class, ExperimentalEncodingApi::class)
     internal suspend inline fun <reified T> send(
         command: String,
-        header: String = " ",
-        params: String = "",
+        header: List<String> = emptyList(),
+        params: List<String> = emptyList(),
         value: T
     ) {
         val content: String = if (value is String) {
@@ -177,11 +180,14 @@ class WebSocketConnectService() : KoinComponent {
             if (value == null) "" else ProtoBuf.encodeToHexString(value)
         }
 
+        val headerString = header.map { it }.joinToString(" ")
+
         if (content.length < MAX_LENGTH) {
-            session?.send("$command $header${SEND_SPLIT}$params${SEND_SPLIT}${content}".toByteArray())
+            val paramsString = params.map { Base64.encode(it.toByteArray()) }.joinToString(" ")
+            session?.send("$command $headerString${SEND_SPLIT}$paramsString${SEND_SPLIT}${content}".toByteArray())
 
             println(
-                "------------------- >>>>>>\nheader = $command [$header]\nparams = [$params]\ncontent = [$content]\n",
+                "------------------- >>>>>>\nheader = $command [$headerString]\nparams = [$paramsString]\ncontent = [$content]\n",
             )
             return
         }
@@ -189,15 +195,13 @@ class WebSocketConnectService() : KoinComponent {
         var index = 1
         val chunked = content.chunked(MAX_LENGTH)
         chunked.forEach {
-            var newParam = "$index ${chunked.size}"
-            if (params.isNotEmpty()) {
-                newParam += " $params"
-            }
+            val paramsString = (listOf(index.toString(), chunked.size.toString())+params)
+                .map { Base64.encode(it.toByteArray()) }.joinToString(" ")
 
-            session?.send("$command $header${SEND_SPLIT}$newParam${SEND_SPLIT}${it}".toByteArray())
+            session?.send("$command $headerString${SEND_SPLIT}$paramsString${SEND_SPLIT}${it}".toByteArray())
 
             println(
-                "------------------- >>>>>>\nheader = $command [$header]\nparams = [$newParam]\ncontent = [$it]\n",
+                "------------------- >>>>>>\nheader = $command [$headerString]\nparams = [$paramsString]\ncontent = [$it]\n",
             )
             index++
         }
