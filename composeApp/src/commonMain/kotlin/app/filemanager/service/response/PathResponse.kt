@@ -11,6 +11,10 @@ class PathResponse(private val webSocketConnectService: WebSocketConnectService)
     // 收到对方返回的文件文件夹信息
     fun replyList(headerKey: Long, params: List<String>, content: String) {
         MainScope().launch {
+            if (params.isEmpty() || params.size < 2) {
+                webSocketConnectService.replyMessage[headerKey] = Triple(0, 0, content)
+                return@launch
+            }
             if (!webSocketConnectService.replyMessage.containsKey(headerKey)) {
                 webSocketConnectService.replyMessage[headerKey] = Triple(
                     params[0].toInt(),

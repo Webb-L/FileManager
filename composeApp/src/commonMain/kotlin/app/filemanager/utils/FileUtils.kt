@@ -11,7 +11,7 @@ internal expect object FileUtils {
     fun deleteFile(path: String): Boolean
     fun totalSpace(path: String): Long
     fun freeSpace(path: String): Long
-    fun createFolder(path: String, name: String): Boolean
+    fun createFolder(path: String, name: String): Result<Boolean>
     fun rename(path: String, oldName: String, newName: String): Boolean
     fun getData(filePath: String, start: Long, end: Long): ByteArray
 }

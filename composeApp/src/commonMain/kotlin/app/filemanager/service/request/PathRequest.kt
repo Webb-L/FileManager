@@ -2,25 +2,37 @@ package app.filemanager.service.request
 
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.getFileAndFolder
-import app.filemanager.service.MAX_LENGTH
 import app.filemanager.service.WebSocketConnectService
+import app.filemanager.service.WebSocketResult
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.encodeToHexString
-import kotlinx.serialization.protobuf.ProtoBuf
 
 class PathRequest(private val webSocketConnectService: WebSocketConnectService) {
     // 远程设备需要我本地文件
     // TODO 检查权限
-    @OptIn(ExperimentalSerializationApi::class)
     fun sendList(id: String, replyKey: Long, directory: String) {
         val fileAndFolder = directory.getFileAndFolder()
-        var index = 1
+        if (fileAndFolder.isFailure) {
+            MainScope().launch {
+                val exceptionOrNull = fileAndFolder.exceptionOrNull() ?: EmptyDataException()
+                webSocketConnectService.send(
+                    command = "/replyList",
+                    header = "$id $replyKey",
+                    value = WebSocketResult(
+                        exceptionOrNull.message,
+                        exceptionOrNull::class.simpleName,
+                        null
+                    )
+                )
+            }
+            return
+        }
+
         val sendFileSimpleInfos = mutableMapOf<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>().apply {
-            fileAndFolder.forEach { fileSimpleInfo ->
+            fileAndFolder.getOrNull()?.forEach { fileSimpleInfo ->
                 val key = if (fileSimpleInfo.protocol == FileProtocol.Local)
                     Pair(FileProtocol.Device, fileSimpleInfo.protocolId)
                 else
@@ -42,22 +54,14 @@ class PathRequest(private val webSocketConnectService: WebSocketConnectService) 
             }
         }
 
-        val sendContent = ProtoBuf.encodeToHexString(sendFileSimpleInfos)
-
-        val count = if (sendContent.length > MAX_LENGTH) sendContent.length / MAX_LENGTH else 1
-        val chunked = sendContent.chunked(sendContent.length / count)
-
         MainScope().launch {
-            chunked.forEach {
-                webSocketConnectService.send(
-                    "/reply_list",
-                    "$id $replyKey",
-                    "$index ${chunked.size}",
-                    it
+            webSocketConnectService.send(
+                command = "/replyList",
+                header = "$id $replyKey",
+                value = WebSocketResult(
+                    value = sendFileSimpleInfos
                 )
-
-                index++
-            }
+            )
         }
     }
 
@@ -66,7 +70,7 @@ class PathRequest(private val webSocketConnectService: WebSocketConnectService) 
     fun sendRootPaths(id: String, replyKey: Long) {
         MainScope().launch {
             val rootPaths = PathUtils.getRootPaths()
-            webSocketConnectService.send(command = "/reply_root_paths", header = "$id $replyKey", value = rootPaths)
+            webSocketConnectService.send(command = "/replyRootPaths", header = "$id $replyKey", value = rootPaths)
         }
     }
 }
