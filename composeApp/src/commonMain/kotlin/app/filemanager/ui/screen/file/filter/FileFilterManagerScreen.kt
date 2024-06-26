@@ -64,7 +64,6 @@ class FileFilterManagerScreen(private val filterId: Long) : Screen {
         ) {
             val extensions = fileFilter.extensions
             GridList(
-                isEmpty = extensions.isEmpty(),
                 modifier = Modifier.padding(it)
             ) {
                 itemsIndexed(extensions) { index, type ->

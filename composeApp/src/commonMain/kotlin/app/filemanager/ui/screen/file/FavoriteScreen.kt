@@ -55,7 +55,6 @@ class FavoriteScreen : Screen {
         ) {
             val favorites = fileFavoriteState.favorites
             GridList(
-                isEmpty = favorites.isEmpty(),
                 modifier = Modifier.padding(it)
             ) {
                 items(favorites) { favorite ->

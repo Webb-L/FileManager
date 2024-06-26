@@ -60,7 +60,6 @@ class FileFilterScreen : Screen {
         ) {
             val filterFileTypes = fileFilterState.filterFileTypes
             GridList(
-                isEmpty = filterFileTypes.isEmpty(),
                 modifier = Modifier.padding(it)
             ) {
                 items(filterFileTypes) { fileFilter ->

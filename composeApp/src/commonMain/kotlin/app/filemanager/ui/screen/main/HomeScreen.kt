@@ -18,7 +18,6 @@ import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.MainState
-import app.filemanager.utils.FileUtils
 import app.filemanager.utils.VerificationUtils
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -95,12 +94,13 @@ object HomeScreen : Screen {
             TextFieldDialog(
                 "新增文件夹",
                 label = "名称",
-                verifyFun = { text -> VerificationUtils.folder(text, fileState.getFileAndFolder(path)) }
+                verifyFun = { text -> VerificationUtils.folder(text, fileState.fileAndFolder) }
             ) {
                 fileState.updateCreateFolder(false)
                 if (it.isEmpty()) return@TextFieldDialog
-                FileUtils.createFolder(path, it)
-                fileFilterState.updateFilerKey()
+                scope.launch {
+                    println(fileState.createFolder(path, it))
+                }
             }
         }
 

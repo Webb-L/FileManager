@@ -38,6 +38,8 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
 
     val fileState = koinInject<FileState>()
     val path by fileState.path.collectAsState()
+    val isLoading by fileState.isLoading.collectAsState()
+    val exception by fileState.exception.collectAsState()
     val fileInfo by fileState.fileInfo.collectAsState()
     val isRenameFile by fileState.isRenameFile.collectAsState()
 
@@ -53,7 +55,7 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
     }
 
     val files = fileFilterState.filter(fileState.fileAndFolder, updateKey)
-    GridList(files.isEmpty()) {
+    GridList(isLoading = isLoading, exception) {
         items(files, key = { it.path }) {
             FileCard(
                 file = it,
