@@ -2,6 +2,7 @@ package app.filemanager.utils
 
 import app.filemanager.AppActivity
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.exception.AuthorityException
 import app.filemanager.extensions.toFileSimpleInfo
 import io.github.aakira.napier.Napier
 import java.io.File
@@ -90,7 +91,17 @@ internal actual object FileUtils {
 
     actual fun totalSpace(path: String): Long = File(path).totalSpace
     actual fun freeSpace(path: String): Long = File(path).freeSpace
-    actual fun createFolder(path: String, name: String) = File(path, name).mkdir()
+    actual fun createFolder(path: String, name: String): Result<Boolean> {
+        val file = File(path, name)
+        return try {
+            Result.success(file.mkdir())
+        } catch (e: SecurityException) {
+            Result.failure(AuthorityException("没有权限"))
+        } catch (e: Exception) {
+            Result.failure(AuthorityException(e.message))
+        }
+    }
+
     actual fun rename(path: String, oldName: String, newName: String): Boolean {
         val oldFile = File(path, oldName)
         val newFile = File(path, newName)

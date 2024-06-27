@@ -1,19 +1,28 @@
 package app.filemanager.utils
 
 import android.os.Environment
-import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.main.DrawerBookmark
 import app.filemanager.data.main.DrawerBookmarkType
+import app.filemanager.exception.AuthorityException
+import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.toFileSimpleInfo
 import java.io.File
 
 internal actual object PathUtils {
     // 获取目录下所有文件和文件夹
-    actual fun getFileAndFolder(path: String): List<FileSimpleInfo> =
-        (File(path).listFiles() ?: emptyArray<File>()).map { file ->
+    actual fun getFileAndFolder(path: String): Result<List<FileSimpleInfo>> {
+        val file = File(path)
+        if (!file.exists()) return Result.failure(AuthorityException("该目录并不存在"))
+        if (!file.canRead()) return Result.failure(AuthorityException("没有权限"))
+
+        val listFiles = file.listFiles() ?: return Result.failure(EmptyDataException())
+        if (listFiles.isEmpty()) return Result.failure(EmptyDataException())
+
+        return Result.success(listFiles.map { file ->
             file.toFileSimpleInfo()
-        }
+        })
+    }
 
     // 获取用户目录
     actual fun getAppPath(): String = System.getProperty("user.dir")
