@@ -20,7 +20,7 @@ class FileHandle(private val webSocketConnectService: WebSocketConnectService) {
     suspend fun rename(remoteId: String, path: String, oldName: String, newName: String) {
         webSocketConnectService.send(
             command = "/rename",
-            header = listOf(remoteId.toString()),
+            header = listOf(remoteId),
             params = listOf(path, oldName, newName),
             value = ""
         )
