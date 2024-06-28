@@ -13,7 +13,6 @@ import app.filemanager.service.response.PathResponse
 import app.filemanager.ui.state.main.DeviceState
 import com.russhwolf.settings.Settings
 import io.ktor.client.*
-import io.ktor.client.engine.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.http.*
 import io.ktor.utils.io.core.*
@@ -52,9 +51,9 @@ class WebSocketConnectService() : KoinComponent {
 
     private val client = HttpClient {
         install(WebSockets)
-        engine {
-            proxy = ProxyBuilder.http("http://127.0.0.1:8080")
-        }
+//        engine {
+//            proxy = ProxyBuilder.http("http://127.0.0.1:8080")
+//        }
     }
     private var session: DefaultClientWebSocketSession? = null
 
@@ -71,6 +70,7 @@ class WebSocketConnectService() : KoinComponent {
     private val fileResponse by lazy { FileResponse(this) }
     private val bookmarkResponse by lazy { BookmarkResponse(this) }
 
+    @OptIn(ExperimentalEncodingApi::class)
     suspend fun connect(host: String) {
         val settings by inject<Settings>()
         deviceId = settings.getString("deviceId", "")
@@ -80,7 +80,7 @@ class WebSocketConnectService() : KoinComponent {
             method = HttpMethod.Get,
             host = host,
             port = 12040,
-            path = "/?id=$deviceId&name=$deviceName",
+            path = "/?id=$deviceId&name=${Base64.encode(deviceName.toByteArray())}",
         ) {
             session = this
             launch {
