@@ -91,6 +91,7 @@ internal actual object FileUtils {
     actual fun freeSpace(path: String): Long = File(path).freeSpace
     actual fun createFolder(path: String, name: String): Result<Boolean> {
         val file = File(path, name)
+        if (file.exists()) return Result.failure(Exception("已经存在，无法创建"))
         return try {
             Result.success(file.mkdir())
         } catch (e: SecurityException) {

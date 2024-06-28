@@ -99,7 +99,14 @@ object HomeScreen : Screen {
                 fileState.updateCreateFolder(false)
                 if (it.isEmpty()) return@TextFieldDialog
                 scope.launch {
-                    println(fileState.createFolder(path, it))
+                    val result = fileState.createFolder(path, it)
+                    if (result.isFailure) {
+                        snackbarHostState.showSnackbar(
+                            message = result.exceptionOrNull()?.message ?: "创建失败",
+                            withDismissAction = true,
+                            duration = SnackbarDuration.Short
+                        )
+                    }
                 }
             }
         }

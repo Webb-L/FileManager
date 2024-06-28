@@ -52,7 +52,6 @@ class PathHandle(private val webSocketConnectService: WebSocketConnectService) {
                         })
                     }
                 }
-                println(fileSimpleInfos)
                 replyCallback(Result.success(fileSimpleInfos))
             } else {
                 replyCallback(Result.failure(decodeFromHexString.deSerializable()))
