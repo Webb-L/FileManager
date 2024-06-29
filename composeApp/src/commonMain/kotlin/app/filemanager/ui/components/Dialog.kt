@@ -33,7 +33,6 @@ import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileOperationType
 import app.filemanager.ui.state.file.FileState
-import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import org.koin.compose.koinInject
 
@@ -42,8 +41,6 @@ import org.koin.compose.koinInject
 fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
     val fileState = koinInject<FileState>()
     val rootPath by fileState.rootPath.collectAsState()
-    val rootPathTotalSpace = FileUtils.totalSpace(rootPath)
-    val rootPathFreeSpace = FileUtils.freeSpace(rootPath)
 
     val fileFilterState = koinInject<FileFilterState>()
 
@@ -78,8 +75,8 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
             SelectionContainer {
                 Column {
                     LinearProgressIndicator(
-                        progress = (size.toFloat() / rootPathTotalSpace.toFloat()),
-                        Modifier
+                        progress = { (size.toFloat() / rootPath.totalSpace.toFloat()) },
+                        modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
                             .height(10.dp)
@@ -90,7 +87,7 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("${rootPathTotalSpace.formatFileSize()} 总计")
+                            Text("${rootPath.totalSpace.formatFileSize()} 总计")
                             Spacer(Modifier.width(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Spacer(
@@ -115,7 +112,7 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                                         .background(ProgressIndicatorDefaults.linearTrackColor)
                                 )
                                 Spacer(Modifier.width(4.dp))
-                                Text("${rootPathFreeSpace.formatFileSize()} 剩余")
+                                Text("${rootPath.freeSpace.formatFileSize()} 剩余")
                             }
                         }
                     }

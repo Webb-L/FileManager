@@ -3,6 +3,7 @@ package app.filemanager.ui.state.file
 import androidx.compose.runtime.mutableStateListOf
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.data.file.PathInfo
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DiskBase
 import app.filemanager.data.main.Local
@@ -21,9 +22,9 @@ import kotlinx.coroutines.launch
 class FileState() {
     val fileAndFolder = mutableStateListOf<FileSimpleInfo>()
 
-    private val _rootPath: MutableStateFlow<String> = MutableStateFlow(PathUtils.getRootPaths().first())
-    val rootPath: StateFlow<String> = _rootPath
-    suspend fun updateRootPath(value: String) {
+    private val _rootPath: MutableStateFlow<PathInfo> = MutableStateFlow(PathUtils.getRootPaths().first())
+    val rootPath: StateFlow<PathInfo> = _rootPath
+    suspend fun updateRootPath(value: PathInfo) {
         _rootPath.value = value
         updateFileAndFolder()
     }
@@ -59,7 +60,7 @@ class FileState() {
             }
         }
         if (getRootPaths().isNotEmpty()) {
-            _rootPath.value = getRootPaths().first().path
+            _rootPath.value = getRootPaths().first()
         }
 
         updateFileAndFolder()
@@ -113,20 +114,18 @@ class FileState() {
     }
 
 
-    suspend fun getRootPaths(): List<FileSimpleInfo> {
+    suspend fun getRootPaths(): List<PathInfo> {
         if (_deskType.value is Local) {
-            return PathUtils.getRootPaths().map {
-                FileSimpleInfo.pathFileSimpleInfo(it)
-            }
+            return PathUtils.getRootPaths()
         }
 
         var isReturn = false
 
         if (_deskType.value is Device) {
             val device = _deskType.value as Device
-            val temp = mutableListOf<FileSimpleInfo>()
+            val temp = mutableListOf<PathInfo>()
             device.getRootPaths {
-                temp.addAll(it.map { FileSimpleInfo.pathFileSimpleInfo(it) })
+                temp.addAll(it)
                 isReturn = true
             }
             while (!isReturn) {

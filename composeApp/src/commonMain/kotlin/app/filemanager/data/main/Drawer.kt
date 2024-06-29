@@ -1,6 +1,7 @@
 package app.filemanager.data.main
 
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.data.file.PathInfo
 import app.filemanager.extensions.isPrivateIPAddress
 import app.filemanager.service.WebSocketConnectService
 import kotlinx.serialization.Serializable
@@ -54,7 +55,7 @@ data class Device(
         return host.values.first()
     }
 
-    suspend fun getRootPaths(replyCallback: (List<String>) -> Unit) =
+    suspend fun getRootPaths(replyCallback: (List<PathInfo>) -> Unit) =
         getConnect()?.pathHandle?.getRootPaths(id, replyCallback)
 
     suspend fun getFileList(path: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) =

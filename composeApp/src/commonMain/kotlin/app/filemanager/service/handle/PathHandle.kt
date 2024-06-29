@@ -2,6 +2,7 @@ package app.filemanager.service.handle
 
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.data.file.PathInfo
 import app.filemanager.service.WebSocketConnectService
 import app.filemanager.service.WebSocketResult
 import app.filemanager.service.WebSocketResultMapListFileSimpleInfo
@@ -62,13 +63,13 @@ class PathHandle(private val webSocketConnectService: WebSocketConnectService) {
         })
     }
 
-    suspend fun getRootPaths(remoteId: String, replyCallback: (List<String>) -> Unit) {
+    suspend fun getRootPaths(remoteId: String, replyCallback: (List<PathInfo>) -> Unit) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
         webSocketConnectService.send(command = "/rootPaths", header = listOf(remoteId, replyKey.toString()), value = "")
 
-        val paths: MutableList<String> = mutableListOf()
+        val paths: MutableList<PathInfo> = mutableListOf()
         webSocketConnectService.waitFinish(replyKey, callback = {
-            paths.addAll(webSocketConnectService.replyMessage[replyKey] as List<String>)
+            paths.addAll(webSocketConnectService.replyMessage[replyKey] as List<PathInfo>)
             true
         })
 

@@ -1,6 +1,7 @@
 package app.filemanager.utils
 
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.data.file.PathInfo
 import app.filemanager.data.main.DrawerBookmark
 import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.exception.AuthorityException
@@ -34,7 +35,8 @@ internal actual object PathUtils {
     actual fun getPathSeparator(): String = separator
 
     // 获取根目录
-    actual fun getRootPaths(): List<String> = File.listRoots().map { it.path }
+    actual fun getRootPaths(): List<PathInfo> = File.listRoots()
+        .map { PathInfo(it.path, it.totalSpace, it.freeSpace) }
 
     // 遍历目录
     actual fun traverse(path: String): List<FileSimpleInfo> {

@@ -1,6 +1,7 @@
 package app.filemanager.utils
 
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.data.file.PathInfo
 import app.filemanager.data.main.DrawerBookmark
 
 internal expect object PathUtils {
@@ -8,7 +9,7 @@ internal expect object PathUtils {
     fun getAppPath(): String
     fun getHomePath(): String
     fun getPathSeparator(): String
-    fun getRootPaths(): List<String>
+    fun getRootPaths(): List<PathInfo>
     fun traverse(path: String): List<FileSimpleInfo>
     fun getBookmarks(): List<DrawerBookmark>
 }

@@ -1,5 +1,6 @@
 package app.filemanager.service.response
 
+import app.filemanager.data.file.PathInfo
 import app.filemanager.service.WebSocketConnectService
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -37,7 +38,7 @@ class PathResponse(private val webSocketConnectService: WebSocketConnectService)
     @OptIn(ExperimentalSerializationApi::class)
     fun replyRootPaths(headerKey: Long, content: String) {
         MainScope().launch {
-            webSocketConnectService.replyMessage[headerKey] = ProtoBuf.decodeFromHexString<List<String>>(content)
+            webSocketConnectService.replyMessage[headerKey] = ProtoBuf.decodeFromHexString<List<PathInfo>>(content)
         }
     }
 }

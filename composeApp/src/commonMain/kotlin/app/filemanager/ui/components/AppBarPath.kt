@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.data.file.PathInfo
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.buttons.DiskSwitchButton
 import app.filemanager.ui.state.file.FileFilterState
@@ -51,13 +52,13 @@ fun AppBarPath() {
         }
 
         itemsIndexed(paths) { index, text ->
-            val nowPath = rootPath + paths.subList(0, index).joinToString(PathUtils.getPathSeparator())
+            val nowPath = rootPath.path + paths.subList(0, index).joinToString(PathUtils.getPathSeparator())
             PathSwitch(
                 text,
                 nowPath,
                 onClick = {
                     scope.launch {
-                        val newPath = rootPath + paths.subList(0, index + 1)
+                        val newPath = rootPath.path + paths.subList(0, index + 1)
                             .joinToString(PathUtils.getPathSeparator())
                         fileState.updatePath(newPath)
                     }
@@ -85,29 +86,56 @@ fun RootPathSwitch() {
 
     val fileState = koinInject<FileState>()
     val rootPath by fileState.rootPath.collectAsState()
-    val fileInfos = mutableStateListOf<FileSimpleInfo>()
+    val fileInfos = mutableStateListOf<PathInfo>()
 
     LaunchedEffect(fileState.deskType.value) {
         fileInfos.clear()
         fileInfos.addAll(fileState.getRootPaths())
     }
 
-    renderPathSwitch(
-        name = rootPath,
-        fileInfos = fileInfos,
-        selected = false,
-        onClick = {
-            scope.launch {
-                fileState.updatePath(rootPath)
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
+        FilterChip(
+            selected = false,
+            label = { Text(rootPath.path) },
+            border = null,
+            shape = RoundedCornerShape(25.dp),
+            trailingIcon = if (fileInfos.size > 1) {
+                {
+                    Icon(
+                        if (expanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown,
+                        null,
+                        Modifier.clip(RoundedCornerShape(25.dp)).clickable { expanded = !expanded }
+                    )
+                }
+            } else {
+                null
+            },
+            onClick = {
+                scope.launch {
+                    fileState.updatePath(rootPath.path)
+                }
             }
-        },
-        onSelected = {
-            scope.launch {
-                fileState.updateRootPath(it)
-                fileState.updatePath(it)
+        )
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            for (fileInfo in fileInfos) {
+                DropdownMenuItem(
+                    text = { Text(fileInfo.path) },
+                    onClick = {
+                        scope.launch {
+                            fileState.updateRootPath(rootPath)
+                            fileState.updatePath(rootPath.path)
+                        }
+                        expanded = false
+                    })
             }
         }
-    )
+    }
 }
 
 /**
