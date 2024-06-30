@@ -210,7 +210,10 @@ class FileState() {
         }
 
         fileOperationState.title = "复制中..."
-        val fileInfos = PathUtils.traverse(srcPath)
+        val fileInfos = mutableListOf<FileSimpleInfo>()
+        PathUtils.traverse(srcPath) {
+            fileInfos.addAll(it)
+        }
         fileOperationState.updateFileInfos(fileInfos)
         for (fileInfo in fileInfos) {
             var toPath: String = fileInfo.path.replace(srcPath, newDestPath)
@@ -279,7 +282,10 @@ class FileState() {
         }
 
         fileOperationState.title = "移动中..."
-        val fileInfos = PathUtils.traverse(srcPath)
+        val fileInfos = mutableListOf<FileSimpleInfo>()
+        PathUtils.traverse(srcPath) {
+            fileInfos.addAll(it)
+        }
         fileOperationState.updateFileInfos(fileInfos)
         for (fileInfo in fileInfos) {
             var toPath: String = fileInfo.path.replace(srcPath, newDestPath)
@@ -334,8 +340,11 @@ class FileState() {
     // 删除文件
     suspend fun deleteFile(fileOperationState: FileOperationState, path: String) {
         fileOperationState.title = "删除中..."
-        val fileInfos = PathUtils.traverse(path)
-            .sortedWith(compareBy<FileSimpleInfo> { it.isDirectory }.thenByDescending { it.path })
+        val fileInfos = mutableListOf<FileSimpleInfo>()
+        PathUtils.traverse(path) {
+            fileInfos.addAll(it)
+        }
+        fileInfos.sortedWith(compareBy<FileSimpleInfo> { it.isDirectory }.thenByDescending { it.path })
         fileOperationState.updateFileInfos(fileInfos)
         for (fileInfo in fileInfos) {
             if (fileOperationState.isCancel) return

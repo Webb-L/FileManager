@@ -35,6 +35,7 @@ import app.filemanager.ui.state.file.FileOperationType
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.utils.PathUtils
 import org.koin.compose.koinInject
+import kotlin.math.roundToInt
 
 
 @Composable
@@ -53,29 +54,34 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
     var size by remember {
         mutableStateOf(-1L)
     }
-    LaunchedEffect(Unit) {
-        size = if (fileInfo.isDirectory) {
-            PathUtils.traverse(fileInfo.path).sumOf {
-                if (it.isDirectory) {
-                    folderCount++
-                    0
-                } else {
-                    fileCount++
-                    it.size
+
+    LaunchedEffect(fileInfo) {
+        if (fileInfo.isDirectory) {
+            PathUtils.traverse(fileInfo.path) { fileSimpleInfos ->
+                size += fileSimpleInfos.sumOf {
+                    if (it.isDirectory) {
+                        folderCount++
+                        0
+                    } else {
+                        fileCount++
+                        it.size
+                    }
                 }
             }
         } else {
-            fileInfo.size
+            size = fileInfo.size
         }
     }
+
     AlertDialog(
         icon = { FileIcon(fileInfo) },
         title = { SelectionContainer { Text(fileInfo.name) } },
         text = {
             SelectionContainer {
                 Column {
+                    val progressValue = (size.toFloat() / rootPath.totalSpace.toFloat())
                     LinearProgressIndicator(
-                        progress = { (size.toFloat() / rootPath.totalSpace.toFloat()) },
+                        progress = { progressValue },
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
@@ -100,7 +106,7 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                                 if (size < 0) {
                                     Text("计算中 已用")
                                 } else {
-                                    Text("${size.formatFileSize()} 已用")
+                                    Text("${size.formatFileSize()} 已用(${(progressValue*100).roundToInt()}%)")
                                 }
                             }
                             Spacer(Modifier.width(8.dp))
@@ -122,7 +128,7 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                             Text("位置", Modifier.weight(0.3f))
                         }
                         Spacer(Modifier.width(8.dp))
-                        Text(fileInfo.path, Modifier.weight(0.7f))
+                        Text(fileInfo.path.replace(fileInfo.name,""), Modifier.weight(0.7f))
                     }
                     Row(Modifier.fillMaxWidth().padding(4.dp)) {
                         DisableSelection {
