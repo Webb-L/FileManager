@@ -85,7 +85,7 @@ class WebSocketConnectService() : KoinComponent {
             session = this
             launch {
                 delay(10)
-                send("/devices", header = listOf("", ""), params = listOf("", ""), value = "")
+                send("/devices", header = listOf("", ""), value = "")
             }
             launch {
                 try {
@@ -152,6 +152,10 @@ class WebSocketConnectService() : KoinComponent {
             // 收到对方返回创建文件夹结果
             "/replyCreateFolder" -> fileResponse.replyCreateFolder(headerKey, content)
 
+            // 遍历目录下所有文件夹和文件
+            "/traversePath" -> pathRequest.sendTraversePath(params, headerKey)
+            // 收到对方发送过来的遍历目录下文件夹和文件
+            "/replyTraversePath" -> pathResponse.replyTraversePath(headerKey,params, content)
             else -> {
                 println("匹配不到指令：\n${header[0]}")
             }
@@ -195,7 +199,7 @@ class WebSocketConnectService() : KoinComponent {
         var index = 1
         val chunked = content.chunked(MAX_LENGTH)
         chunked.forEach {
-            val paramsString = (listOf(index.toString(), chunked.size.toString())+params)
+            val paramsString = (listOf(index.toString(), chunked.size.toString()) + params)
                 .map { Base64.encode(it.toByteArray()) }.joinToString(" ")
 
             session?.send("$command $headerString${SEND_SPLIT}$paramsString${SEND_SPLIT}${it}".toByteArray())

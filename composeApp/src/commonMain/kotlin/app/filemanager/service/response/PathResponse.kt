@@ -41,4 +41,8 @@ class PathResponse(private val webSocketConnectService: WebSocketConnectService)
             webSocketConnectService.replyMessage[headerKey] = ProtoBuf.decodeFromHexString<List<PathInfo>>(content)
         }
     }
+
+    fun replyTraversePath(headerKey: Long, params: List<String>, content: String) {
+
+    }
 }

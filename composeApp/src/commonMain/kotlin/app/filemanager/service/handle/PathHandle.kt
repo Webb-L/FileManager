@@ -76,4 +76,47 @@ class PathHandle(private val webSocketConnectService: WebSocketConnectService) {
         replyCallback(paths)
         webSocketConnectService.replyMessage.remove(replyKey)
     }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun getTraversePath(path: String, remoteId: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
+        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
+        webSocketConnectService.send(
+            command = "/traversePath",
+            header = listOf(remoteId, replyKey.toString()),
+            params = listOf(path),
+            value = ""
+        )
+
+//        val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
+//
+//        webSocketConnectService.waitFinish(replyKey, callback = {
+//            val tempList = webSocketConnectService.replyMessage[replyKey] as Triple<Int, Int, String>
+//            if (tempList.first != tempList.second) {
+//                return@waitFinish false
+//            }
+//
+//            val decodeFromHexString =
+//                ProtoBuf.decodeFromHexString<WebSocketResult<WebSocketResultMapListFileSimpleInfo>>(
+//                    tempList.third
+//                )
+//
+//            if (decodeFromHexString.isSuccess) {
+//                (decodeFromHexString.value as Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>).forEach {
+//                    it.value.forEach { fileSimpleInfo ->
+//                        fileSimpleInfos.add(fileSimpleInfo.apply {
+//                            protocol = it.key.first
+//                            protocolId = it.key.second
+//                            this.path = path + this.path
+//                        })
+//                    }
+//                }
+//                replyCallback(Result.success(fileSimpleInfos))
+//            } else {
+//                replyCallback(Result.failure(decodeFromHexString.deSerializable()))
+//            }
+//
+//            webSocketConnectService.replyMessage.remove(replyKey)
+//            return@waitFinish true
+//        })
+    }
 }

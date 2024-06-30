@@ -61,6 +61,9 @@ data class Device(
     suspend fun getFileList(path: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) =
         getConnect()?.pathHandle?.getList(path, id, replyCallback)
 
+    suspend fun getTraversePath(path: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) =
+        getConnect()?.pathHandle?.getTraversePath(path, id, replyCallback)
+
     suspend fun getBookmark(replyCallback: (List<DrawerBookmark>) -> Unit) =
         getConnect()?.bookmarkHandle?.getBookmark(id, replyCallback)
 

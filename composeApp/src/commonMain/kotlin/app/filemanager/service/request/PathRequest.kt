@@ -77,4 +77,18 @@ class PathRequest(private val webSocketConnectService: WebSocketConnectService) 
             )
         }
     }
+
+    // 发送遍历的目录
+    // TODO 检查权限
+    fun sendTraversePath(params: List<String>, replyKey: Long) {
+        PathUtils.traverse(params[0]) {
+            MainScope().launch {
+                webSocketConnectService.send(
+                    command = "/replyTraversePath",
+                    header = listOf("",replyKey.toString()),
+                    value = it
+                )
+            }
+        }
+    }
 }

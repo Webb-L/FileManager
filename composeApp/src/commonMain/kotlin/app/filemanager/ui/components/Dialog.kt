@@ -27,13 +27,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.data.main.Device
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileOperationType
 import app.filemanager.ui.state.file.FileState
-import app.filemanager.utils.PathUtils
 import org.koin.compose.koinInject
 import kotlin.math.roundToInt
 
@@ -57,17 +57,22 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
 
     LaunchedEffect(fileInfo) {
         if (fileInfo.isDirectory) {
-            PathUtils.traverse(fileInfo.path) { fileSimpleInfos ->
-                size += fileSimpleInfos.sumOf {
-                    if (it.isDirectory) {
-                        folderCount++
-                        0
-                    } else {
-                        fileCount++
-                        it.size
-                    }
+            if (fileState.deskType.value is Device) {
+                (fileState.deskType.value as Device).getTraversePath(fileInfo.path){
+
                 }
             }
+//            PathUtils.traverse(fileInfo.path) { fileSimpleInfos ->
+//                size += fileSimpleInfos.sumOf {
+//                    if (it.isDirectory) {
+//                        folderCount++
+//                        0
+//                    } else {
+//                        fileCount++
+//                        it.size
+//                    }
+//                }
+//            }
         } else {
             size = fileInfo.size
         }
