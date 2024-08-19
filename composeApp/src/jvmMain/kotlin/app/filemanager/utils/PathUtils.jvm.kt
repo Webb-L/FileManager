@@ -13,6 +13,7 @@ import java.io.File.separator
 internal actual object PathUtils {
     // 获取目录下所有文件和文件夹
     actual fun getFileAndFolder(path: String): Result<List<FileSimpleInfo>> {
+        if (path.isEmpty()) return Result.failure(AuthorityException("目录错误"))
         val file = File(path)
         if (!file.exists()) return Result.failure(AuthorityException("该目录并不存在"))
         if (!file.canRead()) return Result.failure(AuthorityException("没有权限"))

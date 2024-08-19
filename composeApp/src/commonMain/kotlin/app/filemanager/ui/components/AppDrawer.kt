@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DrawerBookmarkType
+import app.filemanager.service.data.ConnectType
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.DrawerState
@@ -46,24 +47,24 @@ fun AppDrawer() {
                 }
             }
         )
-        Divider()
+        HorizontalDivider()
         LazyColumn {
-            item {
-                AppDrawerHeader("工具箱", actions = {
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        null,
-                        Modifier.clip(RoundedCornerShape(25.dp))
-                            .clickable { }
-                    )
-                })
-                Spacer(Modifier.height(12.dp))
-            }
-            item { Divider() }
+//            item {
+//                AppDrawerHeader("工具箱", actions = {
+//                    Icon(
+//                        Icons.Default.ChevronRight,
+//                        null,
+//                        Modifier.clip(RoundedCornerShape(25.dp))
+//                            .clickable { }
+//                    )
+//                })
+//                Spacer(Modifier.height(12.dp))
+//            }
+            item { HorizontalDivider() }
             item { AppDrawerBookmark() }
-            item { Divider() }
+            item { HorizontalDivider() }
             item { AppDrawerDevice() }
-            item { Divider() }
+            item { HorizontalDivider() }
             item {
                 AppDrawerItem(
                     "网络",
@@ -82,7 +83,7 @@ fun AppDrawer() {
                 ) {
                 }
             }
-            item { Divider() }
+            item { HorizontalDivider() }
         }
     }
 
@@ -210,12 +211,38 @@ private fun AppDrawerDevice() {
         }
     ) {
         if (!isExpandDevice) return@AppDrawerItem
-        for (device in deviceState.devices.value) {
+        for (device in deviceState.socketDevices) {
             NavigationDrawerItem(
                 icon = { Icon(Icons.Default.Devices, null) },
+                badge = {
+                    when (device.connectType) {
+                        app.filemanager.service.data.ConnectType.Connect -> Badge(
+                            containerColor = MaterialTheme.colorScheme.tertiary
+                        ) {
+                            Text("已连接")
+                        }
+
+                        app.filemanager.service.data.ConnectType.Fail -> Badge {
+                            Text("连接失败")
+                        }
+
+                        app.filemanager.service.data.ConnectType.UnConnect -> Badge {
+                            Text("未连接")
+                        }
+
+                        app.filemanager.service.data.ConnectType.Loading -> Badge(
+                            containerColor = MaterialTheme.colorScheme.tertiary
+                        ) {
+                            Text("连接中")
+                        }
+                    }
+                },
                 label = { Text(device.name) },
                 selected = false,
-                onClick = {},
+                onClick = {
+                    device.connectType = ConnectType.Loading
+                    deviceState.devices.add(device.toDevice())
+                },
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
             )
         }

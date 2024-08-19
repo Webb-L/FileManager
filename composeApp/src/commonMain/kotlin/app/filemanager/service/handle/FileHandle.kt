@@ -40,7 +40,7 @@ class FileHandle(private val webSocketConnectService: WebSocketConnectService) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
         webSocketConnectService.send(
             command = "/createFolder",
-            header = listOf(remoteId, replyKey.toString()),
+            header = listOf(replyKey.toString(), remoteId),
             params = listOf(path, name),
             value = ""
         )

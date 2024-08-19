@@ -3,17 +3,18 @@ package app.filemanager.service.handle
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.PathInfo
-import app.filemanager.service.WebSocketConnectService
+import app.filemanager.service.SocketClientManger
 import app.filemanager.service.WebSocketResult
 import app.filemanager.service.WebSocketResultMapListFileSimpleInfo
+import app.filemanager.service.socket.SocketHeader
 import kotlinx.datetime.Clock
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromHexString
+import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
 import kotlin.random.Random
 
 
-class PathHandle(private val webSocketConnectService: WebSocketConnectService) {
+class PathHandle(private val socket: SocketClientManger) {
     /**
      * 从远程设备获取指定路径下的文件和文件夹列表。
      *
@@ -23,23 +24,22 @@ class PathHandle(private val webSocketConnectService: WebSocketConnectService) {
     @OptIn(ExperimentalSerializationApi::class)
     suspend fun getList(path: String, remoteId: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        webSocketConnectService.send(
-            command = "/list",
-            header = listOf(remoteId, replyKey.toString()),
-            params = listOf(path),
+        socket.send(
+            header = SocketHeader(command = "list"),
+            params = mapOf("replyKey" to replyKey.toString(), "path" to path),
             value = ""
         )
 
         val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
 
-        webSocketConnectService.waitFinish(replyKey, callback = {
-            val tempList = webSocketConnectService.replyMessage[replyKey] as Triple<Int, Int, String>
+        socket.waitFinish(replyKey, callback = {
+            val tempList = socket.replyMessage[replyKey] as Triple<Long, Long, ByteArray>
             if (tempList.first != tempList.second) {
                 return@waitFinish false
             }
 
             val decodeFromHexString =
-                ProtoBuf.decodeFromHexString<WebSocketResult<WebSocketResultMapListFileSimpleInfo>>(
+                ProtoBuf.decodeFromByteArray<WebSocketResult<WebSocketResultMapListFileSimpleInfo>>(
                     tempList.third
                 )
 
@@ -58,39 +58,42 @@ class PathHandle(private val webSocketConnectService: WebSocketConnectService) {
                 replyCallback(Result.failure(decodeFromHexString.deSerializable()))
             }
 
-            webSocketConnectService.replyMessage.remove(replyKey)
+            socket.replyMessage.remove(replyKey)
             return@waitFinish true
         })
     }
 
     suspend fun getRootPaths(remoteId: String, replyCallback: (List<PathInfo>) -> Unit) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        webSocketConnectService.send(command = "/rootPaths", header = listOf(remoteId, replyKey.toString()), value = "")
+        socket.send(
+            header = SocketHeader(command = "rootPaths"),
+            params = mapOf("replyKey" to replyKey.toString()),
+            value = ""
+        )
 
         val paths: MutableList<PathInfo> = mutableListOf()
-        webSocketConnectService.waitFinish(replyKey, callback = {
-            paths.addAll(webSocketConnectService.replyMessage[replyKey] as List<PathInfo>)
+        socket.waitFinish(replyKey, callback = {
+            paths.addAll(socket.replyMessage[replyKey] as List<PathInfo>)
             true
         })
 
         replyCallback(paths)
-        webSocketConnectService.replyMessage.remove(replyKey)
+        socket.replyMessage.remove(replyKey)
     }
 
     @OptIn(ExperimentalSerializationApi::class)
     suspend fun getTraversePath(path: String, remoteId: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        webSocketConnectService.send(
-            command = "/traversePath",
-            header = listOf(remoteId, replyKey.toString()),
-            params = listOf(path),
+        socket.send(
+            header = SocketHeader(command = "traversePath"),
+            params = mapOf("replyKey" to replyKey.toString()),
             value = ""
         )
 
 //        val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
 //
-//        webSocketConnectService.waitFinish(replyKey, callback = {
-//            val tempList = webSocketConnectService.replyMessage[replyKey] as Triple<Int, Int, String>
+//        socket.waitFinish(replyKey, callback = {
+//            val tempList = socket.replyMessage[replyKey] as Triple<Int, Int, String>
 //            if (tempList.first != tempList.second) {
 //                return@waitFinish false
 //            }
@@ -115,7 +118,7 @@ class PathHandle(private val webSocketConnectService: WebSocketConnectService) {
 //                replyCallback(Result.failure(decodeFromHexString.deSerializable()))
 //            }
 //
-//            webSocketConnectService.replyMessage.remove(replyKey)
+//            socket.replyMessage.remove(replyKey)
 //            return@waitFinish true
 //        })
     }

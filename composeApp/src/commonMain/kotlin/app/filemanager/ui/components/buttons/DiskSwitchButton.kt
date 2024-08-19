@@ -21,7 +21,6 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiskSwitchButton(
     deskType: DiskBase,
@@ -36,7 +35,7 @@ fun DiskSwitchButton(
     val deviceState = koinInject<DeviceState>()
     val networkState = koinInject<NetworkState>()
 
-    val devices by deviceState.devices.collectAsState()
+    val devices = deviceState.devices
 
     if (
         devices.isEmpty() &&

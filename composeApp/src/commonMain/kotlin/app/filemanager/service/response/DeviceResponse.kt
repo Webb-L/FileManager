@@ -8,10 +8,10 @@ class DeviceResponse(private val webSocketConnectService: WebSocketConnectServic
     fun deviceList(content: String) {
         MainScope().launch {
             for (message in content.split("\n")) {
-                webSocketConnectService.deviceState.addDevices(
-                    message,
-                    webSocketConnectService,
-                )
+//                webSocketConnectService.deviceState.addDevices(
+//                    message,
+//                    webSocketConnectService,
+//                )
             }
         }
     }

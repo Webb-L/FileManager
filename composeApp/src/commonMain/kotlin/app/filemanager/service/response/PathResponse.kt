@@ -1,44 +1,50 @@
 package app.filemanager.service.response
 
 import app.filemanager.data.file.PathInfo
-import app.filemanager.service.WebSocketConnectService
+import app.filemanager.service.SocketClientManger
+import app.filemanager.service.socket.SocketMessage
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromHexString
+import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
 
-class PathResponse(private val webSocketConnectService: WebSocketConnectService) {
+class PathResponse(private val socket: SocketClientManger) {
     // 收到对方返回的文件文件夹信息
-    fun replyList(headerKey: Long, params: List<String>, content: String) {
+    @OptIn(ExperimentalSerializationApi::class)
+    fun replyList(message: SocketMessage) {
         MainScope().launch {
-            if (params.isEmpty() || params.size < 2) {
-                webSocketConnectService.replyMessage[headerKey] = Triple(0, 0, content)
+            val replyKey = (message.params["replyKey"] ?: "0").toLong()
+            val index = (message.params["index"] ?: "0").toLong()
+            val count = (message.params["count"] ?: "0").toLong()
+            if (index == 0L && count == 0L) {
+                socket.replyMessage[replyKey] = Triple(index, count, message.body)
                 return@launch
             }
-            if (!webSocketConnectService.replyMessage.containsKey(headerKey)) {
-                webSocketConnectService.replyMessage[headerKey] = Triple(
-                    params[0].toInt(),
-                    params[1].toInt(),
-                    content
+            if (!socket.replyMessage.containsKey(replyKey)) {
+                socket.replyMessage[replyKey] = Triple(
+                    index,
+                    count,
+                    message.body
                 )
             } else {
                 val temp =
-                    webSocketConnectService.replyMessage[headerKey] as Triple<Int, Int, String>
+                    socket.replyMessage[replyKey] as Triple<Long, Long, ByteArray>
 
-                webSocketConnectService.replyMessage[headerKey] = Triple(
-                    params[0].toInt(),
-                    params[1].toInt(),
-                    temp.third + content
+                socket.replyMessage[replyKey] = Triple(
+                    index,
+                    count,
+                    (temp.third.toList() + message.body.toList()).toByteArray()
                 )
             }
         }
     }
 
     @OptIn(ExperimentalSerializationApi::class)
-    fun replyRootPaths(headerKey: Long, content: String) {
+    fun replyRootPaths(message: SocketMessage) {
         MainScope().launch {
-            webSocketConnectService.replyMessage[headerKey] = ProtoBuf.decodeFromHexString<List<PathInfo>>(content)
+            val replyKey = (message.params["replyKey"] ?: "0").toLong()
+            socket.replyMessage[replyKey] = ProtoBuf.decodeFromByteArray<List<PathInfo>>(message.body)
         }
     }
 

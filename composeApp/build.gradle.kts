@@ -75,6 +75,7 @@ kotlin {
             implementation(libs.sqlDelight.driver.android)
             implementation(libs.koin.android)
             implementation(libs.androidx.security.crypto)
+            implementation(libs.ktor.network)
         }
 
         jvmMain.dependencies {
@@ -83,6 +84,7 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.sqlDelight.driver.sqlite)
             implementation(libs.jasypt)
+            implementation(libs.ktor.network)
         }
 
         jsMain.dependencies {

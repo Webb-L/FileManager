@@ -21,45 +21,31 @@ class FileRequest(private val webSocketConnectService: WebSocketConnectService) 
 
     // 创建文件夹
     // TODO 检查权限
-    fun sendCreateFolder(id: String, replyKey: Long, params: List<String>) {
+    fun sendCreateFolder(replyKey: Long,replyDeviceId: String, params: List<String>) {
         val command = "/replyCreateFolder"
+        val header = listOf(replyKey.toString(), replyDeviceId)
+        var value:Any
         if (params.size < 2) {
-            MainScope().launch {
-                webSocketConnectService.send(
-                    command = command,
-                    header = listOf(id, replyKey.toString()),
-                    value = WebSocketResult(
-                        value = ParameterErrorException()
-                    )
-                )
-            }
-            return
+            value = WebSocketResult(value = ParameterErrorException())
         }
 
         val createFolder = FileUtils.createFolder(params[0], params[1])
         if (createFolder.isFailure) {
-            MainScope().launch {
-                val exceptionOrNull = createFolder.exceptionOrNull() ?: EmptyDataException()
-                webSocketConnectService.send(
-                    command = command,
-                    header = listOf(id, replyKey.toString()),
-                    value = WebSocketResult(
-                        exceptionOrNull.message,
-                        exceptionOrNull::class.simpleName,
-                        null
-                    )
-                )
-            }
-            return
+            val exceptionOrNull = createFolder.exceptionOrNull() ?: EmptyDataException()
+            value = WebSocketResult(
+                exceptionOrNull.message,
+                exceptionOrNull::class.simpleName,
+                null
+            )
         }
+
+        value = WebSocketResult(value = createFolder.getOrNull() ?: false)
 
         MainScope().launch {
             webSocketConnectService.send(
                 command = command,
-                header = listOf(id, replyKey.toString()),
-                value = WebSocketResult(
-                    value = createFolder.getOrNull() ?: false
-                )
+                header = header,
+                value = value
             )
         }
     }

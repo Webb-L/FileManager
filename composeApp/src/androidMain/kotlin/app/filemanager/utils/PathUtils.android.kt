@@ -39,7 +39,7 @@ internal actual object PathUtils {
         .map { PathInfo(it.path, it.totalSpace, it.freeSpace) }
 
     // 遍历目录
-    actual fun traverse(path: String): List<FileSimpleInfo> {
+    actual fun traverse(path: String, callback: (List<FileSimpleInfo>) -> Unit) {
         val fileList = mutableListOf<FileSimpleInfo>()
         val directory = File(path)
         if (directory.exists()) {
@@ -49,7 +49,7 @@ internal actual object PathUtils {
                     try {
                         fileList.add(file.toFileSimpleInfo())
                         if (file.isDirectory) {
-                            fileList.addAll(traverse(file.path))
+                            traverse(file.path, callback)
                         }
                     } catch (e: Exception) {
                     }
@@ -61,8 +61,7 @@ internal actual object PathUtils {
                 fileList.add(directory.toFileSimpleInfo())
             }
         }
-
-        return fileList
+        callback(fileList)
     }
 
     actual fun getBookmarks(): List<DrawerBookmark> {

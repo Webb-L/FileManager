@@ -9,7 +9,11 @@ import kotlin.random.Random
 class BookmarkHandle(private val webSocketConnectService: WebSocketConnectService) {
     suspend fun getBookmark(remoteId: String, replyCallback: (List<DrawerBookmark>) -> Unit) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        webSocketConnectService.send(command = "/bookmark", header = listOf(remoteId ,replyKey.toString()), value = "")
+        webSocketConnectService.send(
+            command = "/bookmark",
+            header = listOf(replyKey.toString(), remoteId),
+            value = ""
+        )
 
         for (i in 0..100) {
             delay(100)

@@ -8,12 +8,12 @@ import kotlinx.coroutines.launch
 class BookmarkRequest(private val webSocketConnectService: WebSocketConnectService) {
     // 远程设备需要我本地的书签
     // TODO 检查权限
-    fun sendBookmark(id: String, headerKey: Long) {
+    fun sendBookmark(headerKey: Long, id: String) {
         val bookmarks = PathUtils.getBookmarks()
         MainScope().launch {
             webSocketConnectService.send(
                 command = "/replyBookmark",
-                header = listOf(id, headerKey.toString()),
+                header = listOf(headerKey.toString(), id),
                 value = bookmarks
             )
         }

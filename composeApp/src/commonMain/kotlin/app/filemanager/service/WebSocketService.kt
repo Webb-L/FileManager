@@ -2,23 +2,17 @@ package app.filemanager.service
 
 import app.filemanager.service.handle.BookmarkHandle
 import app.filemanager.service.handle.FileHandle
-import app.filemanager.service.handle.PathHandle
 import app.filemanager.service.request.BookmarkRequest
 import app.filemanager.service.request.FileRequest
-import app.filemanager.service.request.PathRequest
 import app.filemanager.service.response.BookmarkResponse
 import app.filemanager.service.response.DeviceResponse
 import app.filemanager.service.response.FileResponse
-import app.filemanager.service.response.PathResponse
 import app.filemanager.ui.state.main.DeviceState
-import com.russhwolf.settings.Settings
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
-import io.ktor.http.*
 import io.ktor.utils.io.core.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToHexString
@@ -39,7 +33,7 @@ const val SEND_SPLIT = "\n\n"
 
 // 接受数据超时时间
 const val TIMEOUT = 10_000
-const val MAX_LENGTH = 10240
+const val MAX_LENGTH = 7168
 
 class WebSocketConnectService() : KoinComponent {
     internal val replyMessage = mutableMapOf<Long, Any>()
@@ -57,49 +51,49 @@ class WebSocketConnectService() : KoinComponent {
     }
     private var session: DefaultClientWebSocketSession? = null
 
-    internal val pathHandle by lazy { PathHandle(this) }
+//    internal val pathHandle by lazy { PathHandle(this) }
     internal val fileHandle by lazy { FileHandle(this) }
     internal val bookmarkHandle by lazy { BookmarkHandle(this) }
 
-    private val pathRequest by lazy { PathRequest(this) }
+//    private val pathRequest by lazy { PathRequest(this) }
     private val fileRequest by lazy { FileRequest(this) }
     private val bookmarkRequest by lazy { BookmarkRequest(this) }
 
     private val deviceResponse by lazy { DeviceResponse(this) }
-    private val pathResponse by lazy { PathResponse(this) }
+//    private val pathResponse by lazy { PathResponse(this) }
     private val fileResponse by lazy { FileResponse(this) }
     private val bookmarkResponse by lazy { BookmarkResponse(this) }
 
     @OptIn(ExperimentalEncodingApi::class)
-    suspend fun connect(host: String) {
-        val settings by inject<Settings>()
-        deviceId = settings.getString("deviceId", "")
-        deviceName = settings.getString("deviceName", "")
-
-        client.webSocket(
-            method = HttpMethod.Get,
-            host = host,
-            port = 12040,
-            path = "/?id=$deviceId&name=${Base64.encode(deviceName.toByteArray())}",
-        ) {
-            session = this
-            launch {
-                delay(10)
-                send("/devices", header = listOf("", ""), value = "")
-            }
-            launch {
-                try {
-                    for (message in incoming) {
-                        message as? Frame.Text ?: continue
-                        parseMessage(message.readText())
-                    }
-                } catch (e: Exception) {
-                    println(e)
-                    close()
-                }
-            }.join()
-        }
-    }
+//    suspend fun connect(host: String) {
+//        val settings by inject<Settings>()
+//        deviceId = settings.getString("deviceId", "")
+//        deviceName = settings.getString("deviceName", "")
+//
+//        client.webSocket(
+//            method = HttpMethod.Get,
+//            host = host,
+//            port = 12040,
+//            path = "/?id=$deviceId&name=${Base64.encode(deviceName.toByteArray())}",
+//        ) {
+//            session = this
+//            launch {
+//                delay(10)
+//                send("/devices", header = listOf("", ""), value = "")
+//            }
+//            launch {
+//                try {
+//                    for (message in incoming) {
+//                        message as? Frame.Text ?: continue
+//                        parseMessage(message.readText())
+//                    }
+//                } catch (e: Exception) {
+//                    println(e)
+//                    close()
+//                }
+//            }.join()
+//        }
+//    }
 
     suspend fun sendFile(id: String, fileName: String) {
 //        send("/upload 12132 $id$SEND_SPLIT".toByteArray().plus(FileUtils.getData(fileName, 0, 300)))
@@ -110,11 +104,12 @@ class WebSocketConnectService() : KoinComponent {
         val messages = msg.split(SEND_SPLIT)
         val header = messages[0].split(" ")
         val headerCommand = header[0]
+        val headerKey = if (header.size > 1) header[1].toLong() else -1
         val headerDevices = mutableListOf<String>()
-        if (header.size > 1) {
-            headerDevices.addAll(header[1].split(","))
+        if (header.size > 2) {
+            headerDevices.addAll(header[2].split(","))
         }
-        val headerKey = if (header.size > 2) header[2].toLong() else -1
+        println("header = $header")
 
         val params = messages[1].split(" ").map { String(Base64.decode(it)) }
 
@@ -126,36 +121,36 @@ class WebSocketConnectService() : KoinComponent {
             "/replyDevices" -> deviceResponse.deviceList(content)
 
             // 远程设备需要我本地文件
-            "/list" -> pathRequest.sendList("", headerKey, params[0])
+//            "/list" -> pathRequest.sendList(headerKey, header[2], params[0])
 
             // 收到对方返回的文件文件夹信息
-            "/replyList" -> pathResponse.replyList(headerKey, params, content)
+//            "/replyList" -> pathResponse.replyList(headerKey, params, content)
 
             // 远程设备需要我本地的书签
-            "/bookmark" -> bookmarkRequest.sendBookmark(header[1], headerKey)
+            "/bookmark" -> bookmarkRequest.sendBookmark(headerKey, header[2])
 
             // 收到对方返回的文件文件夹信息
             "/replyBookmark" -> bookmarkResponse.replyBookmark(headerKey, content)
 
             // 远程设备需要我本地的书签
-            "/rootPaths" -> pathRequest.sendRootPaths(header[1], headerKey)
+//            "/rootPaths" -> pathRequest.sendRootPaths(headerKey, header[2])
 
             // 收到对方返回的文件文件夹信息
-            "/replyRootPaths" -> pathResponse.replyRootPaths(headerKey, content)
+//            "/replyRootPaths" -> pathResponse.replyRootPaths(headerKey, content)
 
             // 重命名文件和文件夹
             "/rename" -> fileRequest.sendRename(content)
 
             // 创建文件夹
-            "/createFolder" -> fileRequest.sendCreateFolder(header[1], headerKey, params)
+            "/createFolder" -> fileRequest.sendCreateFolder(headerKey, header[2], params)
 
             // 收到对方返回创建文件夹结果
             "/replyCreateFolder" -> fileResponse.replyCreateFolder(headerKey, content)
 
             // 遍历目录下所有文件夹和文件
-            "/traversePath" -> pathRequest.sendTraversePath(params, headerKey)
+//            "/traversePath" -> pathRequest.sendTraversePath(headerKey, header[2], params)
             // 收到对方发送过来的遍历目录下文件夹和文件
-            "/replyTraversePath" -> pathResponse.replyTraversePath(headerKey,params, content)
+//            "/replyTraversePath" -> pathResponse.replyTraversePath(headerKey, params, content)
             else -> {
                 println("匹配不到指令：\n${header[0]}")
             }
