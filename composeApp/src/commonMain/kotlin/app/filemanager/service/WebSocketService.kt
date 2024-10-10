@@ -33,7 +33,7 @@ const val SEND_SPLIT = "\n\n"
 
 // 接受数据超时时间
 const val TIMEOUT = 10_000
-const val MAX_LENGTH = 7168
+const val MAX_LENGTH = 6144
 
 class WebSocketConnectService() : KoinComponent {
     internal val replyMessage = mutableMapOf<Long, Any>()
@@ -179,10 +179,10 @@ class WebSocketConnectService() : KoinComponent {
             if (value == null) "" else ProtoBuf.encodeToHexString(value)
         }
 
-        val headerString = header.map { it }.joinToString(" ")
+        val headerString = header.joinToString(" ") { it }
 
         if (content.length < MAX_LENGTH) {
-            val paramsString = params.map { Base64.encode(it.toByteArray()) }.joinToString(" ")
+            val paramsString = params.joinToString(" ") { Base64.encode(it.toByteArray()) }
             session?.send("$command $headerString${SEND_SPLIT}$paramsString${SEND_SPLIT}${content}".toByteArray())
 
             println(
@@ -194,8 +194,10 @@ class WebSocketConnectService() : KoinComponent {
         var index = 1
         val chunked = content.chunked(MAX_LENGTH)
         chunked.forEach {
-            val paramsString = (listOf(index.toString(), chunked.size.toString()) + params)
-                .map { Base64.encode(it.toByteArray()) }.joinToString(" ")
+            val paramsString = (listOf(
+                index.toString(),
+                chunked.size.toString()
+            ) + params).joinToString(" ") { Base64.encode(it.toByteArray()) }
 
             session?.send("$command $headerString${SEND_SPLIT}$paramsString${SEND_SPLIT}${it}".toByteArray())
 

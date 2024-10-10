@@ -10,11 +10,11 @@ import io.ktor.utils.io.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.io.IOException
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
-import java.io.IOException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
@@ -119,7 +119,7 @@ class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatche
             )
 
 
-            val buffer = ByteArray(MAX_LENGTH+1024)
+            val buffer = ByteArray(8192)
             while (true) {
                 val bufferLength = receiveChannel.readAvailable(buffer)
                 if (bufferLength == -1) {
