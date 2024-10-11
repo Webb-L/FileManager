@@ -1,5 +1,6 @@
 package app.filemanager.data.file
 
+import app.filemanager.utils.PathUtils
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -62,6 +63,34 @@ data class FileSimpleInfo(
         protocol = protocol,
         protocolId = protocolId,
     )
+
+    suspend fun getSizeInfo(totalSpace: Long, freeSpace: Long): FileSizeInfo {
+        var fileCount = 0L
+        var folderCount = 0L
+        var fileSize = -1L
+        if (isDirectory) {
+            PathUtils.traverse(path) { fileSimpleInfos ->
+                fileSize += fileSimpleInfos.sumOf {
+                    if (it.isDirectory) {
+                        folderCount++
+                        0
+                    } else {
+                        fileCount++
+                        it.size
+                    }
+                }
+            }
+        } else {
+            fileSize = size
+        }
+        return FileSizeInfo(
+            fileSize = fileSize,
+            fileCount = fileCount,
+            folderCount = folderCount,
+            totalSpace = totalSpace,
+            freeSpace = freeSpace
+        )
+    }
 }
 
 @Serializable
@@ -113,3 +142,12 @@ data class FileInfo(
         )
     }
 }
+
+@Serializable
+data class FileSizeInfo(
+    val fileSize: Long = 0,
+    val fileCount: Long = 0,
+    val folderCount: Long = 0,
+    val totalSpace: Long = 0,
+    val freeSpace: Long = 0,
+)

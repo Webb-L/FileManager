@@ -1,5 +1,7 @@
 package app.filemanager.service.handle
 
+import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.service.SocketClientManger
 import app.filemanager.service.WebSocketResult
 import app.filemanager.service.socket.SocketHeader
@@ -81,6 +83,41 @@ class FileHandle(private val socket: SocketClientManger) {
 
             if (decodeFromHexString.isSuccess) {
                 replyCallback(Result.success(decodeFromHexString.value ?: false))
+            } else {
+                replyCallback(Result.failure(decodeFromHexString.deSerializable()))
+            }
+
+            socket.replyMessage.remove(replyKey)
+            return@waitFinish true
+        })
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun getFileSizeInfo(
+        id: String,
+        fileSimpleInfo: FileSimpleInfo,
+        totalSpace: Long,
+        freeSpace: Long,
+        replyCallback: (Result<FileSizeInfo>) -> Unit
+    ) {
+        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
+        socket.send(
+            header = SocketHeader(command = "getSizeInfo"),
+            params = mapOf(
+                "replyKey" to replyKey.toString(),
+                "totalSpace" to totalSpace.toString(),
+                "freeSpace" to freeSpace.toString()
+            ),
+            value = fileSimpleInfo
+        )
+        socket.waitFinish(replyKey, callback = {
+            val decodeFromHexString =
+                ProtoBuf.decodeFromByteArray<WebSocketResult<FileSizeInfo>>(
+                    socket.replyMessage[replyKey] as ByteArray
+                )
+
+            if (decodeFromHexString.isSuccess) {
+                replyCallback(Result.success(decodeFromHexString.value as FileSizeInfo))
             } else {
                 replyCallback(Result.failure(decodeFromHexString.deSerializable()))
             }

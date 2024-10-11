@@ -50,6 +50,7 @@ class SocketClientManger : KoinComponent {
                 "replyBookmark" -> bookmarkResponse.replyBookmark(message)
                 "replyRename" -> fileResponse.replyRename(message)
                 "replyCreateFolder" -> fileResponse.replyCreateFolder(message)
+                "replyGetSizeInfo" -> fileResponse.replyGetSizeInfo(message)
 
                 else -> {
                     println("未能匹配上：$message")

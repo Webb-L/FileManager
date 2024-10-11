@@ -13,4 +13,9 @@ class FileResponse(private val socket: SocketClientManger) {
         val replyKey = (message.params["replyKey"] ?: "0").toLong()
         socket.replyMessage[replyKey] = message.body
     }
+
+    fun replyGetSizeInfo(message: SocketMessage) {
+        val replyKey = (message.params["replyKey"] ?: "0").toLong()
+        socket.replyMessage[replyKey] = message.body
+    }
 }

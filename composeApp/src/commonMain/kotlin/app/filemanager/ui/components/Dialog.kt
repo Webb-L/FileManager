@@ -27,7 +27,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileSimpleInfo
-import app.filemanager.data.main.Device
+import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
 import app.filemanager.ui.state.file.FileFilterState
@@ -45,36 +45,25 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
 
     val fileFilterState = koinInject<FileFilterState>()
 
-    var fileCount by remember {
-        mutableStateOf(0)
-    }
-    var folderCount by remember {
-        mutableStateOf(0)
-    }
-    var size by remember {
-        mutableStateOf(-1L)
+    val emptyFileSizeInfo = FileSizeInfo(
+        fileSize = 0,
+        fileCount = 0,
+        folderCount = 0,
+        totalSpace = -1,
+        freeSpace = -1
+    )
+
+    var fileSize by remember {
+        mutableStateOf(emptyFileSizeInfo)
     }
 
     LaunchedEffect(fileInfo) {
-        if (fileInfo.isDirectory) {
-            if (fileState.deskType.value is Device) {
-                (fileState.deskType.value as Device).getTraversePath(fileInfo.path){
-
-                }
-            }
-//            PathUtils.traverse(fileInfo.path) { fileSimpleInfos ->
-//                size += fileSimpleInfos.sumOf {
-//                    if (it.isDirectory) {
-//                        folderCount++
-//                        0
-//                    } else {
-//                        fileCount++
-//                        it.size
-//                    }
-//                }
-//            }
-        } else {
-            size = fileInfo.size
+        val result = fileState.getSizeInfo(fileInfo, rootPath)
+        if (result.isSuccess) {
+            fileSize = result.getOrNull() ?: emptyFileSizeInfo
+        }
+        if (result.isFailure) {
+            println(result.exceptionOrNull())
         }
     }
 
@@ -84,7 +73,7 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
         text = {
             SelectionContainer {
                 Column {
-                    val progressValue = (size.toFloat() / rootPath.totalSpace.toFloat())
+                    val progressValue = (fileSize.fileSize.toFloat() / fileSize.totalSpace.toFloat())
                     LinearProgressIndicator(
                         progress = { progressValue },
                         modifier = Modifier
@@ -98,7 +87,11 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("${rootPath.totalSpace.formatFileSize()} 总计")
+                            if (fileSize.totalSpace < 0) {
+                                Text("计算中 总计")
+                            } else {
+                                Text("${fileSize.totalSpace.formatFileSize()} 总计")
+                            }
                             Spacer(Modifier.width(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Spacer(
@@ -108,10 +101,10 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                                         .background(ProgressIndicatorDefaults.linearColor)
                                 )
                                 Spacer(Modifier.width(4.dp))
-                                if (size < 0) {
+                                if (fileSize.fileSize < 0) {
                                     Text("计算中 已用")
                                 } else {
-                                    Text("${size.formatFileSize()} 已用(${(progressValue*100).roundToInt()}%)")
+                                    Text("${fileSize.fileSize.formatFileSize()} 已用(${(progressValue * 100).roundToInt()}%)")
                                 }
                             }
                             Spacer(Modifier.width(8.dp))
@@ -123,7 +116,11 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                                         .background(ProgressIndicatorDefaults.linearTrackColor)
                                 )
                                 Spacer(Modifier.width(4.dp))
-                                Text("${rootPath.freeSpace.formatFileSize()} 剩余")
+                                if (fileSize.freeSpace < 0) {
+                                    Text("计算中 剩余")
+                                } else {
+                                    Text("${fileSize.freeSpace.formatFileSize()} 剩余")
+                                }
                             }
                         }
                     }
@@ -133,7 +130,7 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                             Text("位置", Modifier.weight(0.3f))
                         }
                         Spacer(Modifier.width(8.dp))
-                        Text(fileInfo.path.replace(fileInfo.name,""), Modifier.weight(0.7f))
+                        Text(fileInfo.path.replace(fileInfo.name, ""), Modifier.weight(0.7f))
                     }
                     Row(Modifier.fillMaxWidth().padding(4.dp)) {
                         DisableSelection {
@@ -159,22 +156,22 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                         Spacer(Modifier.width(8.dp))
                         Text("Column 2", Modifier.weight(0.7f))
                     }
-                    if (fileCount > 0) {
+                    if (fileSize.fileCount > 0) {
                         Row(Modifier.fillMaxWidth().padding(4.dp)) {
                             DisableSelection {
                                 Text("文件", Modifier.weight(0.3f))
                             }
                             Spacer(Modifier.width(8.dp))
-                            Text("$fileCount", Modifier.weight(0.7f))
+                            Text("${fileSize.fileCount}", Modifier.weight(0.7f))
                         }
                     }
-                    if (folderCount > 0) {
+                    if (fileSize.folderCount > 0) {
                         Row(Modifier.fillMaxWidth().padding(4.dp)) {
                             DisableSelection {
                                 Text("文件夹", Modifier.weight(0.3f))
                             }
                             Spacer(Modifier.width(8.dp))
-                            Text("$folderCount", Modifier.weight(0.7f))
+                            Text("${fileSize.folderCount}", Modifier.weight(0.7f))
                         }
                     }
                     Row(Modifier.fillMaxWidth().padding(4.dp)) {

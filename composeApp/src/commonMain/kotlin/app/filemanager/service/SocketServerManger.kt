@@ -35,6 +35,7 @@ class SocketServerManger : KoinComponent {
                 "bookmark" -> bookmarkRequest.sendBookmark(clientId, message)
                 "rename" -> fileRequest.sendRename(clientId, message)
                 "createFolder" -> fileRequest.sendCreateFolder(clientId, message)
+                "getSizeInfo" -> fileRequest.sendGetSizeInfo(clientId, message)
 
                 else -> {
                     println("未能匹配上：$message")

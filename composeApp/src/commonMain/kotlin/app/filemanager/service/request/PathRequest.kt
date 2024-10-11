@@ -10,12 +10,10 @@ import app.filemanager.service.socket.SocketMessage
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
-import kotlinx.serialization.ExperimentalSerializationApi
 
 class PathRequest(private val socket: SocketServerManger) {
     // 远程设备需要我本地文件
     // TODO 检查权限
-    @OptIn(ExperimentalSerializationApi::class)
     fun sendList(clientId: String, message: SocketMessage) {
         val directory = message.params["path"] ?: ""
         val fileAndFolder = directory.getFileAndFolder()

@@ -3,6 +3,7 @@ package app.filemanager.ui.state.file
 import androidx.compose.runtime.mutableStateListOf
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.data.file.PathInfo
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DiskBase
@@ -114,7 +115,6 @@ class FileState() {
         _isLoading.value = false
     }
 
-
     suspend fun getRootPaths(): List<PathInfo> {
         if (_deskType.value is Local) {
             return PathUtils.getRootPaths()
@@ -148,7 +148,7 @@ class FileState() {
         if (_deskType.value is Device) {
             val device = _deskType.value as Device
             var result: Result<Boolean> = Result.success(false)
-            device.rename(path, oldName, newName){
+            device.rename(path, oldName, newName) {
                 result = it
                 isReturn = true
             }
@@ -186,6 +186,37 @@ class FileState() {
         }
 
         return Result.failure(Exception("创建失败"))
+    }
+
+    suspend fun getSizeInfo(fileSimpleInfo: FileSimpleInfo, pathInfo: PathInfo): Result<FileSizeInfo> {
+        if (_deskType.value is Local) {
+            return Result.success(fileSimpleInfo.getSizeInfo(pathInfo.totalSpace, pathInfo.freeSpace))
+        }
+
+        var isReturn = false
+        if (_deskType.value is Device) {
+            val device = _deskType.value as Device
+            var result: Result<FileSizeInfo> = Result.success(
+                FileSizeInfo(
+                    fileSize = 0,
+                    fileCount = 0,
+                    folderCount = 0,
+                    totalSpace = 0,
+                    freeSpace = 0
+                )
+            )
+            device.getFileSizeInfo(fileSimpleInfo, pathInfo.totalSpace, pathInfo.freeSpace) {
+                result = it
+                isReturn = true
+            }
+
+            while (!isReturn) {
+                delay(100L)
+            }
+            return result
+        }
+
+        return Result.failure(Exception("获取失败"))
     }
 
     init {

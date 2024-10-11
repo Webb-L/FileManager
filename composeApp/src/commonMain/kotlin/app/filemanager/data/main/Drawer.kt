@@ -1,6 +1,7 @@
 package app.filemanager.data.main
 
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.data.file.PathInfo
 import app.filemanager.service.SocketClientManger
 import kotlinx.serialization.Serializable
@@ -78,6 +79,15 @@ data class Device(
 
     suspend fun createFolder(path: String, name: String, replyCallback: (Result<Boolean>) -> Unit) {
         getConnect()?.fileHandle?.createFolder(id, path, name, replyCallback)
+    }
+
+    suspend fun getFileSizeInfo(
+        fileSimpleInfo: FileSimpleInfo,
+        totalSpace: Long,
+        freeSpace: Long,
+        replyCallback: (Result<FileSizeInfo>) -> Unit
+    ) {
+        getConnect()?.fileHandle?.getFileSizeInfo(id, fileSimpleInfo, totalSpace, freeSpace, replyCallback)
     }
 }
 
