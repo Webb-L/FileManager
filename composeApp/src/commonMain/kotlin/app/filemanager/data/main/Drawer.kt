@@ -68,16 +68,16 @@ data class Device(
 //        getConnect()?.pathHandle?.getTraversePath(path, id, replyCallback)
     }
 
-    suspend fun getBookmark(replyCallback: (List<DrawerBookmark>) -> Unit) {
-//        getConnect()?.bookmarkHandle?.getBookmark(id, replyCallback)
+    suspend fun getBookmark(replyCallback: (Result<List<DrawerBookmark>>) -> Unit) {
+        getConnect()?.bookmarkHandle?.getBookmark(id, replyCallback)
     }
 
-    suspend fun rename(path: String, oldName: String, newName: String) {
-//        getConnect()?.fileHandle?.rename(id, path, oldName, newName)
+    suspend fun rename(path: String, oldName: String, newName: String, replyCallback: (Result<Boolean>) -> Unit) {
+        getConnect()?.fileHandle?.rename(id, path, oldName, newName, replyCallback)
     }
 
     suspend fun createFolder(path: String, name: String, replyCallback: (Result<Boolean>) -> Unit) {
-//        getConnect()?.fileHandle?.createFolder(id, path, name, replyCallback)
+        getConnect()?.fileHandle?.createFolder(id, path, name, replyCallback)
     }
 }
 

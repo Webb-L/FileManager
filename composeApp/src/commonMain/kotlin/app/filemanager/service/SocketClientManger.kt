@@ -1,7 +1,11 @@
 package app.filemanager.service
 
 import app.filemanager.service.data.SocketDevice
+import app.filemanager.service.handle.BookmarkHandle
+import app.filemanager.service.handle.FileHandle
 import app.filemanager.service.handle.PathHandle
+import app.filemanager.service.response.BookmarkResponse
+import app.filemanager.service.response.FileResponse
 import app.filemanager.service.response.PathResponse
 import app.filemanager.service.socket.SocketClient
 import app.filemanager.service.socket.SocketHeader
@@ -24,8 +28,12 @@ class SocketClientManger : KoinComponent {
     internal val deviceState by inject<DeviceState>()
 
     internal val pathHandle by lazy { PathHandle(this) }
+    internal val fileHandle by lazy { FileHandle(this) }
+    internal val bookmarkHandle by lazy { BookmarkHandle(this) }
 
     private val pathResponse by lazy { PathResponse(this) }
+    private val fileResponse by lazy { FileResponse(this) }
+    private val bookmarkResponse by lazy { BookmarkResponse(this) }
 
     @OptIn(ExperimentalSerializationApi::class)
     suspend fun connect(host: String = "127.0.0.1", port: Int = 1204) {
@@ -37,8 +45,11 @@ class SocketClientManger : KoinComponent {
                     deviceState.socketDevices.add(socketDevice)
                 }
 
-                "replyRootPaths" ->pathResponse.replyRootPaths(message)
+                "replyRootPaths" -> pathResponse.replyRootPaths(message)
                 "replyList" -> pathResponse.replyList(message)
+                "replyBookmark" -> bookmarkResponse.replyBookmark(message)
+                "replyRename" -> fileResponse.replyRename(message)
+                "replyCreateFolder" -> fileResponse.replyCreateFolder(message)
 
                 else -> {
                     println("未能匹配上：$message")

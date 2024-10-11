@@ -1,12 +1,6 @@
 package app.filemanager.service
 
-import app.filemanager.service.handle.BookmarkHandle
-import app.filemanager.service.handle.FileHandle
-import app.filemanager.service.request.BookmarkRequest
-import app.filemanager.service.request.FileRequest
-import app.filemanager.service.response.BookmarkResponse
 import app.filemanager.service.response.DeviceResponse
-import app.filemanager.service.response.FileResponse
 import app.filemanager.ui.state.main.DeviceState
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
@@ -52,17 +46,17 @@ class WebSocketConnectService() : KoinComponent {
     private var session: DefaultClientWebSocketSession? = null
 
 //    internal val pathHandle by lazy { PathHandle(this) }
-    internal val fileHandle by lazy { FileHandle(this) }
-    internal val bookmarkHandle by lazy { BookmarkHandle(this) }
+//    internal val fileHandle by lazy { FileHandle(this) }
+//    internal val bookmarkHandle by lazy { BookmarkHandle(this) }
 
 //    private val pathRequest by lazy { PathRequest(this) }
-    private val fileRequest by lazy { FileRequest(this) }
-    private val bookmarkRequest by lazy { BookmarkRequest(this) }
+//    private val fileRequest by lazy { FileRequest(this) }
+//    private val bookmarkRequest by lazy { BookmarkRequest(this) }
 
     private val deviceResponse by lazy { DeviceResponse(this) }
 //    private val pathResponse by lazy { PathResponse(this) }
-    private val fileResponse by lazy { FileResponse(this) }
-    private val bookmarkResponse by lazy { BookmarkResponse(this) }
+//    private val fileResponse by lazy { FileResponse(this) }
+//    private val bookmarkResponse by lazy { BookmarkResponse(this) }
 
     @OptIn(ExperimentalEncodingApi::class)
 //    suspend fun connect(host: String) {
@@ -127,10 +121,10 @@ class WebSocketConnectService() : KoinComponent {
 //            "/replyList" -> pathResponse.replyList(headerKey, params, content)
 
             // 远程设备需要我本地的书签
-            "/bookmark" -> bookmarkRequest.sendBookmark(headerKey, header[2])
+//            "/bookmark" -> bookmarkRequest.sendBookmark(headerKey, header[2])
 
             // 收到对方返回的文件文件夹信息
-            "/replyBookmark" -> bookmarkResponse.replyBookmark(headerKey, content)
+//            "/replyBookmark" -> bookmarkResponse.replyBookmark(headerKey, content)
 
             // 远程设备需要我本地的书签
 //            "/rootPaths" -> pathRequest.sendRootPaths(headerKey, header[2])
@@ -139,13 +133,13 @@ class WebSocketConnectService() : KoinComponent {
 //            "/replyRootPaths" -> pathResponse.replyRootPaths(headerKey, content)
 
             // 重命名文件和文件夹
-            "/rename" -> fileRequest.sendRename(content)
+//            "/rename" -> fileRequest.sendRename(content)
 
             // 创建文件夹
-            "/createFolder" -> fileRequest.sendCreateFolder(headerKey, header[2], params)
+//            "/createFolder" -> fileRequest.sendCreateFolder(headerKey, header[2], params)
 
             // 收到对方返回创建文件夹结果
-            "/replyCreateFolder" -> fileResponse.replyCreateFolder(headerKey, content)
+//            "/replyCreateFolder" -> fileResponse.replyCreateFolder(headerKey, content)
 
             // 遍历目录下所有文件夹和文件
 //            "/traversePath" -> pathRequest.sendTraversePath(headerKey, header[2], params)

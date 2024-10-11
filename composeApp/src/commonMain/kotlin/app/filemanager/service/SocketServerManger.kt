@@ -1,6 +1,8 @@
 package app.filemanager.service
 
 import app.filemanager.extensions.chunked
+import app.filemanager.service.request.BookmarkRequest
+import app.filemanager.service.request.FileRequest
 import app.filemanager.service.request.PathRequest
 import app.filemanager.service.socket.SocketHeader
 import app.filemanager.service.socket.SocketMessage
@@ -21,6 +23,8 @@ class SocketServerManger : KoinComponent {
     private val mainScope = MainScope()
 
     private val pathRequest by lazy { PathRequest(this) }
+    private val fileRequest by lazy { FileRequest(this) }
+    private val bookmarkRequest by lazy { BookmarkRequest(this) }
 
     suspend fun connect(port: Int = 1204) {
         socket.start(port) { clientId, message ->
@@ -28,6 +32,9 @@ class SocketServerManger : KoinComponent {
             when (message.header.command) {
                 "rootPaths" -> pathRequest.sendRootPaths(clientId, message)
                 "list" -> pathRequest.sendList(clientId, message)
+                "bookmark" -> bookmarkRequest.sendBookmark(clientId, message)
+                "rename" -> fileRequest.sendRename(clientId, message)
+                "createFolder" -> fileRequest.sendCreateFolder(clientId, message)
 
                 else -> {
                     println("未能匹配上：$message")

@@ -138,19 +138,29 @@ class FileState() {
         return listOf()
     }
 
-    suspend fun rename(path: String, oldName: String, newName: String) {
+    suspend fun rename(path: String, oldName: String, newName: String): Result<Boolean> {
         if (_deskType.value is Local) {
             FileUtils.rename(path, oldName, newName)
         }
 
         var isReturn = false
-
         if (_deskType.value is Device) {
             val device = _deskType.value as Device
-            device.rename(path, oldName, newName)
+            var result: Result<Boolean> = Result.success(false)
+            device.rename(path, oldName, newName){
+                result = it
+                isReturn = true
+            }
+
+            while (!isReturn) {
+                delay(100L)
+            }
+
+            updateFileAndFolder()
+            return result
         }
 
-        return
+        return Result.failure(Exception("修改失败"))
     }
 
     suspend fun createFolder(path: String, name: String): Result<Boolean> {

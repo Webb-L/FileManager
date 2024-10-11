@@ -1,33 +1,53 @@
 package app.filemanager.service.handle
 
 import app.filemanager.data.main.DrawerBookmark
-import app.filemanager.service.WebSocketConnectService
-import kotlinx.coroutines.delay
+import app.filemanager.service.SocketClientManger
+import app.filemanager.service.WebSocketResult
+import app.filemanager.service.socket.SocketHeader
 import kotlinx.datetime.Clock
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.decodeFromByteArray
+import kotlinx.serialization.protobuf.ProtoBuf
 import kotlin.random.Random
 
-class BookmarkHandle(private val webSocketConnectService: WebSocketConnectService) {
-    suspend fun getBookmark(remoteId: String, replyCallback: (List<DrawerBookmark>) -> Unit) {
+class BookmarkHandle(private val socket: SocketClientManger) {
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun getBookmark(remoteId: String, replyCallback: (Result<List<DrawerBookmark>>) -> Unit) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        webSocketConnectService.send(
-            command = "/bookmark",
-            header = listOf(replyKey.toString(), remoteId),
+        socket.send(
+            header = SocketHeader(command = "bookmark"),
+            params = mapOf("replyKey" to replyKey.toString()),
             value = ""
         )
 
-        for (i in 0..100) {
-            delay(100)
-            if (webSocketConnectService.replyMessage.contains(replyKey)) {
-                break
+
+        socket.waitFinish(replyKey, callback = {
+            val tempList = socket.replyMessage[replyKey] as ByteArray
+            val webSocketResult = ProtoBuf.decodeFromByteArray<WebSocketResult<List<DrawerBookmark>>>(tempList)
+            if (webSocketResult.isSuccess) {
+                val bookmarks: List<DrawerBookmark> = webSocketResult.value as List<DrawerBookmark>
+                replyCallback(Result.success(bookmarks))
+            } else {
+                replyCallback(Result.failure(webSocketResult.deSerializable()))
             }
-        }
 
-        val bookmarks: MutableList<DrawerBookmark> = mutableListOf()
-        if (webSocketConnectService.replyMessage[replyKey] != null) {
-            bookmarks.addAll(webSocketConnectService.replyMessage[replyKey] as List<DrawerBookmark>)
-        }
+            socket.replyMessage.remove(replyKey)
+            return@waitFinish true
+        })
 
-        replyCallback(bookmarks)
-        webSocketConnectService.replyMessage.remove(replyKey)
+//        for (i in 0..100) {
+//            delay(100)
+//            if (webSocketConnectService.replyMessage.contains(replyKey)) {
+//                break
+//            }
+//        }
+//
+//        val bookmarks: MutableList<DrawerBookmark> = mutableListOf()
+//        if (webSocketConnectService.replyMessage[replyKey] != null) {
+//            bookmarks.addAll(webSocketConnectService.replyMessage[replyKey] as List<DrawerBookmark>)
+//        }
+//
+//        replyCallback(bookmarks)
+//        webSocketConnectService.replyMessage.remove(replyKey)
     }
 }
