@@ -59,8 +59,9 @@ class FileState() {
                 val network = type as Network
             }
         }
-        if (getRootPaths().isNotEmpty()) {
-            _rootPath.value = getRootPaths().first()
+        val rootPaths = getRootPaths()
+        if (rootPaths.isNotEmpty()) {
+            _rootPath.value = rootPaths.first()
         }
 
         updateFileAndFolder()

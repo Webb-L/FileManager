@@ -1,7 +1,10 @@
 package app.filemanager.ui.state.main
 
 import androidx.compose.runtime.mutableStateListOf
+import app.filemanager.data.main.Device
+import app.filemanager.data.main.DiskBase
 import app.filemanager.data.main.DrawerBookmark
+import app.filemanager.data.main.Local
 import app.filemanager.utils.PathUtils.getBookmarks
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,4 +34,22 @@ class DrawerState() {
         _isExpandNetwork.value = value
     }
 
+    suspend fun getBookmarks(deskType: DiskBase) {
+        if (deskType is Local) {
+            bookmarks.apply {
+                clear()
+                addAll(getBookmarks())
+            }
+        }
+
+        if (deskType is Device) {
+            bookmarks.clear()
+            deskType.getBookmark {
+                // TODO 解决错误问题。
+                if (it.isSuccess) {
+                    bookmarks.addAll(it.getOrNull() ?: listOf())
+                }
+            }
+        }
+    }
 }

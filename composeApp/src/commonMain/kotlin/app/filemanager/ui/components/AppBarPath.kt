@@ -22,8 +22,10 @@ import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.buttons.DiskSwitchButton
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileState
+import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.utils.NaturalOrderComparator
 import app.filemanager.utils.PathUtils
+import app.filemanager.utils.PathUtils.getBookmarks
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -37,14 +39,23 @@ fun AppBarPath() {
     val rootPath by fileState.rootPath.collectAsState()
     val deskType by fileState.deskType.collectAsState()
 
+    val drawerState = koinInject<DrawerState>()
+
     val paths = path.parsePath()
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = paths.size - 1)
     LazyRow(state = listState) {
         item {
             DiskSwitchButton(
-                deskType,
-                fileState::updateDesk
-            )
+                deskType
+            ) { protocol, type ->
+                fileState.updateDesk(protocol, type)
+                drawerState.getBookmarks(fileState.deskType.value)
+                drawerState.bookmarks.apply {
+                    clear()
+                    fileState.deskType
+                    addAll(getBookmarks())
+                }
+            }
         }
 
         item {
