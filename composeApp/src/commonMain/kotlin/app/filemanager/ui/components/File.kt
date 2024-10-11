@@ -329,12 +329,13 @@ fun FileCardMenu(
                         contentDescription = null
                     )
                 })
-            Divider()
+            HorizontalDivider()
             DropdownMenuItem(
                 text = { Text("属性") },
                 onClick = {
                     scope.launch {
                         fileState.updateFileInfo(file)
+                        fileState.updateViewFile(true)
                     }
                     expanded = false
                 },

@@ -42,6 +42,7 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
     val exception by fileState.exception.collectAsState()
     val fileInfo by fileState.fileInfo.collectAsState()
     val isRenameFile by fileState.isRenameFile.collectAsState()
+    val isViewFile by fileState.isViewFile.collectAsState()
 
     val fileFilterState = koinInject<FileFilterState>()
     val updateKey by fileFilterState.updateKey.collectAsState()
@@ -119,15 +120,16 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
                 fileState.updateFileInfo(null)
             }
         }
-    } else if (fileInfo != null) {
+    }
+    if (isViewFile && fileInfo != null) {
         FileInfoDialog(fileInfo!!) {
             fileState.updateFileInfo(null)
+            fileState.updateViewFile(false)
         }
     }
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileFilterButtons(fileAndFolder: List<FileSimpleInfo>, onToFilterScreen: () -> Unit) {
     val fileFilterState = koinInject<FileFilterState>()

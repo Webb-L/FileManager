@@ -347,6 +347,12 @@ class FileState() {
         _isRenameFile.value = status
     }
 
+    private val _isViewFile: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isViewFile: StateFlow<Boolean> = _isViewFile
+    fun updateViewFile(status: Boolean) {
+        _isViewFile.value = status
+    }
+
     // 删除文件
     suspend fun deleteFile(fileOperationState: FileOperationState, path: String) {
         fileOperationState.title = "删除中..."
