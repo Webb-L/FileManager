@@ -24,6 +24,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileSimpleInfo
@@ -34,6 +35,8 @@ import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileOperationType
 import app.filemanager.ui.state.file.FileState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import kotlin.math.roundToInt
 
@@ -53,20 +56,24 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
         freeSpace = -1
     )
 
+    var errorText by remember {
+        mutableStateOf("")
+    }
     var fileSize by remember {
         mutableStateOf(emptyFileSizeInfo)
     }
 
     LaunchedEffect(fileInfo) {
-        val result = fileState.getSizeInfo(fileInfo, rootPath)
+        val result = withContext(Dispatchers.Default) {
+            fileState.getSizeInfo(fileInfo, rootPath)
+        }
+
         if (result.isSuccess) {
             fileSize = result.getOrNull() ?: emptyFileSizeInfo
-        }
-        if (result.isFailure) {
-            println(result.exceptionOrNull())
+        } else {
+            errorText = result.exceptionOrNull()?.message ?: ""
         }
     }
-
     AlertDialog(
         icon = { FileIcon(fileInfo) },
         title = { SelectionContainer { Text(fileInfo.name) } },
@@ -83,6 +90,10 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                     )
                     Spacer(Modifier.height(4.dp))
                     DisableSelection {
+                        if (errorText.isNotEmpty()) {
+                            Text("获取大小失败：$errorText", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                            return@DisableSelection
+                        }
                         Row(
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier.fillMaxWidth()
@@ -101,7 +112,7 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                                         .background(ProgressIndicatorDefaults.linearColor)
                                 )
                                 Spacer(Modifier.width(4.dp))
-                                if (fileSize.fileSize < 0) {
+                                if (fileSize.totalSpace < 0 && fileSize.fileSize < 0 && fileSize.freeSpace < 0) {
                                     Text("计算中 已用")
                                 } else {
                                     Text("${fileSize.fileSize.formatFileSize()} 已用(${(progressValue * 100).roundToInt()}%)")
@@ -422,7 +433,7 @@ fun FileOperationDialog(onCancel: () -> Unit, onDismiss: () -> Unit) {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FileWarningOperationDialog() {
     val operationState = koinInject<FileOperationState>()

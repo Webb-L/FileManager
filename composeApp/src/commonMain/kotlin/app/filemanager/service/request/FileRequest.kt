@@ -1,6 +1,7 @@
 package app.filemanager.service.request
 
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.exception.ParameterErrorException
 import app.filemanager.exception.toSocketResult
@@ -22,29 +23,24 @@ class FileRequest(private val socket: SocketServerManger) {
         val oldName = message.params["oldName"] ?: ""
         val newName = message.params["newName"] ?: ""
 
-        var value: Any? = null
+        var errorValue: WebSocketResult<Nothing>? = null
+        var value: WebSocketResult<Boolean>? = null
         if (path.isEmpty() || oldName.isEmpty() || newName.isEmpty()) {
-            value = ParameterErrorException().toSocketResult()
+            errorValue = ParameterErrorException().toSocketResult()
         }
 
         MainScope().launch {
-            if (value !is Exception) {
-                socket.send(
-                    clientId = clientId,
-                    header = message.header.copy(command = "replyRename"),
-                    params = message.params,
-                    body = WebSocketResult(
-                        value = FileUtils.rename(path, oldName, newName)
-                    )
+            if (errorValue == null) {
+                value = WebSocketResult(
+                    value = FileUtils.rename(path, oldName, newName)
                 )
-                return@launch
             }
 
             socket.send(
                 clientId = clientId,
                 header = message.header.copy(command = "replyRename"),
                 params = message.params,
-                body = value
+                body = errorValue ?: value!!
             )
         }
     }
@@ -54,31 +50,24 @@ class FileRequest(private val socket: SocketServerManger) {
     fun sendCreateFolder(clientId: String, message: SocketMessage) {
         val path = message.params["path"] ?: ""
         val name = message.params["name"] ?: ""
-        var value: Any? = null
+        var errorValue: WebSocketResult<Nothing>? = null
+        var value: WebSocketResult<Boolean>? = null
         if (path.isEmpty() || name.isEmpty()) {
-            value = ParameterErrorException().toSocketResult()
+            errorValue = ParameterErrorException().toSocketResult()
         }
 
         MainScope().launch {
-            if (value !is Exception) {
+            if (errorValue == null) {
                 val createFolder = FileUtils.createFolder(path, name)
                 if (createFolder.isFailure) {
                     val exceptionOrNull = createFolder.exceptionOrNull() ?: EmptyDataException()
-                    value = WebSocketResult(
+                    errorValue = WebSocketResult(
                         exceptionOrNull.message,
                         exceptionOrNull::class.simpleName,
                         null
                     )
-                }
-
-                if (value !is Exception) {
-                    socket.send(
-                        clientId = clientId,
-                        header = message.header.copy(command = "replyCreateFolder"),
-                        params = message.params,
-                        body = WebSocketResult(value = createFolder.getOrNull() ?: false)
-                    )
-                    return@launch
+                } else {
+                    value = WebSocketResult(value = createFolder.getOrNull() ?: false)
                 }
             }
 
@@ -86,7 +75,7 @@ class FileRequest(private val socket: SocketServerManger) {
                 clientId = clientId,
                 header = message.header.copy(command = "replyCreateFolder"),
                 params = message.params,
-                body = value
+                body = errorValue ?: value!!
             )
         }
     }
@@ -95,24 +84,18 @@ class FileRequest(private val socket: SocketServerManger) {
     fun sendGetSizeInfo(clientId: String, message: SocketMessage) {
         val totalSpace: Long = (message.params["totalSpace"] ?: "-1").toLong()
         val freeSpace: Long = (message.params["freeSpace"] ?: "-1").toLong()
-        var value: Any? = null
-
+        var errorValue: WebSocketResult<Nothing>? = null
+        var value: WebSocketResult<FileSizeInfo>? = null
         if (totalSpace <= -1L || freeSpace <= -1L) {
-            value = ParameterErrorException().toSocketResult()
+            errorValue = ParameterErrorException().toSocketResult()
         }
         MainScope().launch {
-            if (value !is Exception) {
+            if (errorValue == null) {
                 try {
                     val fileSimpleInfo = ProtoBuf.decodeFromByteArray<FileSimpleInfo>(message.body)
-                    socket.send(
-                        clientId = clientId,
-                        header = message.header.copy(command = "replyGetSizeInfo"),
-                        params = message.params,
-                        body = WebSocketResult(value = fileSimpleInfo.getSizeInfo(totalSpace, freeSpace))
-                    )
-                    return@launch
+                    value = WebSocketResult(value = fileSimpleInfo.getSizeInfo(totalSpace, freeSpace))
                 } catch (e: Exception) {
-                    value = ParameterErrorException().toSocketResult()
+                    errorValue = ParameterErrorException().toSocketResult()
                 }
             }
 
@@ -120,7 +103,7 @@ class FileRequest(private val socket: SocketServerManger) {
                 clientId = clientId,
                 header = message.header.copy(command = "replyGetSizeInfo"),
                 params = message.params,
-                body = value
+                body = errorValue ?: value!!
             )
         }
     }
