@@ -33,14 +33,9 @@ class PathHandle(private val socket: SocketClientManger) {
         val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
 
         socket.waitFinish(replyKey, callback = {
-            val tempList = socket.replyMessage[replyKey] as Triple<Long, Long, ByteArray>
-            if (tempList.first != tempList.second) {
-                return@waitFinish false
-            }
-
             val decodeFromHexString =
                 ProtoBuf.decodeFromByteArray<WebSocketResult<WebSocketResultMapListFileSimpleInfo>>(
-                    tempList.third
+                    socket.replyMessage[replyKey] as ByteArray
                 )
 
             if (decodeFromHexString.isSuccess) {
@@ -81,45 +76,40 @@ class PathHandle(private val socket: SocketClientManger) {
         socket.replyMessage.remove(replyKey)
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
+    @OptIn(ExperimentalSerializationApi::class, ExperimentalStdlibApi::class)
     suspend fun getTraversePath(path: String, remoteId: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
         socket.send(
             header = SocketHeader(command = "traversePath"),
-            params = mapOf("replyKey" to replyKey.toString()),
+            params = mapOf("replyKey" to replyKey.toString(), "path" to path),
             value = ""
         )
 
-//        val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
-//
-//        socket.waitFinish(replyKey, callback = {
-//            val tempList = socket.replyMessage[replyKey] as Triple<Int, Int, String>
-//            if (tempList.first != tempList.second) {
-//                return@waitFinish false
-//            }
-//
-//            val decodeFromHexString =
-//                ProtoBuf.decodeFromHexString<WebSocketResult<WebSocketResultMapListFileSimpleInfo>>(
-//                    tempList.third
-//                )
-//
-//            if (decodeFromHexString.isSuccess) {
-//                (decodeFromHexString.value as Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>).forEach {
-//                    it.value.forEach { fileSimpleInfo ->
-//                        fileSimpleInfos.add(fileSimpleInfo.apply {
-//                            protocol = it.key.first
-//                            protocolId = it.key.second
-//                            this.path = path + this.path
-//                        })
-//                    }
-//                }
-//                replyCallback(Result.success(fileSimpleInfos))
-//            } else {
-//                replyCallback(Result.failure(decodeFromHexString.deSerializable()))
-//            }
-//
-//            socket.replyMessage.remove(replyKey)
-//            return@waitFinish true
-//        })
+
+        socket.waitFinish(replyKey, callback = {
+            val decodeFromHexString =
+                ProtoBuf.decodeFromByteArray<WebSocketResult<WebSocketResultMapListFileSimpleInfo>>(
+                    socket.replyMessage[replyKey] as ByteArray
+                )
+
+            if (decodeFromHexString.isSuccess) {
+                val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
+                (decodeFromHexString.value as WebSocketResultMapListFileSimpleInfo).forEach {
+                    it.value.forEach { fileSimpleInfo ->
+                        fileSimpleInfos.add(fileSimpleInfo.apply {
+                            protocol = it.key.first
+                            protocolId = it.key.second
+                            this.path = path + this.path
+                        })
+                    }
+                }
+                replyCallback(Result.success(fileSimpleInfos))
+            } else {
+                replyCallback(Result.failure(decodeFromHexString.deSerializable()))
+            }
+
+            socket.replyMessage.remove(replyKey)
+            return@waitFinish true
+        })
     }
 }

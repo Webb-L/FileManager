@@ -3,6 +3,8 @@ package app.filemanager.service.request
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.exception.EmptyDataException
+import app.filemanager.exception.ParameterErrorException
+import app.filemanager.exception.toSocketResult
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.service.SocketServerManger
 import app.filemanager.service.WebSocketResult
@@ -24,7 +26,7 @@ class PathRequest(private val socket: SocketServerManger) {
                     clientId = clientId,
                     header = message.header.copy(command = "replyList"),
                     params = message.params,
-                    body = WebSocketResult(
+                    value = WebSocketResult(
                         exceptionOrNull.message,
                         exceptionOrNull::class.simpleName,
                         null
@@ -62,7 +64,7 @@ class PathRequest(private val socket: SocketServerManger) {
                 clientId = clientId,
                 header = message.header.copy(command = "replyList"),
                 params = message.params,
-                body = WebSocketResult(
+                value = WebSocketResult(
                     value = sendFileSimpleInfos
                 )
             )
@@ -77,7 +79,7 @@ class PathRequest(private val socket: SocketServerManger) {
                 clientId = clientId,
                 header = message.header.copy(command = "replyRootPaths"),
                 params = message.params,
-                body = PathUtils.getRootPaths()
+                value = PathUtils.getRootPaths()
             )
         }
     }
@@ -85,19 +87,63 @@ class PathRequest(private val socket: SocketServerManger) {
     // 发送遍历的目录
     // TODO 检查权限
     fun sendTraversePath(clientId: String, message: SocketMessage) {
-        val directory = message.params["path"] ?: ""
-        val temp = mutableListOf<FileSimpleInfo>()
-        PathUtils.traverse(directory) {
-            temp.addAll(it)
+        val path = message.params["path"] ?: ""
+        if (path.isEmpty()) {
+            MainScope().launch {
+                socket.send(
+                    clientId = clientId,
+                    header = message.header.copy(command = "replyTraversePath"),
+                    params = message.params,
+                    value = ParameterErrorException().toSocketResult()
+                )
+            }
+            return
         }
 
-        MainScope().launch {
-            socket.send(
-                clientId = clientId,
-                header = message.header.copy(command = "replyTraversePath"),
-                params = message.params,
-                body = temp
-            )
+
+        PathUtils.traverse(path) { fileAndFolder ->
+            var value: WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>? = null
+            var errorValue: WebSocketResult<Nothing>? = null
+            if (fileAndFolder.isFailure) {
+                val exceptionOrNull = fileAndFolder.exceptionOrNull() ?: EmptyDataException()
+                errorValue = WebSocketResult(
+                    exceptionOrNull.message,
+                    exceptionOrNull::class.simpleName,
+                    null
+                )
+            } else {
+                value =
+                    WebSocketResult(value = mutableMapOf<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>().apply {
+                        fileAndFolder.getOrNull()?.forEach { fileSimpleInfo ->
+                            val key = if (fileSimpleInfo.protocol == FileProtocol.Local)
+                                Pair(FileProtocol.Device, fileSimpleInfo.protocolId)
+                            else
+                                Pair(fileSimpleInfo.protocol, fileSimpleInfo.protocolId)
+
+                            if (!containsKey(key)) {
+                                put(key, mutableListOf(fileSimpleInfo.apply {
+                                    this.path = this.path.replace(path, "")
+                                    this.protocol = FileProtocol.Local
+                                    this.protocolId = ""
+                                }))
+                            } else {
+                                get(key)?.add(fileSimpleInfo.apply {
+                                    this.path = this.path.replace(path, "")
+                                    this.protocol = FileProtocol.Local
+                                    this.protocolId = ""
+                                })
+                            }
+                        }
+                    })
+            }
+            MainScope().launch {
+                socket.send(
+                    clientId = clientId,
+                    header = message.header.copy(command = "replyTraversePath"),
+                    params = message.params,
+                    value = errorValue ?: value!!
+                )
+            }
         }
         println("结束")
     }

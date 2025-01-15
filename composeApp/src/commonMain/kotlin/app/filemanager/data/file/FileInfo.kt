@@ -69,15 +69,17 @@ data class FileSimpleInfo(
         var folderCount = 0L
         var fileSize = -1L
         if (isDirectory) {
-            PathUtils.traverse(path) { fileSimpleInfos ->
-                fileSize += fileSimpleInfos.sumOf {
-                    if (it.isDirectory) {
-                        folderCount++
-                        0
-                    } else {
-                        fileCount++
-                        it.size
-                    }
+            PathUtils.traverse(path) {
+                if (it.isSuccess) {
+                    fileSize += it.getOrNull()?.sumOf { fileSimpleInfo ->
+                        if (fileSimpleInfo.isDirectory) {
+                            folderCount++
+                            0
+                        } else {
+                            fileCount++
+                            fileSimpleInfo.size
+                        }
+                    } ?: 0
                 }
             }
         } else {

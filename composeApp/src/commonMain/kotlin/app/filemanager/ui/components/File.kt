@@ -5,7 +5,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Note
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.getFileFilterType
+import app.filemanager.data.file.toIcon
 import app.filemanager.db.FileFavorite
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.extensions.formatFileSize
@@ -47,23 +51,7 @@ fun FileCard(
         headlineContent = { if (file.name.isNotEmpty()) Text(file.name) },
         supportingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                when (file.protocol) {
-                    FileProtocol.Local -> {}
-                    FileProtocol.Device -> {
-                        Icon(
-                            Icons.Default.Devices,
-                            null,
-                            Modifier.size(12.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(Modifier.width(4.dp))
-                    }
-
-                    FileProtocol.Network -> {
-                        Icon(Icons.Default.Public, null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.primary)
-                        Spacer(Modifier.width(4.dp))
-                    }
-                }
+                file.protocol.toIcon()
 
                 val isFavorite = database.fileFavoriteQueries
                     .queryByPathProtocol(file.path, file.protocol)

@@ -7,6 +7,7 @@ import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.exception.AuthorityException
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.toFileSimpleInfo
+import io.github.aakira.napier.Napier
 import java.io.File
 import java.io.File.separator
 
@@ -40,29 +41,58 @@ internal actual object PathUtils {
         .map { PathInfo(it.path, it.totalSpace, it.freeSpace) }
 
     // 遍历目录
-    actual fun traverse(path: String, callback: (List<FileSimpleInfo>) -> Unit) {
-        val fileList = mutableListOf<FileSimpleInfo>()
+    actual fun traverse(path: String, callback: (Result<List<FileSimpleInfo>>) -> Unit) {
+        if (path.isEmpty()) {
+            callback(Result.failure(AuthorityException("路径错误")))
+            return
+        }
+
         val directory = File(path)
-        if (directory.exists()) {
+        if (!directory.exists()) {
+            callback(Result.failure(AuthorityException("该目录并不存在")))
+            return
+        }
+
+        if (!directory.canRead()) {
+            callback(Result.failure(AuthorityException("没有权限读取该目录")))
+            return
+        }
+
+        try {
+            val fileList = mutableListOf<FileSimpleInfo>()
             if (directory.isDirectory) {
-                val files = directory.listFiles() ?: emptyArray()
+                val files = directory.listFiles() ?: throw EmptyDataException()
                 for (file in files) {
                     try {
                         fileList.add(file.toFileSimpleInfo())
                         if (file.isDirectory) {
-                            traverse(file.path, callback)
+                            traverse(file.path) { result ->
+                                result.fold(
+                                    onSuccess = {
+                                        fileList.addAll(it)
+                                    },
+                                    onFailure = {
+                                        callback(Result.failure(it))
+                                    }
+                                )
+                            }
                         }
                     } catch (e: Exception) {
+                        Napier.e { "文件处理失败：${e.message}" }
                     }
-                }
-                if (files.isEmpty()) {
-                    fileList.add(directory.toFileSimpleInfo())
                 }
             } else {
                 fileList.add(directory.toFileSimpleInfo())
             }
+
+            fileList.add(directory.toFileSimpleInfo())
+
+            callback(Result.success(fileList))
+        } catch (e: SecurityException) {
+            callback(Result.failure(AuthorityException("没有权限访问目录")))
+        } catch (e: Exception) {
+            callback(Result.failure(Exception("未知错误：${e.message}")))
         }
-        callback(fileList)
     }
 
     actual fun getBookmarks(): List<DrawerBookmark> {

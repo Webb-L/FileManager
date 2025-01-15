@@ -66,7 +66,7 @@ data class Device(
     }
 
     suspend fun getTraversePath(path: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
-//        getConnect()?.pathHandle?.getTraversePath(path, id, replyCallback)
+        getConnect()?.pathHandle?.getTraversePath(path, id, replyCallback)
     }
 
     suspend fun getBookmark(replyCallback: (Result<List<DrawerBookmark>>) -> Unit) {
@@ -89,6 +89,22 @@ data class Device(
     ) {
         getConnect()?.fileHandle?.getFileSizeInfo(id, fileSimpleInfo, totalSpace, freeSpace, replyCallback)
     }
+
+    suspend fun deleteFile(
+        paths: List<String>,
+        replyCallback: (Result<List<Boolean>>) -> Unit
+    ) {
+        getConnect()?.fileHandle?.deleteFile(id, paths, replyCallback)
+    }
+
+    suspend fun writeBytes(
+        srcPath: String,
+        destPath: String,
+        replyCallback: (Result<Boolean>) -> Unit
+    ) {
+        getConnect()?.fileHandle?.writeBytes(id, srcPath, destPath, replyCallback)
+    }
+
 }
 
 enum class NetworkProtocol {

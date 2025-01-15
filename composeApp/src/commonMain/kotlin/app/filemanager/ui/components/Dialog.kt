@@ -357,11 +357,11 @@ fun FileOperationDialog(onCancel: () -> Unit, onDismiss: () -> Unit) {
             }
             Column {
                 LinearProgressIndicator(
-                    progress = (currentIndex / fileOperationState.fileInfos.size.toFloat()),
-                    Modifier
+                    progress = { (currentIndex / fileOperationState.fileInfos.size.toFloat()) },
+                    modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .height(10.dp)
+                        .height(10.dp),
                 )
                 Spacer(Modifier.height(4.dp))
                 Row(

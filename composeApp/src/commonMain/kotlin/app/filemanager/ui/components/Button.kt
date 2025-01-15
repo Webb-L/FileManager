@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.SwitchLeft
@@ -17,7 +16,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileFilterSort
-import app.filemanager.service.WebSocketService
 import app.filemanager.ui.state.file.FileFilterState
 import org.koin.compose.koinInject
 
@@ -175,15 +173,16 @@ fun IpsButton() {
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            for (ip in WebSocketService().getNetworkIp()) {
-                DropdownMenuItem(
-                    text = { Text(ip) },
-                    onClick = {
-                        expanded = false
-                    },
-                    leadingIcon = { Icon(Icons.Default.Dns, null) },
-                )
-            }
+            // TODO 需要重写
+//            for (ip in WebSocketService().getNetworkIp()) {
+//                DropdownMenuItem(
+//                    text = { Text(ip) },
+//                    onClick = {
+//                        expanded = false
+//                    },
+//                    leadingIcon = { Icon(Icons.Default.Dns, null) },
+//                )
+//            }
         }
     }
 }

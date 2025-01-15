@@ -42,6 +42,7 @@ fun File.toFileSimpleInfo(): FileSimpleInfo {
         isHidden = isHidden,
         path = absolutePath,
         mineType = mineType,
+        // TODO 并不是实际文件实际大小
         size = if (isDirectory) (listFiles() ?: emptyArray<File>()).size.toLong() else length(),
         createdDate = attrs?.creationTime()?.toMillis() ?: 0,
         updatedDate = attrs?.lastModifiedTime()?.toMillis() ?: 0

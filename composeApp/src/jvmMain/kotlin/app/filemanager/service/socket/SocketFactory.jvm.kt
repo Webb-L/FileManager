@@ -2,7 +2,6 @@ package app.filemanager.service.socket
 
 import app.filemanager.createSettings
 import app.filemanager.data.main.DeviceType
-import app.filemanager.service.MAX_LENGTH
 import app.filemanager.service.data.SocketDevice
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
@@ -37,32 +36,42 @@ class JvmSocketServer(private val coroutineContext: CoroutineContext = Dispatche
                     val sendChannel = socket.openWriteChannel(autoFlush = true)
 
                     try {
-                        val buffer = ByteArray(MAX_LENGTH)
+                        val buffer = ByteArray(8192)
                         while (true) {
                             val bufferLength = receiveChannel.readAvailable(buffer)
                             if (bufferLength == -1) {
                                 break
                             }
 
-                            val socketMessage = ProtoBuf.decodeFromByteArray<SocketMessage>(buffer.copyOf(bufferLength))
-                            if (socketMessage.header.command == "connect") {
-                                devices[socket.remoteAddress.toString()] = Pair(
-                                    ProtoBuf.decodeFromByteArray<SocketDevice>(
-                                        socketMessage.body
-                                    ),
-                                    sendChannel
-                                )
-                                sendChannel.writeFully(
-                                    ProtoBuf.encodeToByteArray(
-                                        SocketMessage.sendDevice(
-                                            deviceId = settings.getString("deviceId", ""),
-                                            deviceName = settings.getString("deviceName", ""),
-                                            host = socket.localAddress.toString(),
-                                            type = DeviceType.JVM
+                            if (bufferLength < 8192) {
+                                val socketMessage =
+                                    ProtoBuf.decodeFromByteArray<SocketMessage>(buffer.copyOf(bufferLength))
+                                if (socketMessage.header.command == "connect") {
+                                    devices[socket.remoteAddress.toString()] = Pair(
+                                        ProtoBuf.decodeFromByteArray<SocketDevice>(
+                                            socketMessage.body
+                                        ),
+                                        sendChannel
+                                    )
+                                    sendChannel.writeFully(
+                                        ProtoBuf.encodeToByteArray(
+                                            SocketMessage.sendDevice(
+                                                deviceId = settings.getString("deviceId", ""),
+                                                deviceName = settings.getString("deviceName", ""),
+                                                host = socket.localAddress.toString(),
+                                                type = DeviceType.JVM
+                                            )
                                         )
                                     )
-                                )
+                                } else {
+                                    callback(socket.remoteAddress.toString(), socketMessage)
+                                }
                             } else {
+                                val identifier = "--FileManager--bytearray".toByteArray()
+                                val index = findIdentifierIndex(buffer, identifier)
+                                val socketMessage =
+                                    ProtoBuf.decodeFromByteArray<SocketMessage>(buffer.copyOf(if (index == -1) bufferLength else index))
+                                println("【server】 header = ${socketMessage.header} params = ${socketMessage.params} it=${if (index == -1) bufferLength else index}")
                                 callback(socket.remoteAddress.toString(), socketMessage)
                             }
                         }
@@ -79,14 +88,30 @@ class JvmSocketServer(private val coroutineContext: CoroutineContext = Dispatche
         }
     }
 
+    fun findIdentifierIndex(buffer: ByteArray, identifier: ByteArray): Int {
+        for (i in 0..buffer.size - identifier.size) {
+            var match = true
+            for (j in identifier.indices) {
+                if (buffer[i + j] != identifier[j]) {
+                    match = false
+                    break
+                }
+            }
+            if (match) {
+                return i
+            }
+        }
+        return -1
+    }
 
     override suspend fun stop() {
     }
 
     override suspend fun send(clientId: String, data: ByteArray) {
         val deviceSendChannel = devices[clientId] ?: return
-        println("server - send = ${data.size}")
-        deviceSendChannel.second.writeFully(data)
+        val identifier = "--FileManager--bytearray".toByteArray()
+        val byteArray = data + identifier + ByteArray(8192 - (data.size + identifier.size))
+        deviceSendChannel.second.writeFully(byteArray)
     }
 }
 
@@ -109,12 +134,14 @@ class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatche
 
             val receiveChannel = socket.openReadChannel()
             sendChannel = socket.openWriteChannel(autoFlush = true)
-            send(
-                SocketMessage.sendDevice(
-                    deviceId = settings.getString("deviceId", ""),
-                    deviceName = settings.getString("deviceName", ""),
-                    host = socket.localAddress.toString(),
-                    type = DeviceType.JVM
+            sendChannel?.writeFully(
+                ProtoBuf.encodeToByteArray(
+                    SocketMessage.sendDevice(
+                        deviceId = settings.getString("deviceId", ""),
+                        deviceName = settings.getString("deviceName", ""),
+                        host = socket.localAddress.toString(),
+                        type = DeviceType.JVM
+                    )
                 )
             )
 
@@ -125,17 +152,37 @@ class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatche
                 if (bufferLength == -1) {
                     break
                 }
-                println("client = $bufferLength")
-                val socketMessage = ProtoBuf.decodeFromByteArray<SocketMessage>(buffer.copyOf(bufferLength))
+                val identifier = "--FileManager--bytearray".toByteArray()
+                val index = findIdentifierIndex(buffer, identifier)
+                val socketMessage =
+                    ProtoBuf.decodeFromByteArray<SocketMessage>(buffer.copyOf(if (index == -1) bufferLength else index))
+                println("【client】 header = ${socketMessage.header} params = ${socketMessage.params} it=${if (index == -1) bufferLength else index}")
                 receive(socketMessage)
             }
         }
     }
 
+    fun findIdentifierIndex(buffer: ByteArray, identifier: ByteArray): Int {
+        for (i in 0..buffer.size - identifier.size) {
+            var match = true
+            for (j in identifier.indices) {
+                if (buffer[i + j] != identifier[j]) {
+                    match = false
+                    break
+                }
+            }
+            if (match) {
+                return i
+            }
+        }
+        return -1
+    }
+
     // 发送消息的方法
-    @OptIn(ExperimentalSerializationApi::class)
-    override suspend fun send(data: SocketMessage) {
-        sendChannel?.writeFully(ProtoBuf.encodeToByteArray(data))
+    override suspend fun send(clientId: String, data: ByteArray) {
+        val identifier = "--FileManager--bytearray".toByteArray()
+        val byteArray = data + identifier + ByteArray(8192 - (data.size + identifier.size))
+        sendChannel?.writeFully(byteArray)
     }
 
     override suspend fun disconnect() {

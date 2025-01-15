@@ -6,21 +6,24 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.FileCopy
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.MaterialTheme.typography
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.filemanager.data.StatusEnum
+import app.filemanager.data.file.toIcon
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.service.data.ConnectType
 import app.filemanager.ui.state.file.FileState
-import app.filemanager.ui.state.main.DeviceState
+import app.filemanager.ui.state.main.*
 import app.filemanager.ui.state.main.DrawerState
-import app.filemanager.ui.state.main.MainState
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -28,6 +31,7 @@ import org.koin.compose.koinInject
 @Composable
 fun AppDrawer() {
     val drawerState = koinInject<DrawerState>()
+    val taskState = koinInject<TaskState>()
     val deviceState = koinInject<DeviceState>()
     val isDeviceAdd by deviceState.isDeviceAdd.collectAsState()
 
@@ -60,6 +64,10 @@ fun AppDrawer() {
 //                })
 //                Spacer(Modifier.height(12.dp))
 //            }
+            if (taskState.tasks.isNotEmpty()) {
+                item { HorizontalDivider() }
+                item { AppDrawerTask() }
+            }
             item { HorizontalDivider() }
             item { AppDrawerBookmark() }
             item { HorizontalDivider() }
@@ -70,7 +78,7 @@ fun AppDrawer() {
                     "网络",
                     actions = {
                         Row {
-                            Icon(Icons.Default.Add, null, Modifier.clip(RoundedCornerShape(25.dp)).clickable { })
+                            Icon(Icons.Default.Add, null, Modifier)
                             Spacer(Modifier.width(8.dp))
                             Icon(
                                 if (isExpandNetwork) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -95,6 +103,106 @@ fun AppDrawer() {
 }
 
 @Composable
+private fun AppDrawerTask() {
+    val taskState = koinInject<TaskState>()
+    var checkedTask by remember {
+        mutableStateOf<Task?>(null)
+    }
+
+    AppDrawerItem("任务", actions = {
+    }) {
+        if (taskState.tasks.size > 1) {
+            NavigationDrawerItem(
+                icon = { Icon(Icons.Default.TaskAlt, null) },
+                label = {
+                    Column {
+                        Text("任务(${taskState.tasks.size})")
+                        Text(
+                            "执行中(${taskState.tasks.filter { it.status == StatusEnum.LOADING }.size})-暂停中(${taskState.tasks.filter { it.status == StatusEnum.PAUSE }.size})-失败(${taskState.tasks.filter { it.status == StatusEnum.FAILURE }.size})",
+                            style = typography.bodySmall
+                        )
+                    }
+                },
+                selected = false,
+                onClick = {
+                },
+                badge = {
+                    Icon(Icons.Default.ExpandLess, null, Modifier.rotate(90f))
+                },
+                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+            )
+            return@AppDrawerItem
+        }
+
+        val task = taskState.tasks.first()
+        NavigationDrawerItem(
+            icon = {
+                when (task.taskType) {
+                    TaskType.Copy -> Icon(Icons.Outlined.FileCopy, null)
+                    TaskType.Move -> Icon(Icons.Default.ContentCut, null)
+                    TaskType.Delete -> Icon(Icons.Default.Delete, null)
+                }
+            },
+            label = {
+                Column {
+                    when (task.taskType) {
+                        TaskType.Copy -> Text("复制中")
+                        TaskType.Move -> Text("移动中")
+                        TaskType.Delete -> Text("删除中")
+                    }
+                    Row {
+                        task.protocol.toIcon()
+                        Text(
+                            task.values["path"] ?: "",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            },
+            selected = false,
+            onClick = {
+                checkedTask = task
+            },
+            badge = {
+                when (task.status) {
+                    StatusEnum.SUCCESS -> {}
+                    StatusEnum.FAILURE -> Row {
+                        Icon(
+                            Icons.Outlined.ErrorOutline,
+                            null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.Default.ExpandLess, null, Modifier.rotate(90f))
+                    }
+
+                    StatusEnum.PAUSE -> {
+                        Icon(Icons.Default.Stop, null)
+                    }
+
+                    StatusEnum.LOADING -> CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 3.dp
+                    )
+                }
+            },
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
+    }
+    if (checkedTask != null) {
+        TaskInfoDialog(
+            checkedTask!!,
+            onConfirm = {},
+            onDismiss = {
+                checkedTask = null
+            }
+        )
+    }
+}
+
+@Composable
 private fun AppDrawerBookmark() {
     val scope = rememberCoroutineScope()
 
@@ -112,7 +220,7 @@ private fun AppDrawerBookmark() {
         if (deskType is Device) "${deskType.name} - 书签" else "书签",
         actions = {
             Row {
-                Icon(Icons.Default.Add, null, Modifier.clip(RoundedCornerShape(25.dp)).clickable { })
+                Icon(Icons.Default.Add, null, Modifier)
                 Spacer(Modifier.width(8.dp))
                 Icon(
                     if (isExpandBookmark) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -216,21 +324,21 @@ private fun AppDrawerDevice() {
                 icon = { Icon(Icons.Default.Devices, null) },
                 badge = {
                     when (device.connectType) {
-                        app.filemanager.service.data.ConnectType.Connect -> Badge(
+                        ConnectType.Connect -> Badge(
                             containerColor = MaterialTheme.colorScheme.tertiary
                         ) {
                             Text("已连接")
                         }
 
-                        app.filemanager.service.data.ConnectType.Fail -> Badge {
+                        ConnectType.Fail -> Badge {
                             Text("连接失败")
                         }
 
-                        app.filemanager.service.data.ConnectType.UnConnect -> Badge {
+                        ConnectType.UnConnect -> Badge {
                             Text("未连接")
                         }
 
-                        app.filemanager.service.data.ConnectType.Loading -> Badge(
+                        ConnectType.Loading -> Badge(
                             containerColor = MaterialTheme.colorScheme.tertiary
                         ) {
                             Text("连接中")

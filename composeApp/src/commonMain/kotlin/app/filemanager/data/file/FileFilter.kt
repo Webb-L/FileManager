@@ -1,6 +1,8 @@
 package app.filemanager.data.file
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -39,7 +41,7 @@ enum class FileFilterType(type: String) {
 fun getFileFilterType(type: FileFilterType) {
     when (type) {
         FileFilterType.Folder -> Icon(Icons.Default.Folder, null)
-        FileFilterType.File -> Icon(Icons.Default.Note, null)
+        FileFilterType.File -> Icon(Icons.AutoMirrored.Default.Note, null)
         FileFilterType.Text -> Icon(Icons.Default.Description, null)
         FileFilterType.Audio -> Icon(Icons.Default.Headphones, null)
         FileFilterType.Video -> Icon(Icons.Default.Videocam, null)
@@ -47,7 +49,7 @@ fun getFileFilterType(type: FileFilterType) {
         FileFilterType.ImageRaw -> Icon(Icons.Default.RawOn, null)
         FileFilterType.ImageVector -> Icon(Icons.Default.Landscape, null)
         FileFilterType.Image3D -> Icon(Icons.Default.ViewInAr, null)
-        FileFilterType.PageLayout -> Icon(Icons.Default.Article, null)
+        FileFilterType.PageLayout -> Icon(Icons.AutoMirrored.Default.Article, null)
         FileFilterType.Database -> Icon(Icons.Default.Dataset, null)
         FileFilterType.Executable -> Icon(Icons.Default.Emergency, null)
         FileFilterType.Game -> Icon(Icons.Default.Games, null)

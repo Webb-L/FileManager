@@ -1,6 +1,7 @@
 package app.filemanager.ui.state.file
 
 import androidx.compose.runtime.mutableStateListOf
+import app.filemanager.data.StatusEnum
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.FileSizeInfo
@@ -11,16 +12,20 @@ import app.filemanager.data.main.Local
 import app.filemanager.data.main.Network
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.getFileAndFolder
+import app.filemanager.extensions.pathLevel
 import app.filemanager.extensions.replaceLast
+import app.filemanager.ui.state.main.Task
+import app.filemanager.ui.state.main.TaskState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
-class FileState() {
+class FileState : KoinComponent {
+    val taskState: TaskState by inject()
     val fileAndFolder = mutableStateListOf<FileSimpleInfo>()
 
     private val _rootPath: MutableStateFlow<PathInfo> = MutableStateFlow(PathUtils.getRootPaths().first())
@@ -219,6 +224,79 @@ class FileState() {
         return Result.failure(Exception("获取失败"))
     }
 
+    suspend fun deleteFile(task: Task, path: String): Result<Boolean> {
+        taskState.tasks.add(task)
+        if (_deskType.value is Local) {
+            val result = _deleteFile(task, path)
+            if (result.isSuccess && result.getOrNull() == true) {
+                taskState.tasks.remove(task)
+            } else {
+                val indexOf = taskState.tasks.indexOf(task)
+                if (indexOf != -1) {
+                    taskState.tasks[indexOf] = task.copy(status = StatusEnum.FAILURE)
+                }
+            }
+//            println(taskState.tasks.first())
+            return result
+        }
+
+        var isReturn = false
+        if (_deskType.value is Device) {
+            val device = _deskType.value as Device
+            val fileInfos = mutableListOf<FileSimpleInfo>()
+            device.getTraversePath(path) {
+                if (it.isSuccess) {
+                    fileInfos.addAll(it.getOrNull() ?: emptyList())
+                }
+            }
+
+            var successCount = 0
+            var failureCount = 0
+            var result: Result<Boolean> = Result.success(false)
+            if (fileInfos.size == 1) {
+                device.deleteFile(listOf(fileInfos.first().path)) {
+                    if (it.isSuccess) {
+                        result = Result.success((it.getOrNull() ?: listOf()).first())
+                    }
+                    isReturn = true
+                }
+
+                while (!isReturn) {
+                    delay(100L)
+                }
+                return result
+            }
+
+            for (fileInfo in fileInfos
+                .sortedWith(compareBy<FileSimpleInfo> { it.isDirectory }
+                    .thenByDescending { it.path.pathLevel() }).chunked(10)) {
+                isReturn = false
+                device.deleteFile(fileInfo.map { it.path }) {
+                    if (it.isSuccess) {
+                        for (item in it.getOrNull() ?: listOf()) {
+                            if (item) {
+                                successCount++
+                            } else {
+                                failureCount++
+                            }
+                        }
+                    } else {
+                        failureCount++
+                    }
+                    isReturn = true
+                }
+
+                while (!isReturn) {
+                    delay(100L)
+                }
+            }
+            result = Result.success(fileInfos.size + 1 == successCount && failureCount == 0)
+            return result
+        }
+
+        return Result.failure(Exception("删除失败"))
+    }
+
     init {
         MainScope().launch {
             updateFileAndFolder()
@@ -254,7 +332,9 @@ class FileState() {
         fileOperationState.title = "复制中..."
         val fileInfos = mutableListOf<FileSimpleInfo>()
         PathUtils.traverse(srcPath) {
-            fileInfos.addAll(it)
+            if (it.isSuccess && (it.getOrNull() ?: emptyList()).isNotEmpty()) {
+                fileInfos.addAll(it.getOrNull() ?: emptyList())
+            }
         }
         fileOperationState.updateFileInfos(fileInfos)
         for (fileInfo in fileInfos) {
@@ -326,7 +406,9 @@ class FileState() {
         fileOperationState.title = "移动中..."
         val fileInfos = mutableListOf<FileSimpleInfo>()
         PathUtils.traverse(srcPath) {
-            fileInfos.addAll(it)
+            if (it.isSuccess && (it.getOrNull() ?: emptyList()).isNotEmpty()) {
+                fileInfos.addAll(it.getOrNull() ?: emptyList())
+            }
         }
         fileOperationState.updateFileInfos(fileInfos)
         for (fileInfo in fileInfos) {
@@ -386,28 +468,44 @@ class FileState() {
     }
 
     // 删除文件
-    suspend fun deleteFile(fileOperationState: FileOperationState, path: String) {
-        fileOperationState.title = "删除中..."
+    private suspend fun _deleteFile(task: Task, path: String): Result<Boolean> {
         val fileInfos = mutableListOf<FileSimpleInfo>()
-        PathUtils.traverse(path) {
-            fileInfos.addAll(it)
+        withContext(Dispatchers.Default) {
+            PathUtils.traverse(path) {
+                if (it.isSuccess && (it.getOrNull() ?: emptyList()).isNotEmpty()) {
+                    fileInfos.addAll(it.getOrNull() ?: emptyList())
+                }
+            }
         }
-        fileInfos.sortedWith(compareBy<FileSimpleInfo> { it.isDirectory }.thenByDescending { it.path })
-        fileOperationState.updateFileInfos(fileInfos)
-        for (fileInfo in fileInfos) {
-            if (fileOperationState.isCancel) return
-            while (fileOperationState.isStop) {
+        println("fileInfos = ${fileInfos}")
+        var successCount = 0
+        var failureCount = 0
+        if (fileInfos.size == 1) {
+            val deleteFile = FileUtils.deleteFile(fileInfos.first().path)
+            if (deleteFile.isSuccess && deleteFile.getOrNull() ?: false) {
+                successCount++
+            } else {
+                failureCount++
+            }
+            return Result.success(successCount == 1 && failureCount == 0)
+        }
+
+        for (fileInfo in fileInfos
+            .sortedWith(compareBy<FileSimpleInfo> { it.isDirectory }
+                .thenByDescending { it.path })) {
+            if (taskState.taskCancelKeys.contains(task.key)) return Result.failure(Exception("结束删除"))
+            while (taskState.taskStopKeys.contains(task.key)) {
                 delay(100)
             }
-            val status = FileUtils.deleteFile(fileInfo.path)
-            if (status) {
-                fileOperationState.updateCurrentIndex()
+            val deleteFile = FileUtils.deleteFile(fileInfo.path)
+            if (deleteFile.isSuccess && deleteFile.getOrNull() ?: false) {
+                successCount++
             } else {
-                fileOperationState.addLog(fileInfo.path)
+                failureCount++
             }
         }
-        FileUtils.deleteFile(path)
-        fileOperationState.updateFinished(true)
+
+        return Result.success(fileInfos.size + 1 == successCount && failureCount == 0)
     }
 
     private val _fileInfo: MutableStateFlow<FileSimpleInfo?> = MutableStateFlow(null)
@@ -497,5 +595,24 @@ class FileState() {
             return "$path$fileName(${size + 1})${newDestFileInfo.mineType}"
         }
         return ""
+    }
+
+    suspend fun writeBytes(): Result<Boolean> {
+        var isReturn = false
+        if (_deskType.value is Device) {
+            val device = _deskType.value as Device
+            var result: Result<Boolean> = Result.success(false)
+            device.writeBytes("/home/webb/OSX-KVM2/random_file", "/home/webb/下载/writeTest") {
+                result = it
+                isReturn = true
+            }
+
+            while (!isReturn) {
+                delay(100L)
+            }
+            return result
+        }
+
+        return Result.failure(Exception("删除失败"))
     }
 }

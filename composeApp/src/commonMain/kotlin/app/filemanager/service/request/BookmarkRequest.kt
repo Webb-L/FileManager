@@ -17,7 +17,7 @@ class BookmarkRequest(private val socket: SocketServerManger) {
                 clientId = clientId,
                 header = message.header.copy(command = "replyBookmark"),
                 params = message.params,
-                body = WebSocketResult(
+                value = WebSocketResult(
                     value = bookmarks
                 )
             )

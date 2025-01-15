@@ -72,4 +72,8 @@ fun String.isPrivateIPAddress(): Boolean {
     return isPrivateIPv4Address(this) || isPrivateIPv6Address(this)
 }
 
+fun String.pathLevel(): Int {
+    return this.trim('/').split('/').size
+}
+
 internal expect fun String.parsePath(): List<String>

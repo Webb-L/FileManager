@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.filemanager.data.StatusEnum
 import app.filemanager.data.file.FileFilterType
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.getFileFilterType
@@ -25,6 +26,9 @@ import app.filemanager.ui.screen.file.filter.FileFilterScreen
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
+import app.filemanager.ui.state.main.DrawerState
+import app.filemanager.ui.state.main.Task
+import app.filemanager.ui.state.main.TaskType
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.VerificationUtils
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -48,6 +52,8 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
     val updateKey by fileFilterState.updateKey.collectAsState()
 
     val fileOperationState = koinInject<FileOperationState>()
+
+    val drawerState = koinInject<DrawerState>()
 
     val scope = rememberCoroutineScope()
 
@@ -88,10 +94,14 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
                         when (showSnackbar) {
                             SnackbarResult.Dismissed -> {}
                             SnackbarResult.ActionPerformed -> {
-                                fileOperationState.updateOperationDialog(true)
+//                                fileOperationState.updateOperationDialog(true)
                                 scope.launch {
                                     fileState.deleteFile(
-                                        fileOperationState,
+                                        Task(
+                                            taskType = TaskType.Delete,
+                                            status = StatusEnum.LOADING,
+                                            values = mapOf("path" to deletePath)
+                                        ),
                                         deletePath
                                     )
                                     fileState.updateFileAndFolder()

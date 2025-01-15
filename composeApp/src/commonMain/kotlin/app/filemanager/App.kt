@@ -11,11 +11,9 @@ import app.filemanager.ui.screen.main.MainScreen
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.theme.FileManagerTheme
 import app.filemanager.utils.calculateWindowSizeClass
-import kotlinx.serialization.ExperimentalSerializationApi
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 
-@OptIn(ExperimentalSerializationApi::class)
 @Composable
 internal fun App() = KoinApplication(application = {
     modules(appModule())
