@@ -171,7 +171,7 @@ class FileState : KoinComponent {
 
     suspend fun createFolder(path: String, name: String): Result<Boolean> {
         if (_deskType.value is Local) {
-            return FileUtils.createFolder(path, name)
+            return FileUtils.createFolder("$path${PathUtils.getPathSeparator()}$name")
         }
 
         var isReturn = false
@@ -314,6 +314,33 @@ class FileState : KoinComponent {
     fun copyFile(path: String) {
         _isPasteCopyFile.value = true
         srcPath = path
+    }
+
+    suspend fun copyFile(sourcePath: String, destinationPath: String):Result<Boolean>{
+        // TODO 本地复制
+        if (_deskType.value is Local) {
+            return Result.success(true)
+        }
+
+        var isReturn = false
+        if (_deskType.value is Device) {
+            val device = _deskType.value as Device
+            var result: Result<Boolean> = Result.success(false)
+            // println(fileState.copyFile("/home/webb/CLionProjects/Embedded C++","/home/webb/下载/Embedded C++"))
+            device.copyFile(sourcePath,destinationPath) {
+                result = it
+                isReturn = true
+            }
+
+            while (!isReturn) {
+                delay(100L)
+            }
+
+            updateFileAndFolder()
+            return result
+        }
+
+        return Result.failure(Exception("复制失败"))
     }
 
     suspend fun pasteCopyFile(destPath: String, fileOperationState: FileOperationState) {

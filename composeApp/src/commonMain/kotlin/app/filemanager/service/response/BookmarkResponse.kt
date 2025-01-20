@@ -9,7 +9,7 @@ class BookmarkResponse(private val socket: SocketClientManger) {
     fun replyBookmark(message: SocketMessage) {
         MainScope().launch {
             val replyKey = (message.params["replyKey"] ?: "0").toLong()
-            socket.replyMessage[replyKey] = message.body
+            socket.replyMessage[replyKey] = Pair(-2, message.body)
         }
     }
 }

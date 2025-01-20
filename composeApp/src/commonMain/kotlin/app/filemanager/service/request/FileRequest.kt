@@ -56,28 +56,31 @@ class FileRequest(private val socket: SocketServerManger) {
 
     // 创建文件夹
     // TODO 检查权限
+    @OptIn(ExperimentalSerializationApi::class)
     fun sendCreateFolder(clientId: String, message: SocketMessage) {
-        val path = message.params["path"] ?: ""
-        val name = message.params["name"] ?: ""
         var errorValue: WebSocketResult<Nothing>? = null
-        var value: WebSocketResult<Boolean>? = null
-        if (path.isEmpty() || name.isEmpty()) {
+        var value: WebSocketResult<List<WebSocketResult<Boolean>>>? = null
+        if (message.body.isEmpty()) {
             errorValue = ParameterErrorException().toSocketResult()
         }
 
         MainScope().launch {
             if (errorValue == null) {
-                val createFolder = FileUtils.createFolder(path, name)
-                if (createFolder.isFailure) {
-                    val exceptionOrNull = createFolder.exceptionOrNull() ?: EmptyDataException()
-                    errorValue = WebSocketResult(
-                        exceptionOrNull.message,
-                        exceptionOrNull::class.simpleName,
-                        null
-                    )
-                } else {
-                    value = WebSocketResult(value = createFolder.getOrNull() ?: false)
-                }
+                value = WebSocketResult(
+                    value = ProtoBuf.decodeFromByteArray<List<String>>(message.body)
+                        .map { path ->
+                            val createFolder = FileUtils.createFolder(path)
+                            if (createFolder.isFailure) {
+                                val exceptionOrNull = createFolder.exceptionOrNull() ?: EmptyDataException()
+                                WebSocketResult(
+                                    exceptionOrNull.message,
+                                    exceptionOrNull::class.simpleName,
+                                    null
+                                )
+                            } else {
+                                WebSocketResult(value = createFolder.getOrNull() ?: false)
+                            }
+                        })
             }
 
             socket.send(
@@ -164,10 +167,9 @@ class FileRequest(private val socket: SocketServerManger) {
         var value: WebSocketResult<Boolean>? = null
 
         // 参数验证
-        if (fileSize <= 0L || blockIndex < 0L || blockLength <= 0L || path.isEmpty() || message.body.isEmpty()) {
+        if (fileSize < 0L || blockIndex < 0L || blockLength < 0L || path.isEmpty()) {
             errorValue = ParameterErrorException().toSocketResult()
         }
-
         MainScope().launch {
             if (errorValue == null) {
                 val writeResult = FileUtils.writeBytes(path, fileSize, message.body, blockIndex * MAX_LENGTH)

@@ -99,8 +99,8 @@ internal actual object FileUtils {
 
     actual fun totalSpace(path: String): Long = File(path).totalSpace
     actual fun freeSpace(path: String): Long = File(path).freeSpace
-    actual fun createFolder(path: String, name: String): Result<Boolean> {
-        val file = File(path, name)
+    actual fun createFolder(path: String): Result<Boolean> {
+        val file = File(path)
         if (file.exists()) return Result.failure(Exception("已经存在，无法创建"))
         return try {
             Result.success(file.mkdir())
@@ -196,6 +196,11 @@ internal actual object FileUtils {
                 return
             }
 
+            if (file.length() == 0.toLong()) {
+                onChunkRead(Result.success(Pair(0, byteArrayOf())))
+                return
+            }
+
             file.inputStream().use { input ->
                 val buffer = ByteArray(chunkSize.toInt())
                 var currentIndex = 0L
@@ -233,6 +238,10 @@ internal actual object FileUtils {
 
             if (!file.canWrite()) {
                 return Result.failure(AuthorityException("没有权限写入文件"))
+            }
+
+            if (fileSize == 0L) {
+                return Result.success(true)
             }
 
             RandomAccessFile(file, "rw").use { raf ->

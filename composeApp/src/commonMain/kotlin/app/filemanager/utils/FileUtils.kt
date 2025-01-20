@@ -73,13 +73,13 @@ internal expect object FileUtils {
     fun freeSpace(path: String): Long
 
     /**
-     * 创建一个新文件夹。
+     * 创建一个新的文件夹。
      *
-     * @param path 文件夹的父路径。
-     * @param name 新文件夹的名称。
-     * @return 如果文件夹创建成功，返回成功的结果为true；否则返回失败的结果，并附带错误信息。
+     * @param path 指定新文件夹的路径。
+     * @return 返回一个包含操作结果的Result对象。如果文件夹创建成功，返回Result.success(true)，
+     * 如果创建失败，返回Result.failure或Result.success(false)。
      */
-    fun createFolder(path: String, name: String): Result<Boolean>
+    fun createFolder(path: String): Result<Boolean>
 
     /**
      * 重命名指定路径下的文件或文件夹。

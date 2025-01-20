@@ -105,6 +105,13 @@ data class Device(
         getConnect()?.fileHandle?.writeBytes(id, srcPath, destPath, replyCallback)
     }
 
+    suspend fun copyFile(
+        sourcePath: String,
+        destinationPath: String,
+        replyCallback: (Result<Boolean>) -> Unit
+    ) {
+        getConnect()?.pathHandle?.copyFile(id,sourcePath,destinationPath,replyCallback)
+    }
 }
 
 enum class NetworkProtocol {

@@ -39,6 +39,8 @@ class SocketClientManger : KoinComponent, BaseSocketManager("client") {
                     deviceState.socketDevices.add(socketDevice)
                 }
 
+                "cancelKey" -> cancelKeys.add((message.params["replyKey"] ?: "0").toLong())
+
                 "replyRootPaths" -> pathResponse.replyRootPaths(message)
                 "replyList" -> pathResponse.replyList(message)
                 "replyTraversePath" -> pathResponse.replyTraversePath(message)

@@ -1,5 +1,6 @@
 package app.filemanager.service
 
+import app.filemanager.exception.TimeoutException
 import app.filemanager.extensions.chunked
 import app.filemanager.service.socket.Socket
 import app.filemanager.service.socket.SocketHeader
@@ -18,21 +19,27 @@ import kotlinx.serialization.protobuf.ProtoBuf
  *
  * @param tag 标识该 SocketManager 的标志字符串，用于调试或日志记录。
  */
-abstract class BaseSocketManager(private val tag:String) {
+abstract class BaseSocketManager(private val tag: String) {
     /**
      * 抽象属性，用于表示具体的套接字实现。
      * 子类需要对该属性进行初始化，以便实现具体的网络通信功能。
      */
     protected abstract val socket: Socket
+
+    internal val cancelKeys = mutableSetOf<Long>()
+
     /**
-     * 用于存储消息回复数据的映射表，键为唯一标识（通常为 Long 类型），值为对应的回复数据对象（Any 类型）。
+     * 一个内部使用的可变映射，存储与消息回复相关的数据结构。
      *
-     * 此变量在异步通信中起到存储临时数据的作用，通常在等待某个特定响应或处理消息结果时使用。
-     * 例如，在 `waitFinish` 方法中会通过 `replyKey` 检查当前是否有匹配的消息回复。
+     * - 键：`Long` 类型，表示消息的唯一标识符（一般为 `replyKey`）。
+     * - 值：一个 `Pair` 类型，其中：
+     *   - 第一个元素为 `Int`，表示附加信息，-2 = 完成，其他数字都是等待。
+     *   - 第二个元素为 `Any` 类型，表示与消息相关的任意对象（如具体的回复内容或状态数据）。
      *
-     * 该变量使用了 `MutableMap`，以支持动态添加、更新或移除键值对。同时由于其被声明为 `internal`，仅限模块内部使用。
+     * 该变量主要用于管理与 Socket 通信相关的回复消息，支持在并发环境中动态存储和获取对应的回复信息。
      */
-    internal val replyMessage = mutableMapOf<Long, Any>()
+    internal val replyMessage = mutableMapOf<Long, Pair<Int, Any>>()
+
     /**
      * 用于临时存储与网络通信相关的数据结构。
      *
@@ -47,6 +54,7 @@ abstract class BaseSocketManager(private val tag:String) {
      * - 提高通信过程的效率和数据组织的灵活性。
      */
     private val tempDataMap = mutableMapOf<Long, MutableMap<Long, ByteArray>>()
+
     /**
      * mainScope 是一个以生命周期为范围限制的主协程作用域实例。
      * 提供在 BaseSocketManager 中进行协程管理的能力，确保在协程执行的生命周期内
@@ -64,6 +72,7 @@ abstract class BaseSocketManager(private val tag:String) {
          * 常量默认为 1024 * 6。
          */
         const val MAX_LENGTH = 1024 * 6 // 最大分片长度
+
         /**
          * 定义用于管理请求超时的常量。
          *
@@ -94,10 +103,14 @@ abstract class BaseSocketManager(private val tag:String) {
         params: Map<String, String> = mapOf(),
         value: T
     ) {
+        if (cancelKeys.contains(params["replyKey"] ?: "0".toLong())) {
+            return
+        }
+
         val byteArray = if (value is ByteArray) value else ProtoBuf.encodeToByteArray(value)
 
         if (byteArray.size <= MAX_LENGTH) {
-            println("【${tag}】 header = $header params = $params it=${byteArray.size}")
+//            println("【${tag}】 header = $header params = $params it=${byteArray.size}")
             socket.send(
                 clientId,
                 ProtoBuf.encodeToByteArray(
@@ -119,7 +132,7 @@ abstract class BaseSocketManager(private val tag:String) {
                 params = params + mapOf("index" to index.toString(), "count" to chunked.size.toString()),
                 body = it
             )
-            println("【${tag}】 header = ${socketMessage.header} params = ${socketMessage.params} it=${it.size}")
+//            println("【${tag}】 header = ${socketMessage.header} params = ${socketMessage.params} it=${it.size}")
 
             socket.send(
                 clientId,
@@ -136,26 +149,47 @@ abstract class BaseSocketManager(private val tag:String) {
      *
      * @param replyKey 用于标记消息的键值，用以判断任务的完成状态。
      * @param callback 回调函数，当满足条件时执行，返回布尔值以决定是否退出等待循环。
+     *                 回调函数的参数为布尔值，表示是否结束超时等待。
      */
-    internal suspend fun waitFinish(replyKey: Long, callback: () -> Boolean) {
+    internal suspend fun <T> waitFinish(replyKey: Long, callback: (Result<T>) -> Unit) {
         var startTime = Clock.System.now().toEpochMilliseconds()
         var endTime = startTime + TIMEOUT
+        var lastStatus = -1
 
         while (true) {
-            if (Clock.System.now().toEpochMilliseconds() < endTime) {
-                if (replyMessage.contains(replyKey)) {
+            val isMessagePending = replyMessage.contains(replyKey)
+            // 判断是有超时 有超时就结束
+            if (Clock.System.now().toEpochMilliseconds() >= endTime) {
+                cancelKeys.add(replyKey)
+                callback(Result.failure(TimeoutException()))
+                send(
+                    header = SocketHeader(command = "cancelKey"),
+                    params = mapOf("replyKey" to replyKey.toString()),
+                    value = byteArrayOf()
+                )
+                break
+            }
+
+            // 所有数据存在但是没有完成
+            if (isMessagePending) {
+                // 完成
+                if (replyMessage[replyKey]!!.first == -2) {
+                    @Suppress("UNCHECKED_CAST")
+                    callback(Result.success(replyMessage[replyKey]!!.second as T))
+                    break
+                }
+
+                // 未完成还有数据
+                if (lastStatus != replyMessage[replyKey]!!.first) {
                     startTime = Clock.System.now().toEpochMilliseconds()
                     endTime = startTime + TIMEOUT
-
-                    if (callback()) {
-                        break
-                    }
+                    lastStatus = replyMessage[replyKey]!!.first
                 }
-            } else {
-                break
             }
             delay(100)
         }
+
+        replyMessage.remove(replyKey)
     }
 
     /**
@@ -176,7 +210,7 @@ abstract class BaseSocketManager(private val tag:String) {
 
             // 数据没有分片
             if (index == 0L && count == 0L) {
-                replyMessage[replyKey] = message.body
+                replyMessage[replyKey] = Pair(-2, message.body)
                 return@launch
             }
 
@@ -193,7 +227,7 @@ abstract class BaseSocketManager(private val tag:String) {
                     acc + (replyMap[key] ?: ByteArray(0))
                 }
 
-                replyMessage[replyKey] = byteArray
+                replyMessage[replyKey] = Pair(-2, byteArray)
                 tempDataMap.remove(replyKey)
             }
         }

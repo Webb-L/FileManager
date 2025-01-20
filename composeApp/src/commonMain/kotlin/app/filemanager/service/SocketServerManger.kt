@@ -17,6 +17,7 @@ class SocketServerManger : KoinComponent, BaseSocketManager("server") {
     suspend fun connect(port: Int = 1204) {
         socket.start(port) { clientId, message ->
             when (message.header.command) {
+                "cancelKey" -> cancelKeys.add((message.params["replyKey"] ?: "0").toLong())
                 "rootPaths" -> pathRequest.sendRootPaths(clientId, message)
                 "list" -> pathRequest.sendList(clientId, message)
                 "traversePath" -> pathRequest.sendTraversePath(clientId, message)

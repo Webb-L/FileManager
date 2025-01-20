@@ -19,7 +19,8 @@ class PathResponse(private val socket: SocketClientManger) {
     fun replyRootPaths(message: SocketMessage) {
         MainScope().launch {
             val replyKey = (message.params["replyKey"] ?: "0").toLong()
-            socket.replyMessage[replyKey] = ProtoBuf.decodeFromByteArray<List<PathInfo>>(message.body)
+            socket.replyMessage[replyKey] =
+                Pair(-2, ProtoBuf.decodeFromByteArray<List<PathInfo>>(message.body))
         }
     }
 

@@ -21,18 +21,21 @@ class BookmarkHandle(private val socket: SocketClientManger) {
         )
 
 
-        socket.waitFinish(replyKey, callback = {
-            val tempList = socket.replyMessage[replyKey] as ByteArray
-            val webSocketResult = ProtoBuf.decodeFromByteArray<WebSocketResult<List<DrawerBookmark>>>(tempList)
+        socket.waitFinish(replyKey, callback = { result ->
+            if (result.isFailure) {
+                replyCallback(Result.failure(result.exceptionOrNull() ?: Exception()))
+                return@waitFinish
+            }
+
+            val webSocketResult = ProtoBuf.decodeFromByteArray<WebSocketResult<List<DrawerBookmark>>>(
+                result.getOrDefault(byteArrayOf())
+            )
             if (webSocketResult.isSuccess) {
                 val bookmarks: List<DrawerBookmark> = webSocketResult.value as List<DrawerBookmark>
                 replyCallback(Result.success(bookmarks))
             } else {
                 replyCallback(Result.failure(webSocketResult.deSerializable()))
             }
-
-            socket.replyMessage.remove(replyKey)
-            return@waitFinish true
         })
 
 //        for (i in 0..100) {

@@ -7,7 +7,9 @@ import app.filemanager.service.SocketClientManger
 import app.filemanager.service.WebSocketResult
 import app.filemanager.service.socket.SocketHeader
 import app.filemanager.utils.FileUtils
+import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -45,17 +47,19 @@ class FileHandle(private val socket: SocketClientManger) {
             value = ""
         )
 
-        socket.waitFinish(replyKey, callback = {
-            val temp = socket.replyMessage[replyKey] as ByteArray
-            val webSocketResult = ProtoBuf.decodeFromByteArray<WebSocketResult<Boolean>>(temp)
+        socket.waitFinish(replyKey, callback = { result ->
+            if (result.isFailure) {
+                replyCallback(Result.failure(result.exceptionOrNull() ?: Exception()))
+                return@waitFinish
+            }
+
+            val webSocketResult =
+                ProtoBuf.decodeFromByteArray<WebSocketResult<Boolean>>(result.getOrDefault(byteArrayOf()))
             if (webSocketResult.isSuccess) {
                 replyCallback(Result.success(webSocketResult.value ?: false))
             } else {
                 replyCallback(Result.failure(webSocketResult.deSerializable()))
             }
-
-            socket.replyMessage.remove(replyKey)
-            return@waitFinish true
         })
     }
 
@@ -73,27 +77,28 @@ class FileHandle(private val socket: SocketClientManger) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
         socket.send(
             header = SocketHeader(command = "createFolder"),
-            params = mapOf(
-                "replyKey" to replyKey.toString(),
-                "path" to path,
-                "name" to name
-            ),
-            value = ""
+            params = mapOf("replyKey" to replyKey.toString()),
+            value = listOf("$path${PathUtils.getPathSeparator()}$name")
         )
-        socket.waitFinish(replyKey, callback = {
-            val decodeFromHexString =
-                ProtoBuf.decodeFromByteArray<WebSocketResult<Boolean>>(
-                    socket.replyMessage[replyKey] as ByteArray
-                )
-
-            if (decodeFromHexString.isSuccess) {
-                replyCallback(Result.success(decodeFromHexString.value ?: false))
-            } else {
-                replyCallback(Result.failure(decodeFromHexString.deSerializable()))
+        socket.waitFinish(replyKey, callback = { result ->
+            if (result.isFailure) {
+                replyCallback(Result.failure(result.exceptionOrNull() ?: Exception()))
+                return@waitFinish
             }
 
-            socket.replyMessage.remove(replyKey)
-            return@waitFinish true
+            val resultList = ProtoBuf.decodeFromByteArray<List<WebSocketResult<Boolean>>>(
+                result.getOrDefault(byteArrayOf())
+            )
+            if (resultList.isNotEmpty()) {
+                val first = resultList.first()
+                if (first.isSuccess) {
+                    replyCallback(Result.success(first.value ?: false))
+                } else {
+                    replyCallback(Result.failure(first.deSerializable()))
+                }
+            } else {
+                replyCallback(Result.failure(Exception("文件夹创建失败")))
+            }
         })
     }
 
@@ -115,20 +120,21 @@ class FileHandle(private val socket: SocketClientManger) {
             ),
             value = fileSimpleInfo
         )
-        socket.waitFinish(replyKey, callback = {
+        socket.waitFinish(replyKey, callback = { result ->
+            if (result.isFailure) {
+                replyCallback(Result.failure(result.exceptionOrNull() ?: Exception()))
+                return@waitFinish
+            }
+
             val decodeFromHexString =
                 ProtoBuf.decodeFromByteArray<WebSocketResult<FileSizeInfo>>(
-                    socket.replyMessage[replyKey] as ByteArray
+                    result.getOrDefault(byteArrayOf())
                 )
-
             if (decodeFromHexString.isSuccess) {
                 replyCallback(Result.success(decodeFromHexString.value as FileSizeInfo))
             } else {
                 replyCallback(Result.failure(decodeFromHexString.deSerializable()))
             }
-
-            socket.replyMessage.remove(replyKey)
-            return@waitFinish true
         })
     }
 
@@ -143,33 +149,37 @@ class FileHandle(private val socket: SocketClientManger) {
             value = paths
         )
 
-        socket.waitFinish(replyKey, callback = {
+        socket.waitFinish(replyKey, callback = { result ->
+            if (result.isFailure) {
+                replyCallback(Result.failure(result.exceptionOrNull() ?: Exception()))
+                return@waitFinish
+            }
+
             val decodeFromHexString =
                 ProtoBuf.decodeFromByteArray<WebSocketResult<List<Boolean>>>(
-                    socket.replyMessage[replyKey] as ByteArray
+                    result.getOrDefault(byteArrayOf())
                 )
-
             if (decodeFromHexString.isSuccess) {
                 replyCallback(Result.success(decodeFromHexString.value as List<Boolean>))
             } else {
                 replyCallback(Result.failure(decodeFromHexString.deSerializable()))
             }
-
-            socket.replyMessage.remove(replyKey)
-            return@waitFinish true
         })
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     suspend fun writeBytes(id: String, srcPath: String, destPath: String, replyCallback: (Result<Boolean>) -> Unit) {
         val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
         val file = FileUtils.getFile(srcPath)
         val length = ceil(file.size / MAX_LENGTH.toFloat()).toInt()
-
+        val mainScope = MainScope()
         FileUtils.readFileChunks(srcPath, MAX_LENGTH.toLong()) {
             if (it.isSuccess) {
                 val result = it.getOrNull() ?: Pair(0, byteArrayOf())
-                MainScope().launch {
+                mainScope.launch {
+                    if (socket.cancelKeys.contains(replyKey)) {
+                        mainScope.cancel()
+                        return@launch
+                    }
                     socket.send(
                         header = SocketHeader(command = "writeBytes"),
                         params = mapOf(
@@ -182,23 +192,28 @@ class FileHandle(private val socket: SocketClientManger) {
                         value = result.second
                     )
                 }
+            } else {
+                replyCallback(Result.failure(it.exceptionOrNull() ?: Exception()))
             }
         }
 
 
-        socket.waitFinish(replyKey, callback = {
-            val decodeFromHexString = socket.replyMessage[replyKey] as MutableList<Long>
+        socket.waitFinish<List<Long>>(replyKey, callback = { result ->
+            if (result.isFailure) {
+                replyCallback(Result.failure(result.exceptionOrNull() ?: Exception()))
+                return@waitFinish
+            }
+            socket.cancelKeys.remove(replyKey)
 
-            println("写入失败的块 = ${decodeFromHexString}")
+            val decodeFromHexString = result.getOrDefault(listOf())
+
+//            println("写入失败的块 = ${decodeFromHexString}")
 
             if (decodeFromHexString.isEmpty()) {
                 replyCallback(Result.success(true))
             } else {
                 replyCallback(Result.failure(Exception()))
             }
-
-            socket.replyMessage.remove(replyKey)
-            return@waitFinish true
         })
     }
 }

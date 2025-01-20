@@ -11,25 +11,25 @@ class FileResponse(private val socket: SocketClientManger) {
     val writeErrorMaps = mutableMapOf<Long, MutableList<Long>>()
     fun replyRename(message: SocketMessage) {
         val replyKey = (message.params["replyKey"] ?: "0").toLong()
-        socket.replyMessage[replyKey] = message.body
+        socket.replyMessage[replyKey] = Pair(-2, message.body)
     }
 
     fun replyCreateFolder(message: SocketMessage) {
         val replyKey = (message.params["replyKey"] ?: "0").toLong()
-        socket.replyMessage[replyKey] = message.body
+        socket.replyMessage[replyKey] = Pair(-2, message.body)
     }
 
     fun replyGetSizeInfo(message: SocketMessage) {
         val replyKey = (message.params["replyKey"] ?: "0").toLong()
-        socket.replyMessage[replyKey] = message.body
+        socket.replyMessage[replyKey] = Pair(-2, message.body)
     }
 
     fun replyDeleteFile(message: SocketMessage) {
         val replyKey = (message.params["replyKey"] ?: "0").toLong()
-        socket.replyMessage[replyKey] = message.body
+        socket.replyMessage[replyKey] = Pair(-2, message.body)
     }
 
-    @OptIn(ExperimentalSerializationApi::class, ExperimentalStdlibApi::class)
+    @OptIn(ExperimentalSerializationApi::class)
     fun replyWriteBytes(message: SocketMessage) {
         val replyKey = (message.params["replyKey"] ?: "0").toLong()
         val blockIndex: Long = (message.params["blockIndex"] ?: "-1").toLong()
@@ -38,9 +38,18 @@ class FileResponse(private val socket: SocketClientManger) {
 
         // TODO 记录错误的记录
 
+        if (blockIndex == 0L && blockLength == 0L) {
+            socket.replyMessage[replyKey] = Pair(-2, listOf<Long>())
+            return
+        }
+
         if (blockIndex + 1 == blockLength && webSocketResult.isSuccess && webSocketResult.value == true) {
-            socket.replyMessage[replyKey] = writeErrorMaps[replyKey] ?: mutableListOf<Long>()
+            socket.replyMessage[replyKey] =
+                Pair(-2, writeErrorMaps[replyKey] ?: mutableListOf())
             writeErrorMaps.remove(replyKey)
+        } else if (blockIndex + 1 < blockLength) {
+            socket.replyMessage[replyKey] =
+                Pair(blockIndex.toInt(), listOf<Long>())
         }
 
         if (!webSocketResult.isSuccess || webSocketResult.value == false) {
