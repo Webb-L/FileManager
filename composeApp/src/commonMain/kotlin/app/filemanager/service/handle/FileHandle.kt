@@ -5,6 +5,7 @@ import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.service.BaseSocketManager.Companion.MAX_LENGTH
 import app.filemanager.service.SocketClientManger
 import app.filemanager.service.WebSocketResult
+import app.filemanager.service.data.RenameInfo
 import app.filemanager.service.socket.SocketHeader
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
@@ -40,11 +41,8 @@ class FileHandle(private val socket: SocketClientManger) {
             header = SocketHeader(command = "rename"),
             params = mapOf(
                 "replyKey" to replyKey.toString(),
-                "path" to path,
-                "oldName" to oldName,
-                "newName" to newName
             ),
-            value = ""
+            value = listOf(RenameInfo(path, oldName, newName))
         )
 
         socket.waitFinish(replyKey, callback = { result ->
@@ -54,12 +52,33 @@ class FileHandle(private val socket: SocketClientManger) {
             }
 
             val webSocketResult =
-                ProtoBuf.decodeFromByteArray<WebSocketResult<Boolean>>(result.getOrDefault(byteArrayOf()))
-            if (webSocketResult.isSuccess) {
-                replyCallback(Result.success(webSocketResult.value ?: false))
-            } else {
+                ProtoBuf.decodeFromByteArray<WebSocketResult<List<WebSocketResult<Boolean>>>>(
+                    result.getOrDefault(
+                        byteArrayOf()
+                    )
+                )
+
+            // 若解码结果本身不成功，则直接回调错误并返回
+            if (!webSocketResult.isSuccess) {
                 replyCallback(Result.failure(webSocketResult.deSerializable()))
+                return@waitFinish
             }
+
+            // 若解码结果成功，则获取内层列表
+            val webSocketResults = webSocketResult.value.orEmpty()
+            if (webSocketResults.isEmpty()) {
+                replyCallback(Result.failure(Exception("重命名失败")))
+                return@waitFinish
+            }
+
+            // 获取列表中的第一个元素并判断其是否成功
+            val firstResult = webSocketResults.first()
+            if (firstResult.isSuccess) {
+                replyCallback(Result.success(firstResult.value ?: false))
+            } else {
+                replyCallback(Result.failure(firstResult.deSerializable()))
+            }
+
         })
     }
 

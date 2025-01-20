@@ -8,6 +8,7 @@ import app.filemanager.exception.toSocketResult
 import app.filemanager.service.BaseSocketManager.Companion.MAX_LENGTH
 import app.filemanager.service.SocketServerManger
 import app.filemanager.service.WebSocketResult
+import app.filemanager.service.data.RenameInfo
 import app.filemanager.service.socket.SocketMessage
 import app.filemanager.utils.FileUtils
 import kotlinx.coroutines.MainScope
@@ -19,30 +20,41 @@ import kotlinx.serialization.protobuf.ProtoBuf
 class FileRequest(private val socket: SocketServerManger) {
     // 重命名文件和文件夹
     // TODO 检查权限
+    @OptIn(ExperimentalSerializationApi::class)
     fun sendRename(clientId: String, message: SocketMessage) {
-        val path = message.params["path"] ?: ""
-        val oldName = message.params["oldName"] ?: ""
-        val newName = message.params["newName"] ?: ""
-
         var errorValue: WebSocketResult<Nothing>? = null
-        var value: WebSocketResult<Boolean>? = null
-        if (path.isEmpty() || oldName.isEmpty() || newName.isEmpty()) {
+        var value: WebSocketResult<List<WebSocketResult<Boolean>>>? = null
+        if (message.body.isEmpty()) {
             errorValue = ParameterErrorException().toSocketResult()
         }
 
         MainScope().launch {
             if (errorValue == null) {
-                val rename = FileUtils.rename(path, oldName, newName)
-                if (rename.isFailure) {
-                    val exceptionOrNull = rename.exceptionOrNull() ?: EmptyDataException()
-                    errorValue = WebSocketResult(
-                        exceptionOrNull.message,
-                        exceptionOrNull::class.simpleName,
-                        null
-                    )
-                } else {
-                    value = WebSocketResult(value = rename.getOrNull() ?: false)
+                val renameInfos = ProtoBuf.decodeFromByteArray<List<RenameInfo>>(message.body)
+                if (renameInfos.isEmpty()) {
+                    errorValue = ParameterErrorException().toSocketResult()
+                    return@launch
                 }
+
+                value = WebSocketResult(
+                    value = renameInfos.map {
+                        if (it.hasEmptyField()) {
+                            return@map ParameterErrorException().toSocketResult()
+                        }
+
+                        val rename = FileUtils.rename(it.path, it.oldName, it.newName)
+                        if (rename.isFailure) {
+                            val exceptionOrNull = rename.exceptionOrNull() ?: EmptyDataException()
+                            WebSocketResult(
+                                exceptionOrNull.message,
+                                exceptionOrNull::class.simpleName,
+                                null
+                            )
+                        } else {
+                            WebSocketResult(value = rename.getOrNull() ?: false)
+                        }
+                    }
+                )
             }
 
             socket.send(
