@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Sensors
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.SwitchLeft
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,7 +27,7 @@ fun SortButton() {
 
     Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
         IconButton({ expanded = true }) {
-            Icon(Icons.Default.Sort, null)
+            Icon(Icons.AutoMirrored.Default.Sort, null)
         }
         DropdownMenu(
             expanded = expanded,

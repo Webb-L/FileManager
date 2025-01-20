@@ -3,7 +3,7 @@ package app.filemanager.ui.screen.file
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -44,7 +44,7 @@ class FavoriteScreen : Screen {
                             mainState.updateFavorite(false)
                             navigator.pop()
                         }) {
-                            Icon(Icons.Default.ArrowBack, null)
+                            Icon(Icons.AutoMirrored.Default.ArrowBack, null)
                         }
                     },
                     actions = {

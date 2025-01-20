@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -47,7 +47,7 @@ class FileFilterManagerScreen(private val filterId: Long) : Screen {
                             fileFilterState.syncFilterFileTypes()
                             navigator.pop()
                         }) {
-                            Icon(Icons.Default.ArrowBack, null)
+                            Icon(Icons.AutoMirrored.Default.ArrowBack, null)
                         }
                     },
                     actions = {}

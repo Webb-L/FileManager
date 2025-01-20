@@ -5,10 +5,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Note
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -163,7 +163,7 @@ fun FileIcon(file: FileSimpleInfo) {
     val fileFilter = fileFilterState.getFilterFileByFileExtension(file.mineType)
     if (fileFilter == null) {
         Icon(
-            Icons.Default.Note,
+            Icons.AutoMirrored.Default.Note,
             contentDescription = file.name,
         )
         return
@@ -220,7 +220,7 @@ fun FileCardMenu(
                             contentDescription = null
                         )
                     })
-                Divider()
+                HorizontalDivider()
             }
             DropdownMenuItem(
                 text = { Text("复制") },
@@ -258,7 +258,7 @@ fun FileCardMenu(
                         contentDescription = null
                     )
                 })
-            Divider()
+            HorizontalDivider()
             DropdownMenuItem(
                 text = { Text("重命名") },
                 onClick = {
@@ -281,8 +281,7 @@ fun FileCardMenu(
                         contentDescription = null
                     )
                 })
-            Divider()
-
+            HorizontalDivider()
             val isFavorite = database.fileFavoriteQueries
                 .queryByPathProtocol(file.path, FileProtocol.Local)
                 .executeAsList()
