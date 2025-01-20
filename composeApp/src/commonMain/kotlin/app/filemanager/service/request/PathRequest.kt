@@ -2,6 +2,7 @@ package app.filemanager.service.request
 
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.data.file.PathInfo
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.exception.ParameterErrorException
 import app.filemanager.exception.toSocketResult
@@ -75,11 +76,25 @@ class PathRequest(private val socket: SocketServerManger) {
     // TODO 检查权限
     fun sendRootPaths(clientId: String, message: SocketMessage) {
         MainScope().launch {
+            var errorValue: WebSocketResult<Nothing>? = null
+            var value: WebSocketResult<List<PathInfo>>? = null
+
+            val rootPaths = PathUtils.getRootPaths()
+            if (rootPaths.isFailure) {
+                val exceptionOrNull = rootPaths.exceptionOrNull() ?: EmptyDataException()
+                errorValue = WebSocketResult(
+                    exceptionOrNull.message,
+                    exceptionOrNull::class.simpleName,
+                    null
+                )
+            } else {
+                value = WebSocketResult(value = rootPaths.getOrDefault(listOf()))
+            }
             socket.send(
                 clientId = clientId,
                 header = message.header.copy(command = "replyRootPaths"),
                 params = message.params,
-                value = PathUtils.getRootPaths()
+                value = errorValue ?: value!!
             )
         }
     }

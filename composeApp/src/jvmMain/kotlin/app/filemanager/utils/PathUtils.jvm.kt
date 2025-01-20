@@ -37,8 +37,17 @@ internal actual object PathUtils {
     actual fun getPathSeparator(): String = separator
 
     // 获取根目录
-    actual fun getRootPaths(): List<PathInfo> = File.listRoots()
-        .map { PathInfo(it.path, it.totalSpace, it.freeSpace) }
+    actual fun getRootPaths(): Result<List<PathInfo>> {
+        return try {
+            Result.success(
+                File.listRoots()
+                    .map { PathInfo(it.path, it.totalSpace, it.freeSpace) })
+        } catch (e: SecurityException) {
+            Result.failure(AuthorityException("没有权限访问目录"))
+        } catch (e: Exception) {
+            Result.failure(Exception())
+        }
+    }
 
     // 遍历目录
     actual fun traverse(path: String, callback: (Result<List<FileSimpleInfo>>) -> Unit) {

@@ -9,7 +9,7 @@ internal expect object PathUtils {
     fun getAppPath(): String
     fun getHomePath(): String
     fun getPathSeparator(): String
-    fun getRootPaths(): List<PathInfo>
+    fun getRootPaths(): Result<List<PathInfo>>
     fun traverse(path: String, callback: (Result<List<FileSimpleInfo>>) -> Unit)
     fun getBookmarks(): List<DrawerBookmark>
 }

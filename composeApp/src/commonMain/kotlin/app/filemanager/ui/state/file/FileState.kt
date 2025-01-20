@@ -28,7 +28,8 @@ class FileState : KoinComponent {
     val taskState: TaskState by inject()
     val fileAndFolder = mutableStateListOf<FileSimpleInfo>()
 
-    private val _rootPath: MutableStateFlow<PathInfo> = MutableStateFlow(PathUtils.getRootPaths().first())
+    private val _rootPath: MutableStateFlow<PathInfo> =
+        MutableStateFlow(PathUtils.getRootPaths().getOrDefault(listOf()).first())
     val rootPath: StateFlow<PathInfo> = _rootPath
     suspend fun updateRootPath(value: PathInfo) {
         _rootPath.value = value
@@ -122,7 +123,7 @@ class FileState : KoinComponent {
 
     suspend fun getRootPaths(): List<PathInfo> {
         if (_deskType.value is Local) {
-            return PathUtils.getRootPaths()
+            return PathUtils.getRootPaths().getOrDefault(listOf())
         }
 
         var isReturn = false
@@ -316,7 +317,7 @@ class FileState : KoinComponent {
         srcPath = path
     }
 
-    suspend fun copyFile(sourcePath: String, destinationPath: String):Result<Boolean>{
+    suspend fun copyFile(sourcePath: String, destinationPath: String): Result<Boolean> {
         // TODO 本地复制
         if (_deskType.value is Local) {
             return Result.success(true)
@@ -327,7 +328,7 @@ class FileState : KoinComponent {
             val device = _deskType.value as Device
             var result: Result<Boolean> = Result.success(false)
             // println(fileState.copyFile("/home/webb/CLionProjects/Embedded C++","/home/webb/下载/Embedded C++"))
-            device.copyFile(sourcePath,destinationPath) {
+            device.copyFile(sourcePath, destinationPath) {
                 result = it
                 isReturn = true
             }
