@@ -18,9 +18,11 @@ import app.filemanager.ui.state.main.Task
 import app.filemanager.ui.state.main.TaskState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
-import kotlinx.coroutines.*
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -226,33 +228,81 @@ class FileState : KoinComponent {
     }
 
     suspend fun deleteFile(task: Task, path: String): Result<Boolean> {
+        val fileInfos = mutableListOf<FileSimpleInfo>()
+        var successCount = 0
+        var failureCount = 0
+        val mainScope = MainScope()
+
         taskState.tasks.add(task)
         if (_deskType.value is Local) {
-            val result = _deleteFile(task, path)
-            if (result.isSuccess && result.getOrNull() == true) {
-                taskState.tasks.remove(task)
-            } else {
-                val indexOf = taskState.tasks.indexOf(task)
-                if (indexOf != -1) {
-                    taskState.tasks[indexOf] = task.copy(status = StatusEnum.FAILURE)
+            PathUtils.traverse(path) {
+                if (it.isSuccess && (it.getOrNull() ?: emptyList()).isNotEmpty()) {
+                    fileInfos.addAll(it.getOrNull() ?: emptyList())
                 }
             }
-//            println(taskState.tasks.first())
-            return result
+            fileInfos.add(FileUtils.getFile(path))
+
+            if (fileInfos.size == 1) {
+                val deleteFile = FileUtils.deleteFile(fileInfos.first().path)
+                if (deleteFile.isSuccess && deleteFile.getOrNull() == true) {
+                    successCount++
+                    taskState.tasks.remove(task)
+                } else {
+                    failureCount++
+                    task.status = StatusEnum.FAILURE
+                    task.result[fileInfos.first().path] = deleteFile.exceptionOrNull()?.message ?: ""
+                }
+                return deleteFile
+            }
+
+            val groupBy = fileInfos
+                .sortedWith(compareBy<FileSimpleInfo> { it.isDirectory }
+                    .thenByDescending { it.path.pathLevel() })
+                .groupBy { it.isDirectory }
+
+            groupBy.forEach { (isDir, fileList) ->
+                for (filesChunk in fileList.chunked(30)) {
+                    mainScope.launch {
+                        for (file in filesChunk) {
+                            val deleteFile = FileUtils.deleteFile(file.path)
+                            if (deleteFile.isSuccess && deleteFile.getOrNull() == true) {
+                                successCount++
+                            } else {
+                                failureCount++
+                                task.result[file.path] = deleteFile.exceptionOrNull()?.message ?: ""
+                            }
+                        }
+                    }
+                }
+
+                if (!isDir) {
+                    while (successCount + failureCount < fileList.size) {
+                        delay(100L)
+                    }
+                }
+            }
+
+            while (successCount + failureCount < fileInfos.size) {
+                delay(100L)
+            }
+
+            task.status = StatusEnum.FAILURE
+            val isFinish = fileInfos.size == successCount && failureCount == 0
+            if (isFinish) {
+                taskState.tasks.remove(task)
+            }
+            return Result.success(isFinish)
         }
 
         var isReturn = false
         if (_deskType.value is Device) {
             val device = _deskType.value as Device
-            val fileInfos = mutableListOf<FileSimpleInfo>()
             device.getTraversePath(path) {
                 if (it.isSuccess) {
                     fileInfos.addAll(it.getOrNull() ?: emptyList())
                 }
             }
 
-            var successCount = 0
-            var failureCount = 0
             var result: Result<Boolean> = Result.success(false)
             if (fileInfos.size == 1) {
                 device.deleteFile(listOf(fileInfos.first().path)) {
@@ -291,8 +341,7 @@ class FileState : KoinComponent {
                     delay(100L)
                 }
             }
-            result = Result.success(fileInfos.size + 1 == successCount && failureCount == 0)
-            return result
+            return Result.success(fileInfos.size + 1 == successCount && failureCount == 0)
         }
 
         return Result.failure(Exception("删除失败"))
@@ -364,6 +413,7 @@ class FileState : KoinComponent {
                 fileInfos.addAll(it.getOrNull() ?: emptyList())
             }
         }
+        fileInfos.add(FileUtils.getFile(srcPath))
         fileOperationState.updateFileInfos(fileInfos)
         for (fileInfo in fileInfos) {
             var toPath: String = fileInfo.path.replace(srcPath, newDestPath)
@@ -438,6 +488,7 @@ class FileState : KoinComponent {
                 fileInfos.addAll(it.getOrNull() ?: emptyList())
             }
         }
+        fileInfos.add(FileUtils.getFile(srcPath))
         fileOperationState.updateFileInfos(fileInfos)
         for (fileInfo in fileInfos) {
             var toPath: String = fileInfo.path.replace(srcPath, newDestPath)
@@ -493,47 +544,6 @@ class FileState : KoinComponent {
     val isViewFile: StateFlow<Boolean> = _isViewFile
     fun updateViewFile(status: Boolean) {
         _isViewFile.value = status
-    }
-
-    // 删除文件
-    private suspend fun _deleteFile(task: Task, path: String): Result<Boolean> {
-        val fileInfos = mutableListOf<FileSimpleInfo>()
-        withContext(Dispatchers.Default) {
-            PathUtils.traverse(path) {
-                if (it.isSuccess && (it.getOrNull() ?: emptyList()).isNotEmpty()) {
-                    fileInfos.addAll(it.getOrNull() ?: emptyList())
-                }
-            }
-        }
-        println("fileInfos = ${fileInfos}")
-        var successCount = 0
-        var failureCount = 0
-        if (fileInfos.size == 1) {
-            val deleteFile = FileUtils.deleteFile(fileInfos.first().path)
-            if (deleteFile.isSuccess && deleteFile.getOrNull() ?: false) {
-                successCount++
-            } else {
-                failureCount++
-            }
-            return Result.success(successCount == 1 && failureCount == 0)
-        }
-
-        for (fileInfo in fileInfos
-            .sortedWith(compareBy<FileSimpleInfo> { it.isDirectory }
-                .thenByDescending { it.path })) {
-            if (taskState.taskCancelKeys.contains(task.key)) return Result.failure(Exception("结束删除"))
-            while (taskState.taskStopKeys.contains(task.key)) {
-                delay(100)
-            }
-            val deleteFile = FileUtils.deleteFile(fileInfo.path)
-            if (deleteFile.isSuccess && deleteFile.getOrNull() ?: false) {
-                successCount++
-            } else {
-                failureCount++
-            }
-        }
-
-        return Result.success(fileInfos.size + 1 == successCount && failureCount == 0)
     }
 
     private val _fileInfo: MutableStateFlow<FileSimpleInfo?> = MutableStateFlow(null)

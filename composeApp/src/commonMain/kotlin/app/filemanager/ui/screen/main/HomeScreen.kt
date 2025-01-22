@@ -12,7 +12,6 @@ import app.filemanager.ui.components.AppBarPath
 import app.filemanager.ui.components.FileOperationDialog
 import app.filemanager.ui.components.FileWarningOperationDialog
 import app.filemanager.ui.components.TextFieldDialog
-import app.filemanager.ui.screen.file.FavoriteScreen
 import app.filemanager.ui.screen.file.FileScreen
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
@@ -35,8 +34,8 @@ object HomeScreen : Screen {
         val scope = rememberCoroutineScope()
 
         val mainState = koinInject<MainState>()
+        val screen by mainState.screen.collectAsState()
         val editPath by mainState.isEditPath.collectAsState()
-        val isFavorite by mainState.isFavorite.collectAsState()
 
         val fileFilterState = koinInject<FileFilterState>()
         val isSearchText by fileFilterState.isSearchText.collectAsState()
@@ -84,9 +83,9 @@ object HomeScreen : Screen {
             }
         }
 
-        LaunchedEffect(isFavorite) {
-            if (isFavorite) {
-                navigator.push(FavoriteScreen())
+        LaunchedEffect(screen) {
+            if (screen != null) {
+                navigator.push(screen!!)
             }
         }
 

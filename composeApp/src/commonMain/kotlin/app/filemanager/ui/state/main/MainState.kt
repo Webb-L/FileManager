@@ -1,5 +1,6 @@
 package app.filemanager.ui.state.main
 
+import cafe.adriel.voyager.core.screen.Screen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -29,5 +30,12 @@ class MainState {
     // 更新是否为编辑路径状态的方法
     fun updateEditPath(value: Boolean) {
         _isEditPath.value = value
+    }
+
+    private val _screen: MutableStateFlow<Screen?> = MutableStateFlow(null)
+    val screen: StateFlow<Screen?> = _screen
+
+    fun updateScreen(value: Screen?) {
+        _screen.value = value
     }
 }

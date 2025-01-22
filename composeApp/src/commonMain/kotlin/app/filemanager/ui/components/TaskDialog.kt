@@ -13,7 +13,12 @@ import app.filemanager.data.StatusEnum
 import app.filemanager.ui.state.main.Task
 
 @Composable
-fun TaskInfoDialog(task: Task, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+fun TaskInfoDialog(
+    task: Task,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    onToResult: () -> Unit
+) {
     AlertDialog(
         title = {
             task.toTitle()
@@ -31,9 +36,7 @@ fun TaskInfoDialog(task: Task, onConfirm: () -> Unit, onDismiss: () -> Unit) {
             when (task.status) {
                 StatusEnum.SUCCESS -> Box(Modifier.size(0.dp))
                 StatusEnum.FAILURE -> Row {
-                    TextButton(
-                        { }
-                    ) {
+                    TextButton(onToResult) {
                         Text("查看结果")
                     }
                     TextButton(
@@ -76,8 +79,8 @@ fun TaskInfoDialog(task: Task, onConfirm: () -> Unit, onDismiss: () -> Unit) {
 
 @Composable
 private fun FileOperation(task: Task) {
-    val currentIndex = (task.result["index"]?:"0").toInt()
-    val total = (task.result["index"]?:"0").toInt()
+    val currentIndex = (task.result["index"] ?: "0").toInt()
+    val total = (task.result["index"] ?: "0").toInt()
     Column {
         LinearProgressIndicator(
             progress = { (currentIndex / total.toFloat()) },

@@ -21,6 +21,8 @@ import app.filemanager.data.file.toIcon
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.service.data.ConnectType
+import app.filemanager.ui.screen.file.FavoriteScreen
+import app.filemanager.ui.screen.task.TaskResultScreen
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.*
 import app.filemanager.ui.state.main.DrawerState
@@ -105,6 +107,7 @@ fun AppDrawer() {
 @Composable
 private fun AppDrawerTask() {
     val taskState = koinInject<TaskState>()
+    val mainState = koinInject<MainState>()
     var checkedTask by remember {
         mutableStateOf<Task?>(null)
     }
@@ -156,7 +159,7 @@ private fun AppDrawerTask() {
                             task.values["path"] ?: "",
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.bodySmall
+                            style = typography.bodySmall
                         )
                     }
                 }
@@ -197,6 +200,10 @@ private fun AppDrawerTask() {
             onConfirm = {},
             onDismiss = {
                 checkedTask = null
+            },
+            onToResult = {
+                mainState.updateScreen(TaskResultScreen(checkedTask!!))
+                checkedTask = null
             }
         )
     }
@@ -236,7 +243,10 @@ private fun AppDrawerBookmark() {
             icon = { Icon(Icons.Default.Favorite, null) },
             label = { Text("收藏") },
             selected = isFavorite,
-            onClick = { mainState.updateFavorite(true) },
+            onClick = {
+                mainState.updateFavorite(true)
+                mainState.updateScreen(FavoriteScreen())
+            },
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
         )
         for (bookmark in drawerState.bookmarks) {
@@ -259,6 +269,7 @@ private fun AppDrawerBookmark() {
                     scope.launch {
                         fileState.updatePath(bookmark.path)
                     }
+                    mainState.updateScreen(null)
                     mainState.updateFavorite(false)
                 },
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)

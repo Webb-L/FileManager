@@ -82,7 +82,7 @@ internal actual object FileUtils {
     actual fun deleteFile(path: String): Result<Boolean> {
         val file = File(path)
         if (!file.exists()) {
-            return Result.failure(Exception("文件不存在，无法删除"))
+            return Result.success(true)
         }
         return try {
             if (file.delete()) {

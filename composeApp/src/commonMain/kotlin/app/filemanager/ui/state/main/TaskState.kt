@@ -24,7 +24,7 @@ data class Task(
     // 任务参数
     val values: Map<String, String> = mapOf(),
     // 任务结果
-    val result: Map<String, String> = mapOf(),
+    val result: MutableMap<String, String> = mutableMapOf(),
     var protocol: FileProtocol = FileProtocol.Local,
     var protocolId: String = "",
 ) {
