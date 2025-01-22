@@ -10,6 +10,7 @@ import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.service.SocketServerManger
 import app.filemanager.service.WebSocketResult
 import app.filemanager.service.socket.SocketMessage
+import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -116,6 +117,7 @@ class PathRequest(private val socket: SocketServerManger) {
         }
 
 
+        var isFirst = false
         PathUtils.traverse(path) { fileAndFolder ->
             var value: WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>? = null
             var errorValue: WebSocketResult<Nothing>? = null
@@ -129,7 +131,13 @@ class PathRequest(private val socket: SocketServerManger) {
             } else {
                 value =
                     WebSocketResult(value = mutableMapOf<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>().apply {
-                        fileAndFolder.getOrNull()?.forEach { fileSimpleInfo ->
+                        val files: MutableList<FileSimpleInfo> = mutableListOf()
+                        files.addAll(fileAndFolder.getOrDefault(listOf()))
+                        if (!isFirst) {
+                            files.add(FileUtils.getFile(path))
+                            isFirst = true
+                        }
+                        files.forEach { fileSimpleInfo ->
                             val key = if (fileSimpleInfo.protocol == FileProtocol.Local)
                                 Pair(FileProtocol.Device, fileSimpleInfo.protocolId)
                             else

@@ -94,8 +94,6 @@ internal actual object PathUtils {
                 fileList.add(directory.toFileSimpleInfo())
             }
 
-            fileList.add(directory.toFileSimpleInfo())
-
             callback(Result.success(fileList))
         } catch (e: SecurityException) {
             callback(Result.failure(AuthorityException("没有权限访问目录")))

@@ -8,6 +8,7 @@ import app.filemanager.service.SocketClientManger
 import app.filemanager.service.WebSocketResult
 import app.filemanager.service.WebSocketResultMapListFileSimpleInfo
 import app.filemanager.service.socket.SocketHeader
+import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
@@ -148,6 +149,7 @@ class PathHandle(private val socket: SocketClientManger) {
                 list.addAll(fileAndFolder.getOrNull() ?: listOf())
             }
         }
+        list.add(FileUtils.getFile(srcPath))
 
         list.sortedWith(
             compareBy<FileSimpleInfo> { !it.isDirectory }
@@ -194,6 +196,7 @@ class PathHandle(private val socket: SocketClientManger) {
                         delay(100L)
                     }
                 } else {
+                    // TODO 数据少会出现问题
                     for (files in fileSimpleInfos.chunked(fileSimpleInfos.size / 30)) {
                         mainScope.launch {
                             for (file in files) {
