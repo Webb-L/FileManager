@@ -241,14 +241,17 @@ class FileState : KoinComponent {
                 }
             }
             fileInfos.add(FileUtils.getFile(path))
+            task.values["progressMax"] = fileInfos.size.toString()
 
             if (fileInfos.size == 1) {
                 val deleteFile = FileUtils.deleteFile(fileInfos.first().path)
                 if (deleteFile.isSuccess && deleteFile.getOrNull() == true) {
                     successCount++
+                    task.values["progressCur"] = successCount.toString()
                     taskState.tasks.remove(task)
                 } else {
                     failureCount++
+                    task.values["progressCur"] = failureCount.toString()
                     task.status = StatusEnum.FAILURE
                     task.result[fileInfos.first().path] = deleteFile.exceptionOrNull()?.message ?: ""
                 }
@@ -271,6 +274,7 @@ class FileState : KoinComponent {
                                 failureCount++
                                 task.result[file.path] = deleteFile.exceptionOrNull()?.message ?: ""
                             }
+                            task.values["progressCur"] = (successCount + failureCount).toString()
                         }
                     }
                 }
@@ -297,11 +301,14 @@ class FileState : KoinComponent {
         var isReturn = false
         if (_deskType.value is Device) {
             val device = _deskType.value as Device
+            task.protocol = FileProtocol.Device
+            task.protocolId = device.id
             device.getTraversePath(path) {
                 if (it.isSuccess) {
                     fileInfos.addAll(it.getOrNull() ?: emptyList())
                 }
             }
+            task.values["progressMax"] = fileInfos.size.toString()
 
             var result: Result<Boolean> = Result.success(false)
             if (fileInfos.size == 1) {
@@ -320,7 +327,7 @@ class FileState : KoinComponent {
 
             for (fileInfo in fileInfos
                 .sortedWith(compareBy<FileSimpleInfo> { it.isDirectory }
-                    .thenByDescending { it.path.pathLevel() }).chunked(10)) {
+                    .thenByDescending { it.path.pathLevel() }).chunked(30)) {
                 isReturn = false
                 device.deleteFile(fileInfo.map { it.path }) {
                     if (it.isSuccess) {
@@ -334,6 +341,7 @@ class FileState : KoinComponent {
                     } else {
                         failureCount++
                     }
+                    task.values["progressCur"] = (successCount + failureCount).toString()
                     isReturn = true
                 }
 

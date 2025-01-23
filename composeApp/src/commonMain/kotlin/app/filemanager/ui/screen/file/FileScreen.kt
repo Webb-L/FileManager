@@ -100,7 +100,7 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
                                         Task(
                                             taskType = TaskType.Delete,
                                             status = StatusEnum.LOADING,
-                                            values = mapOf("path" to deletePath)
+                                            values = mutableMapOf("path" to deletePath)
                                         ),
                                         deletePath
                                     )

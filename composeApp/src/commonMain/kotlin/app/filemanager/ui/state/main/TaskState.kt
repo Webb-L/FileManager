@@ -22,7 +22,7 @@ data class Task(
     val key: Long = Clock.System.now().toEpochMilliseconds() + Random.nextInt(),
     var status: StatusEnum,
     // 任务参数
-    val values: Map<String, String> = mapOf(),
+    val values: MutableMap<String, String> = mutableMapOf(),
     // 任务结果
     val result: MutableMap<String, String> = mutableMapOf(),
     var protocol: FileProtocol = FileProtocol.Local,

@@ -79,8 +79,8 @@ fun TaskInfoDialog(
 
 @Composable
 private fun FileOperation(task: Task) {
-    val currentIndex = (task.result["index"] ?: "0").toInt()
-    val total = (task.result["index"] ?: "0").toInt()
+    val currentIndex = (task.values["progressCur"] ?: "0").toInt()
+    val total = (task.values["progressMax"] ?: "0").toInt()
     Column {
         LinearProgressIndicator(
             progress = { (currentIndex / total.toFloat()) },
