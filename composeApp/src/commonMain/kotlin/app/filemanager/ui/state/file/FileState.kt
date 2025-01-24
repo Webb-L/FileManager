@@ -14,6 +14,7 @@ import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.pathLevel
 import app.filemanager.extensions.replaceLast
+import app.filemanager.service.BaseSocketManager.Companion.MAX_LENGTH
 import app.filemanager.ui.state.main.Task
 import app.filemanager.ui.state.main.TaskState
 import app.filemanager.utils.FileUtils
@@ -25,9 +26,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import kotlin.math.ceil
 
 class FileState : KoinComponent {
     val taskState: TaskState by inject()
+    val fileOperationState: FileOperationState by inject()
     val fileAndFolder = mutableStateListOf<FileSimpleInfo>()
 
     private val _rootPath: MutableStateFlow<PathInfo> =
@@ -371,13 +374,110 @@ class FileState : KoinComponent {
     val isPasteCopyFile: StateFlow<Boolean> = _isPasteCopyFile
     fun copyFile(path: String) {
         _isPasteCopyFile.value = true
+        if (path.isEmpty()) return
         srcPath = path
+        checkedPath.add(path)
     }
 
-    suspend fun copyFile(sourcePath: String, destinationPath: String): Result<Boolean> {
-        // TODO 本地复制
+    suspend fun copyFile(srcPath: String, destPath: String): Result<Boolean> {
+        // TODO 创建任务
         if (_deskType.value is Local) {
-            return Result.success(true)
+            val mainScope = MainScope()
+            var successCount = 0
+            var failureCount = 0
+
+            val list = mutableListOf<FileSimpleInfo>()
+            PathUtils.traverse(srcPath) { fileAndFolder ->
+                if (fileAndFolder.isSuccess) {
+                    list.addAll(fileAndFolder.getOrDefault(listOf()))
+                }
+            }
+
+            val rootFolder = FileUtils.createFolder(destPath)
+            if (rootFolder.isFailure) {
+                return rootFolder
+            }
+
+            list.sortedWith(
+                compareBy<FileSimpleInfo> { !it.isDirectory }
+                    .thenBy { it.path.pathLevel() })
+                .groupBy { it.isDirectory }.forEach { (isDir, fileSimpleInfos) ->
+                    if (isDir) {
+                        for (paths in fileSimpleInfos.map { it.path.replaceFirst(srcPath, destPath) }.chunked(30)) {
+                            mainScope.launch {
+                                val count = paths.count {
+                                    FileUtils.createFolder(it).getOrDefault(false)
+                                }
+
+                                successCount += count
+                                failureCount += paths.size - count
+                            }
+                        }
+
+                        while (successCount + failureCount < fileSimpleInfos.size) {
+                            delay(100L)
+                        }
+                    } else {
+                        for (files in fileSimpleInfos.chunked(maxOf(30, fileSimpleInfos.size / 30))) {
+                            mainScope.launch {
+                                for (file in files) {
+                                    if (file.size == 0L) {
+                                        val writeResult = FileUtils.writeBytes(
+                                            file.path.replaceFirst(srcPath, destPath),
+                                            file.size,
+                                            byteArrayOf(),
+                                            0
+                                        )
+                                        if (writeResult.isFailure) {
+                                            failureCount++
+                                            continue
+                                        }
+                                        successCount++
+                                        continue
+                                    }
+
+
+                                    var length = ceil(file.size / MAX_LENGTH.toFloat()).toInt()
+                                    var isSuccess = true
+                                    FileUtils.readFileChunks(file.path, MAX_LENGTH.toLong()) {
+                                        if (it.isSuccess) {
+                                            val result = it.getOrNull() ?: Pair(0, byteArrayOf())
+                                            val writeResult = FileUtils.writeBytes(
+                                                file.path.replaceFirst(srcPath, destPath),
+                                                file.size,
+                                                result.second,
+                                                result.first.toLong() * MAX_LENGTH
+                                            )
+                                            length--
+                                            if (writeResult.isFailure) {
+                                                isSuccess = false
+                                            }
+                                        } else {
+                                            isSuccess = false
+                                            length--
+                                        }
+                                    }
+                                    if (isSuccess && length <= 0) {
+                                        successCount++
+                                    } else {
+                                        failureCount++
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+            while (successCount + failureCount < list.size) {
+                delay(100L)
+            }
+
+
+            val isFinish = list.size == successCount && failureCount == 0
+//            if (isFinish) {
+//                taskState.tasks.remove(task)
+//            }
+            return Result.success(isFinish)
         }
 
         var isReturn = false
@@ -385,7 +485,7 @@ class FileState : KoinComponent {
             val device = _deskType.value as Device
             var result: Result<Boolean> = Result.success(false)
             // println(fileState.copyFile("/home/webb/CLionProjects/Embedded C++","/home/webb/下载/Embedded C++"))
-            device.copyFile(sourcePath, destinationPath) {
+            device.copyFile(srcPath, destPath) {
                 result = it
                 isReturn = true
             }
@@ -402,66 +502,111 @@ class FileState : KoinComponent {
     }
 
     suspend fun pasteCopyFile(destPath: String, fileOperationState: FileOperationState) {
-        val srcFileInfo = FileUtils.getFile(srcPath)
         val destFileInfo = FileUtils.getFile(destPath)
 
-        var newDestPath = destPath
-        if (srcFileInfo.isDirectory) {
-            newDestPath = destPath + PathUtils.getPathSeparator() + srcFileInfo.name
-        }
-        val newFileName = generateNewName(srcFileInfo, destFileInfo, fileOperationState)
-        if (newFileName.isNotEmpty()) {
-            newDestPath = newFileName
-        }
+        val fileAndFolders = getFileAndFolder(destFileInfo.path).getOrDefault(listOf())
 
-        fileOperationState.title = "复制中..."
-        val fileInfos = mutableListOf<FileSimpleInfo>()
-        PathUtils.traverse(srcPath) {
-            if (it.isSuccess && (it.getOrNull() ?: emptyList()).isNotEmpty()) {
-                fileInfos.addAll(it.getOrNull() ?: emptyList())
-            }
+        fileOperationState.updateWarningOperationDialog(
+            checkIfNameExists(
+                checkedPath.map { FileUtils.getFile(it) },
+                destFileInfo,
+                fileAndFolders,
+                fileOperationState
+            )
+        )
+        while (fileOperationState.isWarningOperationDialog.value) {
+            delay(300)
         }
-        fileInfos.add(FileUtils.getFile(srcPath))
-        fileOperationState.updateFileInfos(fileInfos)
-        for (fileInfo in fileInfos) {
-            var toPath: String = fileInfo.path.replace(srcPath, newDestPath)
-            try {
-                val newDestFile = FileUtils.getFile(fileInfo.path.replace(srcPath, newDestPath), fileInfo.name)
-                if (fileInfo.name == newDestFile.name) {
-                    try {
-                        val newName = generateNewName(srcFileInfo, newDestFile, fileOperationState)
-                        if (newName.isNotEmpty()) {
-                            toPath = newName
+        if (fileOperationState.files.isEmpty()) return
+
+        val fileOperationPaths = mutableListOf<Pair<String, String>>()
+
+        for (file in fileOperationState.files) {
+            if (file.isConflict) {
+                // 跳过
+                if (file.type == FileOperationType.Jump) continue
+
+                // 保留
+                if (file.type == FileOperationType.Reserve) {
+                    val fileName = if (file.src.isDirectory)
+                        file.src.name
+                    else
+                        file.src.name.replaceLast(file.src.mineType, "")
+
+                    val fileNameRegex = "${Regex.escape(fileName)}(\\(\\d*\\))?".toRegex()
+
+                    // 获取相同文件名
+                    val files = fileAndFolders
+                        .asSequence()
+                        .filter {
+                            if (it.isDirectory) {
+                                true
+                            } else {
+                                !it.isDirectory
+                            }
                         }
-                    } catch (e: Exception) {
+                        .map {
+                            if (it.isDirectory) {
+                                it.name
+                            } else {
+                                it.name.replace(it.mineType, "")
+                            }
+                        }
+                        .map { fileNameRegex.find(it) }
+                        .filter { it != null }
+                        .map { it!!.value }
+                        .sortedByDescending { it }
+                        .toSet()
+
+                    // 只存在一个文件
+                    val size: Int
+                    if (files.isEmpty() || files.size == 1) {
+                        size = 1
+                    } else {
+                        // 存在多个文件
+                        val oldSize = "\\([^()]*\\)\$".toRegex().find(files.first())!!.value
+                            .replace("(", "")
+                            .replace(")", "")
+                        size = oldSize.toInt()
                     }
+
+                    fileOperationPaths.add(
+                        Pair(
+                            file.src.path,
+                            "${destFileInfo.path}${PathUtils.getPathSeparator()}$fileName(${size + 1})${destFileInfo.mineType}"
+                        )
+                    )
+                    continue
                 }
-            } catch (e: Exception) {
-                toPath = fileInfo.path.replace(srcPath, newDestPath)
             }
 
-            if (fileOperationState.isContinue) {
-                fileOperationState.isContinue = false
-                continue
-            }
-            if (fileOperationState.isCancel) return
-            while (fileOperationState.isStop) {
-                delay(100)
-            }
+            fileOperationPaths.add(
+                Pair(
+                    file.src.path,
+                    "${file.dest.path}${PathUtils.getPathSeparator()}${file.src.name}"
+                )
+            )
+        }
 
-            val status = FileUtils.copyFile(fileInfo.path, toPath)
-            if (status) {
-                fileOperationState.updateCurrentIndex()
-            } else {
-                fileOperationState.addLog(fileInfo.path)
+        val mainScope = MainScope()
+        var executeCount = 0
+        for (fileOperationPath in fileOperationPaths) {
+            mainScope.launch {
+                copyFile(fileOperationPath.first, fileOperationPath.second)
+                executeCount++
             }
         }
-        fileOperationState.updateFinished(true)
+
+        while (executeCount < fileOperationPaths.size) {
+            delay(100)
+        }
         updateFileAndFolder()
+        cancelCopyFile()
     }
 
     fun cancelCopyFile() {
         _isPasteCopyFile.value = false
+        fileOperationState.files.clear()
         srcPath = ""
     }
 
@@ -470,75 +615,78 @@ class FileState : KoinComponent {
     val isPasteMoveFile: StateFlow<Boolean> = _isPasteMoveFile
     fun moveFile(path: String) {
         _isPasteMoveFile.value = true
+        if (path.isEmpty()) return
         srcPath = path
+        checkedPath.add(path)
     }
 
     suspend fun pasteMoveFile(destPath: String, fileOperationState: FileOperationState) {
-        val srcFileInfo = FileUtils.getFile(srcPath)
-        val destFileInfo = FileUtils.getFile(destPath)
-
-        var newDestPath = destPath
-        if (srcFileInfo.isDirectory) {
-            newDestPath = destPath + PathUtils.getPathSeparator() + srcFileInfo.name
-        }
-
-        println("${srcFileInfo.path} - ${destFileInfo.path}")
-
-        val newFileName = generateNewName(srcFileInfo, destFileInfo, fileOperationState)
-        if (newFileName.isNotEmpty()) {
-            newDestPath = newFileName
-        }
-
-        fileOperationState.title = "移动中..."
-        val fileInfos = mutableListOf<FileSimpleInfo>()
-        PathUtils.traverse(srcPath) {
-            if (it.isSuccess && (it.getOrNull() ?: emptyList()).isNotEmpty()) {
-                fileInfos.addAll(it.getOrNull() ?: emptyList())
-            }
-        }
-        fileInfos.add(FileUtils.getFile(srcPath))
-        fileOperationState.updateFileInfos(fileInfos)
-        for (fileInfo in fileInfos) {
-            var toPath: String = fileInfo.path.replace(srcPath, newDestPath)
-            try {
-                val newDestFile = FileUtils.getFile(newDestPath, fileInfo.name)
-                if (fileInfo.name == newDestFile.name) {
-                    try {
-                        val newName = generateNewName(srcFileInfo, newDestFile, fileOperationState)
-                        println(newName)
-                        if (newName.isNotEmpty()) {
-                            toPath = newName
-                        }
-                    } catch (e: Exception) {
-                    }
-                }
-            } catch (e: Exception) {
-                toPath = fileInfo.path.replace(srcPath, newDestPath)
-            }
-
-            if (fileOperationState.isContinue) {
-                fileOperationState.isContinue = false
-                continue
-            }
-            if (fileOperationState.isCancel) return
-            while (fileOperationState.isStop) {
-                delay(100)
-            }
-
-            val status = FileUtils.moveFile(fileInfo.path, toPath)
-            if (status) {
-                fileOperationState.updateCurrentIndex()
-            } else {
-                fileOperationState.addLog(fileInfo.path)
-            }
-        }
-        FileUtils.deleteFile(srcPath)
-        fileOperationState.updateFinished(true)
-        updateFileAndFolder()
+//        val srcFileInfo = FileUtils.getFile(srcPath)
+//        val destFileInfo = FileUtils.getFile(destPath)
+//
+//        var newDestPath = destPath
+//        if (srcFileInfo.isDirectory) {
+//            newDestPath = destPath + PathUtils.getPathSeparator() + srcFileInfo.name
+//        }
+//
+//        println("${srcFileInfo.path} - ${destFileInfo.path}")
+//
+//        val newFileName = generateNewName(srcFileInfo, destFileInfo, fileOperationState)
+//        if (newFileName.isNotEmpty()) {
+//            newDestPath = newFileName
+//        }
+//
+//        fileOperationState.title = "移动中..."
+//        val fileInfos = mutableListOf<FileSimpleInfo>()
+//        PathUtils.traverse(srcPath) {
+//            if (it.isSuccess && (it.getOrNull() ?: emptyList()).isNotEmpty()) {
+//                fileInfos.addAll(it.getOrNull() ?: emptyList())
+//            }
+//        }
+//        fileInfos.add(FileUtils.getFile(srcPath))
+//        fileOperationState.updateFileInfos(fileInfos)
+//        for (fileInfo in fileInfos) {
+//            var toPath: String = fileInfo.path.replace(srcPath, newDestPath)
+//            try {
+//                val newDestFile = FileUtils.getFile(newDestPath, fileInfo.name)
+//                if (fileInfo.name == newDestFile.name) {
+//                    try {
+//                        val newName = generateNewName(srcFileInfo, newDestFile, fileOperationState)
+//                        println(newName)
+//                        if (newName.isNotEmpty()) {
+//                            toPath = newName
+//                        }
+//                    } catch (e: Exception) {
+//                    }
+//                }
+//            } catch (e: Exception) {
+//                toPath = fileInfo.path.replace(srcPath, newDestPath)
+//            }
+//
+//            if (fileOperationState.isContinue) {
+//                fileOperationState.isContinue = false
+//                continue
+//            }
+//            if (fileOperationState.isCancel) return
+//            while (fileOperationState.isStop) {
+//                delay(100)
+//            }
+//
+//            val status = FileUtils.moveFile(fileInfo.path, toPath)
+//            if (status) {
+//                fileOperationState.updateCurrentIndex()
+//            } else {
+//                fileOperationState.addLog(fileInfo.path)
+//            }
+//        }
+//        FileUtils.deleteFile(srcPath)
+//        fileOperationState.updateFinished(true)
+//        updateFileAndFolder()
     }
 
     fun cancelMoveFile() {
         _isPasteMoveFile.value = false
+        fileOperationState.files.clear()
         srcPath = ""
     }
 
@@ -560,87 +708,86 @@ class FileState : KoinComponent {
         _fileInfo.value = data
     }
 
-    private suspend fun generateNewName(
-        srcFileInfo: FileSimpleInfo,
+    private fun checkIfNameExists(
+        srcFileInfos: List<FileSimpleInfo>,
         destFileInfo: FileSimpleInfo,
+        fileAndFolders: List<FileSimpleInfo>,
         fileOperationState: FileOperationState,
-    ): String {
-        var newDestFileInfo = destFileInfo
-        if (srcFileInfo.name == destFileInfo.name) {
-            // 文件复制到文件
-            // 显示操作弹框 阻止下面代码执行
-            fileOperationState.updateWarningFiles(Pair(srcFileInfo, destFileInfo))
-            while (fileOperationState.isWarningOperationDialog.value) {
-                delay(300)
-            }
-        } else if (srcFileInfo.isDirectory && destFileInfo.isDirectory) {
-            // 文件夹复制到文件夹
-            try {
-                newDestFileInfo = FileUtils.getFile(destFileInfo.path, srcFileInfo.name)
-                // 显示操作弹框 阻止下面代码执行
-                fileOperationState.updateWarningFiles(Pair(srcFileInfo, newDestFileInfo))
-                while (fileOperationState.isWarningOperationDialog.value) {
-                    delay(300)
-                }
-            } catch (e: Exception) {
-                return ""
-            }
-        } else {
-            return ""
+    ): Boolean {
+        val fileOperations = mutableListOf<FileOperation>()
+
+        for (srcFileInfo in srcFileInfos) {
+            // 是否冲突
+            val isConflict = srcFileInfo.name == destFileInfo.name ||
+                    (srcFileInfo.isDirectory && destFileInfo.isDirectory &&
+                            fileAndFolders.any { it.name == srcFileInfo.name })
+
+            fileOperations.add(
+                FileOperation(
+                    isConflict = isConflict,
+                    src = srcFileInfo,
+                    dest = if (isConflict) destFileInfo.withCopy(name = srcFileInfo.name) else destFileInfo,
+                )
+            )
         }
+
+        fileOperationState.files.apply {
+            clear()
+            addAll(fileOperations)
+        }
+        return fileOperations.any { it.isConflict }
 
         // 保留文件
-        if (fileOperationState.warningOperationType.value == FileOperationType.Reserve) {
-            val path = newDestFileInfo.path.replaceLast(newDestFileInfo.name, "")
-            val fileName = if (newDestFileInfo.isDirectory)
-                newDestFileInfo.name
-            else
-                newDestFileInfo.name.replaceLast(newDestFileInfo.mineType, "")
-
-            val fileNameRegex = "${Regex.escape(fileName)}(\\(\\d*\\))?".toRegex()
-
-            val fileAndFolderResult = getFileAndFolder(path)
-            if (fileAndFolderResult.isSuccess) {
-
-            }
-
-            // 获取相同文件名
-            val files = (fileAndFolderResult.getOrNull() ?: emptyList())
-                .asSequence()
-                .filter {
-                    if (it.isDirectory) {
-                        true
-                    } else {
-                        !it.isDirectory
-                    }
-                }
-                .map {
-                    if (it.isDirectory) {
-                        it.name
-                    } else {
-                        it.name.replace(it.mineType, "")
-                    }
-                }
-                .map { fileNameRegex.find(it) }
-                .filter { it != null }
-                .map { it!!.value }
-                .sortedByDescending { it }
-                .toSet()
-
-            // 只存在一个文件
-            val size: Int
-            if (files.isEmpty() || files.size == 1) {
-                size = 1
-            } else {
-                // 存在多个文件
-                val oldSize = "\\([^()]*\\)\$".toRegex().find(files.first())!!.value
-                    .replace("(", "")
-                    .replace(")", "")
-                size = oldSize.toInt()
-            }
-            return "$path$fileName(${size + 1})${newDestFileInfo.mineType}"
-        }
-        return ""
+//        if (fileOperationState.warningOperationType.value == FileOperationType.Reserve) {
+//            val path = newDestFileInfo.path.replaceLast(newDestFileInfo.name, "")
+//            val fileName = if (newDestFileInfo.isDirectory)
+//                newDestFileInfo.name
+//            else
+//                newDestFileInfo.name.replaceLast(newDestFileInfo.mineType, "")
+//
+//            val fileNameRegex = "${Regex.escape(fileName)}(\\(\\d*\\))?".toRegex()
+//
+//            val fileAndFolderResult = getFileAndFolder(path)
+//            if (fileAndFolderResult.isSuccess) {
+//
+//            }
+//
+//            // 获取相同文件名
+//            val files = (fileAndFolderResult.getOrNull() ?: emptyList())
+//                .asSequence()
+//                .filter {
+//                    if (it.isDirectory) {
+//                        true
+//                    } else {
+//                        !it.isDirectory
+//                    }
+//                }
+//                .map {
+//                    if (it.isDirectory) {
+//                        it.name
+//                    } else {
+//                        it.name.replace(it.mineType, "")
+//                    }
+//                }
+//                .map { fileNameRegex.find(it) }
+//                .filter { it != null }
+//                .map { it!!.value }
+//                .sortedByDescending { it }
+//                .toSet()
+//
+//            // 只存在一个文件
+//            val size: Int
+//            if (files.isEmpty() || files.size == 1) {
+//                size = 1
+//            } else {
+//                // 存在多个文件
+//                val oldSize = "\\([^()]*\\)\$".toRegex().find(files.first())!!.value
+//                    .replace("(", "")
+//                    .replace(")", "")
+//                size = oldSize.toInt()
+//            }
+//            return "$path$fileName(${size + 1})${newDestFileInfo.mineType}"
+//        }
     }
 
     suspend fun writeBytes(): Result<Boolean> {
