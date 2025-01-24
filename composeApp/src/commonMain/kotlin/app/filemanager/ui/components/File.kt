@@ -185,22 +185,21 @@ fun FileCardMenu(
     val database = koinInject<FileManagerDatabase>()
 
     val scope = rememberCoroutineScope()
+
     Box(Modifier.wrapContentSize(Alignment.TopStart)) {
-        Icon(
-            Icons.Filled.MoreVert,
-            null,
-            modifier = Modifier
-                .clip(RoundedCornerShape(25.dp))
-                .clickable {
-                    expanded = true
-                }
-        )
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                Icons.Filled.MoreVert,
+                null,
+            )
+        }
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
+            val isFileChecked = fileState.checkedPath.contains(file.path)
             // 粘贴文件
-            if ((isPasteCopyFile || isPasteMoveFile)) {
+            if ((isPasteCopyFile || isPasteMoveFile) && !isFileChecked) {
                 DropdownMenuItem(
                     text = { Text("粘贴") },
                     onClick = {
@@ -222,30 +221,34 @@ fun FileCardMenu(
                     })
                 HorizontalDivider()
             }
-            DropdownMenuItem(
-                text = { Text("复制") },
-                onClick = {
-                    fileState.copyFile(file.path)
-                    expanded = false
-                },
-                leadingIcon = {
-                    Icon(
-                        Icons.Outlined.FileCopy,
-                        contentDescription = null
-                    )
-                })
-            DropdownMenuItem(
-                text = { Text("移动") },
-                onClick = {
-                    fileState.moveFile(file.path)
-                    expanded = false
-                },
-                leadingIcon = {
-                    Icon(
-                        Icons.Outlined.ContentCut,
-                        contentDescription = null
-                    )
-                })
+            if ((!isPasteCopyFile && !isPasteMoveFile) && !isFileChecked) {
+                DropdownMenuItem(
+                    text = { Text("复制") },
+                    onClick = {
+                        fileState.copyFile(file.path)
+                        expanded = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Outlined.FileCopy,
+                            contentDescription = null
+                        )
+                    })
+            }
+            if ((!isPasteCopyFile && !isPasteMoveFile) && !isFileChecked) {
+                DropdownMenuItem(
+                    text = { Text("移动") },
+                    onClick = {
+                        fileState.moveFile(file.path)
+                        expanded = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Outlined.ContentCut,
+                            contentDescription = null
+                        )
+                    })
+            }
             DropdownMenuItem(
                 text = { Text("删除") },
                 onClick = {
@@ -322,6 +325,143 @@ fun FileCardMenu(
                 onClick = {
                     scope.launch {
                         fileState.updateFileInfo(file)
+                        fileState.updateViewFile(true)
+                    }
+                    expanded = false
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Outlined.Info,
+                        contentDescription = null
+                    )
+                })
+        }
+    }
+}
+
+@Composable
+fun FileBottomAppMenu() {
+    val fileState = koinInject<FileState>()
+    val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
+    val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
+    var expanded by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
+    Box(Modifier.wrapContentSize(Alignment.TopStart)) {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                Icons.Filled.MoreVert,
+                null,
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            if (!isPasteCopyFile && !isPasteMoveFile) {
+                DropdownMenuItem(
+                    text = { Text("复制") },
+                    onClick = {
+                        fileState.copyFile("")
+                        expanded = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Outlined.FileCopy,
+                            contentDescription = null
+                        )
+                    })
+            }
+            if (!isPasteCopyFile && !isPasteMoveFile) {
+                DropdownMenuItem(
+                    text = { Text("移动") },
+                    onClick = {
+                        fileState.moveFile("")
+                        expanded = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Outlined.ContentCut,
+                            contentDescription = null
+                        )
+                    })
+            }
+            DropdownMenuItem(
+                text = { Text("删除") },
+                onClick = {
+//                    onRemove(file.path)
+                    expanded = false
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Outlined.Delete,
+                        contentDescription = null
+                    )
+                })
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text("重命名") },
+                onClick = {
+//                    fileState.updateFileInfo(file)
+                    fileState.updateRenameFile(true)
+                    expanded = false
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Outlined.Edit,
+                        contentDescription = null
+                    )
+                })
+            DropdownMenuItem(
+                text = { Text("设置") },
+                onClick = { /* Handle settings! */ },
+                leadingIcon = {
+                    Icon(
+                        Icons.Outlined.Settings,
+                        contentDescription = null
+                    )
+                })
+            HorizontalDivider()
+//            val isFavorite = database.fileFavoriteQueries
+//                .queryByPathProtocol(file.path, FileProtocol.Local)
+//                .executeAsList()
+
+//            DropdownMenuItem(
+//                text = { Text("收藏") },
+//                onClick = {
+//                    if (isFavorite.isNotEmpty()) {
+//                        database.fileFavoriteQueries.deleteById(isFavorite.first())
+//                    } else {
+//                        database.fileFavoriteQueries.insert(
+//                            name = file.name,
+//                            isDirectory = file.isDirectory,
+//                            isFixed = false,
+//                            path = file.path,
+//                            mineType = file.mineType,
+//                            size = file.size,
+//                            createdDate = file.createdDate,
+//                            updatedDate = file.updatedDate,
+//                            protocol = FileProtocol.Local,
+//                            protocolId = ""
+//                        )
+//                    }
+//                    expanded = false
+//                },
+//                leadingIcon = {
+//                    Icon(
+//                        if (isFavorite.isNotEmpty())
+//                            Icons.Outlined.Favorite
+//                        else
+//                            Icons.Outlined.FavoriteBorder,
+//                        contentDescription = null
+//                    )
+//                })
+//            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text("属性") },
+                onClick = {
+                    scope.launch {
+//                        fileState.updateFileInfo(file)
                         fileState.updateViewFile(true)
                     }
                     expanded = false

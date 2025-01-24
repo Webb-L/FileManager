@@ -1,15 +1,18 @@
 package app.filemanager.ui.screen.main
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.AppBarPath
-import app.filemanager.ui.components.FileOperationDialog
+import app.filemanager.ui.components.FileBottomAppMenu
 import app.filemanager.ui.components.FileWarningOperationDialog
 import app.filemanager.ui.components.TextFieldDialog
 import app.filemanager.ui.screen.file.FileScreen
@@ -48,7 +51,6 @@ object HomeScreen : Screen {
         val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
 
         val fileOperationState = koinInject<FileOperationState>()
-        val isOperationDialog by fileOperationState.isOperationDialog.collectAsState()
         val isWarningOperationDialog by fileOperationState.isWarningOperationDialog.collectAsState()
 
         val snackbarHostState = remember { SnackbarHostState() }
@@ -57,7 +59,7 @@ object HomeScreen : Screen {
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = { HomeBottomBar() },
             floatingActionButton = {
-                if (!isPasteCopyFile && !isPasteMoveFile) {
+                if (fileState.checkedPath.isEmpty()) {
                     ExtendedFloatingActionButton({ fileState.updateCreateFolder(true) }) {
                         Icon(Icons.Filled.Add, null)
                         Spacer(Modifier.width(8.dp))
@@ -122,18 +124,6 @@ object HomeScreen : Screen {
             }
         }
 
-        if (isOperationDialog) {
-            FileOperationDialog(
-                onCancel = {
-                    fileOperationState.isCancel = true
-                    fileOperationState.updateOperationDialog(false)
-                },
-                onDismiss = {
-                    fileOperationState.updateOperationDialog(false)
-                }
-            )
-        }
-
         if (isWarningOperationDialog) {
             FileWarningOperationDialog()
         }
@@ -178,12 +168,37 @@ object HomeScreen : Screen {
         val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
         val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
 
-        if (isPasteCopyFile || isPasteMoveFile) {
+
+        val fileFilterState = koinInject<FileFilterState>()
+        val updateKey by fileFilterState.updateKey.collectAsState()
+
+        if (fileState.checkedPath.isNotEmpty()) {
             BottomAppBar(
                 actions = {
+                    val files = fileFilterState.filter(fileState.fileAndFolder, updateKey)
+                    val isCheckedAll =
+                        fileState.checkedPath.size == files.count { fileState.checkedPath.contains(it.path) } &&
+                                fileState.checkedPath.size == files.size
+                    Box(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .toggleable(
+                                value = isCheckedAll,
+                                onValueChange = {
+                                    fileState.checkedPath.clear()
+                                    if (!isCheckedAll) {
+                                        fileState.checkedPath.addAll(files.map { it.path })
+                                    }
+                                },
+                                role = Role.Checkbox,
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Checkbox(isCheckedAll, onCheckedChange = null)
+                    }
+
                     if (isPasteCopyFile || isPasteMoveFile) {
                         IconButton({
-                            fileOperationState.updateOperationDialog(true)
                             scope.launch {
                                 withContext(Dispatchers.Default) {
                                     if (isPasteCopyFile) {
@@ -202,9 +217,16 @@ object HomeScreen : Screen {
                     IconButton({
                         if (isPasteCopyFile) fileState.cancelCopyFile()
                         if (isPasteMoveFile) fileState.cancelMoveFile()
+                        fileState.checkedPath.clear()
                     }) {
                         Icon(Icons.Filled.Close, null)
                     }
+
+                    Spacer(Modifier.weight(1f))
+
+                    FileBottomAppMenu()
+
+                    Spacer(Modifier.width(8.dp))
                 },
                 floatingActionButton = {
                     FloatingActionButton(
