@@ -68,11 +68,11 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
                 file = it,
                 checkedState = fileState.checkedPath.contains(it.path),
                 onStateChange = { status ->
-//                    if (status) {
-//                        fileState.checkedPath.add(it.path)
-//                    } else {
-//                        fileState.checkedPath.remove(it.path)
-//                    }
+                    if (status) {
+                        fileState.checkedPath.add(it.path)
+                    } else {
+                        fileState.checkedPath.remove(it.path)
+                    }
                 },
                 onClick = {
                     scope.launch {
@@ -182,7 +182,8 @@ fun FileFilterButtons(fileAndFolder: List<FileSimpleInfo>, onToFilterScreen: () 
 
                 val isSelected = fileFilterState.filterFileExtensions.contains(FileFilterType.Folder)
 
-                FilterChip(selected = isSelected,
+                FilterChip(
+                    selected = isSelected,
                     label = { Text("文件夹($folderCount)") },
                     leadingIcon = { getFileFilterType(FileFilterType.Folder) },
                     shape = RoundedCornerShape(25.dp),
@@ -203,7 +204,8 @@ fun FileFilterButtons(fileAndFolder: List<FileSimpleInfo>, onToFilterScreen: () 
                     extensions.filterKeys { it == key }.values.sum()
                 }
 
-                FilterChip(selected = isSelected,
+                FilterChip(
+                    selected = isSelected,
                     label = { Text("${fileFilter.name}($fileCount)") },
                     leadingIcon = { getFileFilterType(fileFilter.type) },
                     shape = RoundedCornerShape(25.dp),
@@ -223,7 +225,8 @@ fun FileFilterButtons(fileAndFolder: List<FileSimpleInfo>, onToFilterScreen: () 
 
                 val isSelected = fileFilterState.filterFileExtensions.contains(FileFilterType.File)
 
-                FilterChip(selected = isSelected,
+                FilterChip(
+                    selected = isSelected,
                     label = { Text("文件($fileCount)") },
                     leadingIcon = { getFileFilterType(FileFilterType.File) },
                     shape = RoundedCornerShape(25.dp),
@@ -243,7 +246,8 @@ fun FileFilterButtons(fileAndFolder: List<FileSimpleInfo>, onToFilterScreen: () 
 
         Row(Modifier.padding(start = 16.dp, end = 12.dp)) {
             val isHideFile by fileFilterState.isHideFile.collectAsState()
-            FilterChip(selected = isHideFile,
+            FilterChip(
+                selected = isHideFile,
                 label = { Text("隐藏文件") },
                 shape = RoundedCornerShape(25.dp),
                 onClick = { fileFilterState.updateHideFile(!isHideFile) })

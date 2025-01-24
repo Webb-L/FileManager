@@ -106,11 +106,11 @@ data class Device(
     }
 
     suspend fun copyFile(
-        sourcePath: String,
-        destinationPath: String,
+        srcPath: String,
+        destPath: String,
         replyCallback: (Result<Boolean>) -> Unit
     ) {
-        getConnect()?.pathHandle?.copyFile(id,sourcePath,destinationPath,replyCallback)
+        getConnect()?.pathHandle?.copyFile(id, srcPath, destPath, replyCallback)
     }
 }
 
