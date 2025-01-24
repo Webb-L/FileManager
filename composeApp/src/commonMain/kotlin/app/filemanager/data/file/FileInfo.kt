@@ -93,6 +93,34 @@ data class FileSimpleInfo(
             freeSpace = freeSpace
         )
     }
+
+    fun withCopy(
+        name: String? = null,
+        description: String? = null,
+        isDirectory: Boolean? = null,
+        isHidden: Boolean? = null,
+        path: String? = null,
+        mineType: String? = null,
+        size: Long? = null,
+        createdDate: Long? = null,
+        updatedDate: Long? = null,
+        protocol: FileProtocol? = null,
+        protocolId: String? = null,
+    ): FileSimpleInfo {
+        return FileSimpleInfo(
+            name = name ?: this.name,
+            description = description ?: this.description,
+            isDirectory = isDirectory ?: this.isDirectory,
+            isHidden = isHidden ?: this.isHidden,
+            path = path ?: this.path,
+            mineType = mineType ?: this.mineType,
+            size = size ?: this.size,
+            createdDate = createdDate ?: this.createdDate,
+            updatedDate = updatedDate ?: this.updatedDate,
+            protocol = protocol ?: this.protocol,
+            protocolId = protocolId ?: this.protocolId,
+        )
+    }
 }
 
 @Serializable

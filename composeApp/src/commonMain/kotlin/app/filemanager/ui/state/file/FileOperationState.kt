@@ -5,66 +5,54 @@ import app.filemanager.data.file.FileSimpleInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
+/**
+ * 文件操作类型枚举类，表示不同的文件操作方式。
+ */
 enum class FileOperationType {
+    /**
+     * 表示文件操作类型中的替换操作。
+     *
+     * 此枚举值用于标识需要将文件内容替换为其他内容的情形。
+     */
     Replace,
+    /**
+     * 表示一种跳转操作的枚举常量，通常用于文件操作类型相关的逻辑中。
+     *
+     * Jump 类型通常指代在文件中的某种跳转行为，可以结合具体业务逻辑应用于对应场景。
+     */
     Jump,
+    /**
+     * 枚举类 FileOperationType 中的一个枚举常量，表示 "保留" 这一操作类型。
+     * 通常用于表示无需修改或替换的文件操作，保持原样不变。
+     */
     Reserve
+}
+
+data class FileOperation(
+    val isConflict: Boolean = false,
+    val src: FileSimpleInfo,
+    val dest: FileSimpleInfo,
+    var isUseAll: Boolean = false,
+    var type: FileOperationType = FileOperationType.Replace,
+) {
+    fun withCopy(
+        isConflict: Boolean = this.isConflict,
+        src: FileSimpleInfo = this.src,
+        dest: FileSimpleInfo = this.dest,
+        isUseAll: Boolean = this.isUseAll,
+        type: FileOperationType = this.type,
+    ) = copy(
+        isConflict = isConflict,
+        src = src,
+        dest = dest,
+        isUseAll = isUseAll,
+        type = type
+    )
 }
 
 class FileOperationState {
     // 弹框标题
     var title: String = ""
-
-    private val _isOperationDialog: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isOperationDialog: StateFlow<Boolean> = _isOperationDialog
-    fun updateOperationDialog(value: Boolean) {
-        _isOperationDialog.value = value
-    }
-
-    val fileInfos = mutableListOf<FileSimpleInfo>()
-
-    private val _currentIndex: MutableStateFlow<Int> = MutableStateFlow(0)
-    val currentIndex: StateFlow<Int> = _currentIndex
-    fun updateCurrentIndex() {
-        _currentIndex.value += 1
-//        if (_currentIndex.value == fileInfos.size) {
-//            _isOperationDialog.value = false
-//        }
-    }
-
-    var isStop = false
-    var isCancel = false
-    var isContinue = false
-
-    private val _isFinished: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isFinished: StateFlow<Boolean> = _isFinished
-    fun updateFinished(value: Boolean) {
-        _isFinished.value = value
-        if (value) {
-            _isOperationDialog.value = false
-            _currentIndex.value = 0
-            isStop = false
-            isCancel = false
-            logs.clear()
-            fileInfos.clear()
-        }
-    }
-
-    val logs = mutableStateListOf<String>()
-
-    fun updateFileInfos(value: List<FileSimpleInfo>) {
-        _currentIndex.value = 0
-        _isFinished.value = false
-        isStop = false
-        isCancel = false
-        logs.clear()
-        fileInfos.clear()
-        fileInfos.addAll(value)
-    }
-
-    fun addLog(path: String) {
-        logs.add("失败 - $path")
-    }
 
     // 警告状态
     private val _isWarningOperationDialog: MutableStateFlow<Boolean> = MutableStateFlow(false)
@@ -73,28 +61,5 @@ class FileOperationState {
         _isWarningOperationDialog.value = value
     }
 
-    private val _warningFiles: MutableStateFlow<Pair<FileSimpleInfo, FileSimpleInfo>> =
-        MutableStateFlow(Pair(FileSimpleInfo.nullFileSimpleInfo(), FileSimpleInfo.nullFileSimpleInfo()))
-    val warningFiles: StateFlow<Pair<FileSimpleInfo, FileSimpleInfo>> = _warningFiles
-    fun updateWarningFiles(value: Pair<FileSimpleInfo, FileSimpleInfo>) {
-        _warningFiles.value = value
-        _isWarningOperationDialog.value = true
-        _warningOperationType.value = FileOperationType.Replace
-        _warningUseAll.value = false
-    }
-
-    private val _warningOperationType: MutableStateFlow<FileOperationType> =
-        MutableStateFlow(FileOperationType.Replace)
-    val warningOperationType: StateFlow<FileOperationType> = _warningOperationType
-    fun updateWarningOperationType(value: FileOperationType) {
-        _warningOperationType.value = value
-    }
-
-
-    private val _warningUseAll: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val warningUseAll: StateFlow<Boolean> = _warningUseAll
-    fun updateWarningUseAll(value: Boolean) {
-        _warningUseAll.value = value
-    }
-
+    val files = mutableStateListOf<FileOperation>()
 }
