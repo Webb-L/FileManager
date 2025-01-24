@@ -128,7 +128,6 @@ class PathHandle(private val socket: SocketClientManger) {
     }
 
     // TODO 遍历目录->创建文件夹->创建文件
-    // TODO 1.本地复制
     // [y] TODO 2.本地复制到远程
     // TODO 3.远程复制到本地
     // TODO 4.远程复制到远程
@@ -196,8 +195,7 @@ class PathHandle(private val socket: SocketClientManger) {
                         delay(100L)
                     }
                 } else {
-                    // TODO 数据少会出现问题
-                    for (files in fileSimpleInfos.chunked(fileSimpleInfos.size / 30)) {
+                    for (files in fileSimpleInfos.chunked(maxOf(30, fileSimpleInfos.size / 30))) {
                         mainScope.launch {
                             for (file in files) {
                                 socket.fileHandle.writeBytes(
