@@ -1,17 +1,15 @@
 package app.filemanager.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material3.*
@@ -25,7 +23,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.FileSizeInfo
@@ -91,7 +88,11 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                     Spacer(Modifier.height(4.dp))
                     DisableSelection {
                         if (errorText.isNotEmpty()) {
-                            Text("获取大小失败：$errorText", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                            Text(
+                                "获取大小失败：$errorText",
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Center
+                            )
                             return@DisableSelection
                         }
                         Row(
@@ -331,231 +332,131 @@ fun TextFieldDialog(
     }
 }
 
-@Composable
-fun FileOperationDialog(onCancel: () -> Unit, onDismiss: () -> Unit) {
-    val fileOperationState = koinInject<FileOperationState>()
-    val currentIndex by fileOperationState.currentIndex.collectAsState()
-    val isFinished by fileOperationState.isFinished.collectAsState()
-
-    var isExpandDevice by remember {
-        mutableStateOf(true)
-    }
-
-    AlertDialog(
-        title = { Text(fileOperationState.title) },
-        text = {
-            if (fileOperationState.fileInfos.isEmpty() && currentIndex == 0) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                    Spacer(Modifier.height(8.dp))
-                    Text("正在统计...")
-                }
-                return@AlertDialog
-            }
-            Column {
-                LinearProgressIndicator(
-                    progress = { (currentIndex / fileOperationState.fileInfos.size.toFloat()) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .height(10.dp),
-                )
-                Spacer(Modifier.height(4.dp))
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("${fileOperationState.fileInfos.size} 总计")
-                    Spacer(Modifier.width(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Spacer(
-                            Modifier
-                                .size(10.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(ProgressIndicatorDefaults.linearColor)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text("$currentIndex 完成")
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Spacer(
-                            Modifier
-                                .size(10.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(ProgressIndicatorDefaults.linearTrackColor)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text("${fileOperationState.fileInfos.size - currentIndex} 剩余")
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-                Row {
-                    Text(
-                        "当前：${fileOperationState.fileInfos[currentIndex].path}", Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    if (fileOperationState.logs.isEmpty()) return@Row
-                    Icon(
-                        if (isExpandDevice) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                        null,
-                        Modifier.clip(RoundedCornerShape(25.dp)).clickable {
-                            isExpandDevice = !isExpandDevice
-                        }
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
-                if (isExpandDevice) {
-                    BasicTextField(
-                        fileOperationState.logs.reversed().joinToString("\n"),
-                        textStyle = LocalTextStyle.current.copy(LocalContentColor.current.copy(0.6f)),
-                        readOnly = true,
-                        modifier = Modifier
-                            .heightIn(max = 180.dp),
-                        onValueChange = {})
-                }
-            }
-        },
-        onDismissRequest = {},
-        confirmButton = {},
-        dismissButton = {
-            if (isFinished) {
-                TextButton(onDismiss) { Text("关闭") }
-                return@AlertDialog
-            }
-            TextButton(onCancel) { Text("取消") }
-        }
-    )
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FileWarningOperationDialog() {
     val operationState = koinInject<FileOperationState>()
-    val type by operationState.warningOperationType.collectAsState()
-    val isUseAll by operationState.warningUseAll.collectAsState()
-    val files by operationState.warningFiles.collectAsState()
-
-    val newFile = files.first
-    val oldFile = files.second
 
     AlertDialog(
+        modifier = Modifier.padding(16.dp),
         onDismissRequest = {},
         title = { Text("是否需要替换") },
         text = {
-            Column {
-                Spacer(Modifier.height(12.dp))
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    OutlinedCard {
-                        ListItem(
-                            headlineContent = { Text(newFile.name) },
-                            supportingContent = { FileWarningDialogItem(newFile) },
-                            leadingContent = { FileIcon(newFile) },
-                            trailingContent = {
-                                Badge(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                                ) { Text("新文件") }
-                            },
-                        )
+            LazyColumn {
+                val fileOperations = operationState.files.filter { it.isConflict }
+
+                itemsIndexed(fileOperations) { index, file ->
+                    Column {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(
+                                top = 12.dp,
+                                bottom = 14.dp
+                            )
+                        ) {
+                            OutlinedCard {
+                                ListItem(
+                                    headlineContent = { Text(file.src.name) },
+                                    supportingContent = { FileWarningDialogItem(file.src) },
+                                    leadingContent = { FileIcon(file.src) },
+                                    trailingContent = {
+                                        Badge(
+                                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                                        ) { Text("新文件") }
+                                    },
+                                )
+                            }
+                            Spacer(Modifier.height(4.dp))
+                            Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(32.dp))
+                            Spacer(Modifier.height(4.dp))
+                            OutlinedCard {
+                                ListItem(
+                                    headlineContent = { Text(file.dest.name) },
+                                    supportingContent = { FileWarningDialogItem(file.dest) },
+                                    leadingContent = { FileIcon(file.dest) },
+                                    trailingContent = {
+                                        Badge { Text("旧文件") }
+                                    },
+                                )
+                            }
+                        }
+
+                        FlowRow {
+                            FileOperationType.entries.forEach { operationType ->
+                                FilterChip(
+                                    onClick = {
+                                        operationState.files.indexOf(file).takeIf { it >= 0 }?.let { index ->
+                                            operationState.files[index] = file.withCopy(type = operationType)
+                                        }
+                                    },
+                                    label = {
+                                        val labelText = when {
+                                            file.dest.isDirectory && file.src.isDirectory -> when (operationType) {
+                                                FileOperationType.Replace -> "替换文件夹"
+                                                FileOperationType.Jump -> "跳过文件夹"
+                                                FileOperationType.Reserve -> "保留文件夹"
+                                            }
+
+                                            else -> when (operationType) {
+                                                FileOperationType.Replace -> "替换文件"
+                                                FileOperationType.Jump -> "跳过文件"
+                                                FileOperationType.Reserve -> "保留文件"
+                                            }
+                                        }
+                                        Text(labelText)
+                                    },
+                                    selected = file.type == operationType
+                                )
+                                Spacer(Modifier.width(8.dp))
+                            }
+                        }
+
+                        if (!file.dest.isDirectory && !file.src.isDirectory) return@Column
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Row(
+                            Modifier
+                                .toggleable(
+                                    value = file.isUseAll,
+                                    onValueChange = {
+                                        operationState.files.indexOf(file).takeIf { it >= 0 }?.let { index ->
+                                            operationState.files[index] = file.withCopy(
+                                                isUseAll = !file.isUseAll
+                                            )
+                                        }
+                                    },
+                                    role = Role.Checkbox
+                                ),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = file.isUseAll,
+                                onCheckedChange = null
+                            )
+                            Text(
+                                text = "应用此操作到所有文件夹和文件",
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 16.dp)
+                            )
+                        }
                     }
-                    Spacer(Modifier.height(4.dp))
-                    Icon(Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(32.dp))
-                    Spacer(Modifier.height(4.dp))
-                    OutlinedCard {
-                        ListItem(
-                            headlineContent = { Text(oldFile.name) },
-                            supportingContent = { FileWarningDialogItem(oldFile) },
-                            leadingContent = { FileIcon(oldFile) },
-                            trailingContent = { Badge { Text("旧文件") } },
-                        )
+
+                    if (index < fileOperations.size - 1) {
+                        HorizontalDivider(Modifier.padding(vertical = 16.dp))
                     }
-                }
-
-                Spacer(Modifier.height(14.dp))
-
-                FlowRow {
-                    FilterChip(
-                        onClick = { operationState.updateWarningOperationType(FileOperationType.Replace) },
-                        label = {
-                            if (newFile.isDirectory && oldFile.isDirectory) {
-                                Text("替换文件夹")
-                            } else {
-                                Text("替换文件")
-                            }
-                        },
-                        selected = type == FileOperationType.Replace
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    FilterChip(
-                        onClick = { operationState.updateWarningOperationType(FileOperationType.Jump) },
-                        label = {
-                            if (newFile.isDirectory && oldFile.isDirectory) {
-                                Text("跳过文件夹")
-                            } else {
-                                Text("跳过文件")
-                            }
-                        },
-                        selected = type == FileOperationType.Jump
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    FilterChip(
-                        onClick = { operationState.updateWarningOperationType(FileOperationType.Reserve) },
-                        label = {
-                            if (newFile.isDirectory && oldFile.isDirectory) {
-                                Text("保留文件夹")
-                            } else {
-                                Text("保留文件")
-                            }
-                        },
-                        selected = type == FileOperationType.Reserve
-                    )
-                }
-
-                if (!newFile.isDirectory && !oldFile.isDirectory) return@Column
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .toggleable(
-                            value = isUseAll,
-                            onValueChange = { operationState.updateWarningUseAll(!isUseAll) },
-                            role = Role.Checkbox
-                        )
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Checkbox(
-                        checked = isUseAll,
-                        onCheckedChange = null
-                    )
-                    Text(
-                        text = "应用此操作到所有文件夹和文件",
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(start = 16.dp)
-                    )
                 }
             }
         },
         confirmButton = {
             TextButton({
-                when (type) {
-                    FileOperationType.Replace -> {}
-                    FileOperationType.Jump -> operationState.isContinue = true
-                    FileOperationType.Reserve -> {}
-                }
                 operationState.updateWarningOperationDialog(false)
             }) { Text("确认") }
         },
         dismissButton = {
             TextButton({
+                operationState.files.clear()
                 operationState.updateWarningOperationDialog(false)
-                operationState.isCancel = true
-                operationState.updateOperationDialog(false)
             }) { Text("取消") }
         }
     )
