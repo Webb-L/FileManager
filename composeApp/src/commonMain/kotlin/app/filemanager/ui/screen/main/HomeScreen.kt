@@ -10,15 +10,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.extensions.parsePath
-import app.filemanager.ui.components.AppBarPath
-import app.filemanager.ui.components.FileBottomAppMenu
-import app.filemanager.ui.components.FileWarningOperationDialog
-import app.filemanager.ui.components.TextFieldDialog
+import app.filemanager.ui.components.*
 import app.filemanager.ui.screen.file.FileScreen
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
+import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.MainState
 import app.filemanager.utils.VerificationUtils
 import cafe.adriel.voyager.core.screen.Screen
@@ -53,6 +52,8 @@ object HomeScreen : Screen {
         val fileOperationState = koinInject<FileOperationState>()
         val isWarningOperationDialog by fileOperationState.isWarningOperationDialog.collectAsState()
 
+        val deviceState = koinInject<DeviceState>()
+
         val snackbarHostState = remember { SnackbarHostState() }
         Scaffold(
             topBar = { HomeTopBar() },
@@ -69,6 +70,13 @@ object HomeScreen : Screen {
             }
         ) {
             Column(Modifier.padding(it)) {
+                deviceState.connectionRequest.entries
+                    .firstOrNull { it.value == DeviceConnectType.WAITING }
+                    ?.let { entry ->
+                        deviceState.socketDevices.firstOrNull { it.id == entry.key }?.let { device ->
+                            MaterialBannerDeviceConnect(device)
+                        }
+                    }
                 if (isSearchText) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(end = 16.dp),

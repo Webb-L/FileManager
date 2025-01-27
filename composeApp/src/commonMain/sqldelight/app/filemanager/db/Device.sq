@@ -1,16 +1,30 @@
 import app.filemanager.data.main.DeviceType;
+import app.filemanager.data.main.DeviceConnectType;
 
 
 CREATE TABLE Device
 (
-    id   TEXT               NOT NULL CONSTRAINT Device_pk PRIMARY KEY CONSTRAINT Device_pk_2 UNIQUE,
-    name TEXT               NOT NULL,
-    type TEXT AS DeviceType NOT NULL
+    id            TEXT               NOT NULL CONSTRAINT Device_pk PRIMARY KEY CONSTRAINT Device_pk_2 UNIQUE,
+    name          TEXT               NOT NULL,
+    type          TEXT AS DeviceType NOT NULL,
+    connectionType TEXT  AS  DeviceConnectType            NOT NULL
 );
 
 insert:
-INSERT INTO Device (id, name, type)
-VALUES (?, ?, ?);
+INSERT INTO Device (id, name, type, connectionType)
+VALUES (?, ?, ?, ?);
 
 updateNameById:
 UPDATE Device SET name = ? WHERE id = ? LIMIT 1;
+
+updateConnectionTypeById:
+UPDATE Device SET connectionType = ? WHERE id = ? LIMIT 1;
+
+queryByIdAndNotPermanentlyBanned:
+SELECT * FROM Device WHERE id = ? AND connectionType != 'PERMANENTLY_BANNED';
+
+queryAll:
+SELECT * FROM Device;
+
+queryById:
+SELECT * FROM Device WHERE id = ?;

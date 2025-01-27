@@ -76,4 +76,32 @@ fun String.pathLevel(): Int {
     return this.trim('/').split('/').size
 }
 
+/**
+ * 生成当前 IP 所在子网的所有 IP 地址。
+ * 当前方法假设子网掩码为 /24，即最后一段 IP 范围为 0~255。
+ *
+ * @return 返回包含子网中所有 IP 地址的列表。如果当前字符串格式不为有效 IP 格式，则返回空列表。
+ */
+fun String.getSubnetIps():List<String> {
+    // 假设使用 /24 网段
+    // 1. 将传入的 IP 切分为四段
+    val parts = split(".")
+    if (parts.size != 4) {
+        // 如果格式不正确，直接返回空列表或根据需要抛出异常
+        return emptyList()
+    }
+
+    // 2. 取前三段作为固定部分，最后一段作为子网内可变段
+    val prefix = "${parts[0]}.${parts[1]}.${parts[2]}"
+    val result = mutableListOf<String>()
+
+    // 3. 生成 0～255 共 256 个 IP（可根据需要排除 0 或 255）
+    for (i in 0..255) {
+        val completeIp = "$prefix.$i"
+        result.add(completeIp)
+    }
+    return result
+
+}
+
 internal expect fun String.parsePath(): List<String>

@@ -5,6 +5,7 @@ import app.filemanager.extensions.chunked
 import app.filemanager.service.socket.Socket
 import app.filemanager.service.socket.SocketHeader
 import app.filemanager.service.socket.SocketMessage
+import io.ktor.utils.io.core.*
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -66,6 +67,15 @@ abstract class BaseSocketManager(private val tag: String) {
      * 伴生对象，用于定义和管理与类相关的全局常量。
      */
     companion object {
+        // 10 minutes in seconds
+        const val CONNECT_TIMEOUT = 600
+
+        const val PORT = 1204
+
+        val SEND_IDENTIFIER = "--FileManager--bytearray".toByteArray()
+
+        const val SEND_LENGTH = 1024 * 8
+
         /**
          * 表示最大分片长度的常量，用于定义在数据传输过程中每个分片的最大长度。
          * 此值用于确保分片在网络传输时的稳定性和效率，避免超出可接受的大小限制。

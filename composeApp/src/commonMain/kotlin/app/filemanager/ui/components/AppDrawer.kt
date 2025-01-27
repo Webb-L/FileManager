@@ -1,5 +1,6 @@
 package app.filemanager.ui.components
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,15 +13,18 @@ import androidx.compose.material3.*
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.StatusEnum
 import app.filemanager.data.file.toIcon
 import app.filemanager.data.main.Device
+import app.filemanager.data.main.DeviceType.*
 import app.filemanager.data.main.DrawerBookmarkType
-import app.filemanager.service.data.ConnectType
+import app.filemanager.service.data.ConnectType.*
 import app.filemanager.ui.screen.file.FavoriteScreen
 import app.filemanager.ui.screen.task.TaskResultScreen
 import app.filemanager.ui.state.file.FileState
@@ -291,10 +295,28 @@ private fun AppDrawerItem(
 
 @Composable
 private fun AppDrawerDevice() {
+    val mainState = koinInject<MainState>()
+
     val drawerState = koinInject<DrawerState>()
     val isExpandDevice by drawerState.isExpandDevice.collectAsState()
 
     val deviceState = koinInject<DeviceState>()
+    val loadingDevices by deviceState.loadingDevices.collectAsState()
+
+    val infiniteTransition = rememberInfiniteTransition()
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 360f,
+        targetValue = if (loadingDevices) 0f else 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 1500,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+    val scope = rememberCoroutineScope()
 
     AppDrawerItem(
         "设备",
@@ -313,8 +335,12 @@ private fun AppDrawerDevice() {
                     null,
                     Modifier
                         .clip(RoundedCornerShape(25.dp))
+                        .graphicsLayer {
+                            rotationZ = rotation
+                        }
+                        .alpha(if (loadingDevices) 0.5f else 1f)
                         .clickable {
-
+                            if (loadingDevices) return@clickable
                         }
                 )
                 Spacer(Modifier.width(8.dp))
@@ -330,37 +356,67 @@ private fun AppDrawerDevice() {
         }
     ) {
         if (!isExpandDevice) return@AppDrawerItem
-        for (device in deviceState.socketDevices) {
+        for ((index, device) in deviceState.socketDevices.withIndex()) {
             NavigationDrawerItem(
-                icon = { Icon(Icons.Default.Devices, null) },
+                icon = {
+                    if (device.connectType == Loading) {
+                        CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 3.dp)
+                        return@NavigationDrawerItem
+                    }
+
+                    when (device.type) {
+                        Android -> Icon(Icons.Default.PhoneAndroid, null)
+                        IOS -> Icon(Icons.Default.PhoneIphone, null)
+                        JVM -> Icon(Icons.Default.Devices, null)
+                        JS -> Icon(Icons.Default.Javascript, null)
+                    }
+                },
                 badge = {
                     when (device.connectType) {
-                        ConnectType.Connect -> Badge(
+                        Connect -> Icon(
+                            Icons.Default.Close,
+                            "取消连接",
+                            Modifier
+                                .clip(RoundedCornerShape(25.dp))
+                                .clickable {
+                                    if (device.socketManger?.disconnect() == true) {
+                                        deviceState.socketDevices[index] = device.withCopy(
+                                            connectType = UnConnect
+                                        )
+                                        deviceState.devices.remove(deviceState.devices.firstOrNull { it.id == device.id })
+                                    }
+                                }
+                        )
+
+                        Fail -> Badge { Text("连接失败") }
+                        UnConnect -> Badge { Text("未连接") }
+                        Loading -> Badge(
                             containerColor = MaterialTheme.colorScheme.tertiary
-                        ) {
-                            Text("已连接")
-                        }
+                        ) { Text("连接中") }
 
-                        ConnectType.Fail -> Badge {
-                            Text("连接失败")
-                        }
-
-                        ConnectType.UnConnect -> Badge {
-                            Text("未连接")
-                        }
-
-                        ConnectType.Loading -> Badge(
-                            containerColor = MaterialTheme.colorScheme.tertiary
-                        ) {
-                            Text("连接中")
-                        }
+                        New -> Badge { Text("新-未连接") }
+                        Rejected -> Badge { Text("拒绝连接") }
                     }
                 },
                 label = { Text(device.name) },
                 selected = false,
                 onClick = {
-                    device.connectType = ConnectType.Loading
-                    deviceState.devices.add(device.toDevice())
+                    when (device.connectType) {
+                        New, UnConnect, Fail, Rejected -> {
+                            deviceState.socketDevices[index] = device.withCopy(
+                                connectType = Loading
+                            )
+                            scope.launch {
+                                mainState.socketClientManger.connect(device)
+                            }
+                        }
+
+                        Connect -> {
+                            // TODO 断开连接
+                        }
+
+                        Loading -> {}
+                    }
                 },
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
             )

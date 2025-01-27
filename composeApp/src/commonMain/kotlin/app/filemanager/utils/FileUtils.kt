@@ -31,24 +31,6 @@ internal expect object FileUtils {
     fun openFile(file: String)
 
     /**
-     * 将指定路径的文件复制到目标路径。
-     *
-     * @param src 源文件路径。
-     * @param dest 目标文件路径。
-     * @return 如果复制成功则返回 true，否则返回 false。
-     */
-    fun copyFile(src: String, dest: String): Boolean
-
-    /**
-     * 移动文件方法，将指定路径的文件移动到目标路径。
-     *
-     * @param src 源文件的路径。
-     * @param dest 目标文件的路径。
-     * @return 如果文件移动成功，返回true；否则返回false。
-     */
-    fun moveFile(src: String, dest: String): Boolean
-
-    /**
      * 删除指定路径的文件。
      *
      * @param path 文件的绝对路径。

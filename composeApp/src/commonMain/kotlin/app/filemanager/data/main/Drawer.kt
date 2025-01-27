@@ -41,6 +41,48 @@ enum class DeviceType(type: String) {
     JS("JS")
 }
 
+/**
+ * 设备连接类型的枚举类，用于表示设备的连接状态。
+ * @param type 设备连接类型的字符串标识。
+ */
+@Serializable
+enum class DeviceConnectType(type: String) {
+    /**
+     * 表示设备连接的自动连接类型。
+     *
+     * AUTO_CONNECT 枚举值用于指示设备可以自动连接，无需进一步用户交互。
+     */
+    AUTO_CONNECT("AUTO_CONNECT"),
+
+    /**
+     * 表示设备连接状态为永久禁止连接。
+     *
+     * 用于指代设备被明确禁止连接到当前系统的状态。
+     * 一旦设置为此状态，设备将不会再请求或尝试建立连接。
+     */
+    PERMANENTLY_BANNED("PERMANENTLY_BANNED"),
+
+    /**
+     * 表示设备连接已被批准的状态。
+     */
+    APPROVED("APPROVED"),
+
+    /**
+     * 表示设备连接已被拒绝的状态。
+     *
+     * REJECTED 枚举值用于指代设备的连接请求已经被明确拒绝。
+     * 设备在此状态下不能建立连接，可能需要用户执行额外操作以更改状态。
+     */
+    REJECTED("REJECTED"),
+
+    /**
+     * 表示设备连接处于等待状态。
+     *
+     * WAITING 枚举值用于指代设备当前正在等待连接的状态。
+     */
+    WAITING("WAITING")
+}
+
 
 data class Device(
     val id: String,

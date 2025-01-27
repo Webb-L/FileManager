@@ -1,5 +1,6 @@
 package app.filemanager.service
 
+import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.handle.BookmarkHandle
 import app.filemanager.service.handle.FileHandle
@@ -17,7 +18,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 class SocketClientManger : KoinComponent, BaseSocketManager("client") {
-    override val socket: SocketClient = createSocketClient()
+    public override val socket: SocketClient = createSocketClient()
 
     private val deviceState by inject<DeviceState>()
 
@@ -30,13 +31,26 @@ class SocketClientManger : KoinComponent, BaseSocketManager("client") {
     private val bookmarkResponse by lazy { BookmarkResponse(this) }
 
     @OptIn(ExperimentalSerializationApi::class)
-    suspend fun connect(host: String = "127.0.0.1", port: Int = 1204) {
-        socket.connect(host, port) { message ->
+    suspend fun connect(connectDevice: SocketDevice) {
+        socket.connect(connectDevice.host, PORT) { message ->
             when (message.header.command) {
                 "connect" -> {
-                    val socketDevice = ProtoBuf.decodeFromByteArray<SocketDevice>(message.body)
-                    socketDevice.socketManger = this@SocketClientManger
-                    deviceState.socketDevices.add(socketDevice)
+                    val messageDevice =
+                        if (message.body.isEmpty()) connectDevice else ProtoBuf.decodeFromByteArray<SocketDevice>(
+                            message.body
+                        )
+                    val connectType = if (message.body.isEmpty()) ConnectType.Rejected else ConnectType.Connect
+                    val index = deviceState.socketDevices.indexOfFirst {
+                        it.id == messageDevice.id && messageDevice.host.contains(it.host)
+                    }
+                    if (index >= 0) {
+                        messageDevice.socketManger = this@SocketClientManger
+                        val updatedDevice = messageDevice.withCopy(connectType = connectType)
+                        deviceState.socketDevices[index] = updatedDevice
+                        if (deviceState.devices.firstOrNull { it.id == updatedDevice.id } == null) {
+                            deviceState.devices.add(updatedDevice.toDevice())
+                        }
+                    }
                 }
 
                 "cancelKey" -> cancelKeys.add((message.params["replyKey"] ?: "0").toLong())
@@ -56,5 +70,9 @@ class SocketClientManger : KoinComponent, BaseSocketManager("client") {
                 }
             }
         }
+    }
+
+    fun disconnect(): Boolean {
+        return socket.disconnect()
     }
 }

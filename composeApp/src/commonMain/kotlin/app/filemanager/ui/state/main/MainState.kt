@@ -1,10 +1,13 @@
 package app.filemanager.ui.state.main
 
+import app.filemanager.service.SocketClientManger
 import cafe.adriel.voyager.core.screen.Screen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class MainState {
+    val socketClientManger = SocketClientManger()
+
     // 是否展开抽屉的状态流
     private val _isExpandDrawer: MutableStateFlow<Boolean> = MutableStateFlow(true)
     val isExpandDrawer: StateFlow<Boolean> = _isExpandDrawer
