@@ -407,7 +407,13 @@ private fun AppDrawerDevice() {
                                 connectType = Loading
                             )
                             scope.launch {
-                                mainState.socketClientManger.connect(device)
+                                try {
+                                    mainState.socketClientManger.connect(device)
+                                } catch (e: Exception) {
+                                    deviceState.socketDevices[index] = device.withCopy(
+                                        connectType = Fail
+                                    )
+                                }
                             }
                         }
 

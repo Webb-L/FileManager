@@ -6,6 +6,7 @@ import app.filemanager.data.main.DeviceType
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.extensions.getSubnetIps
 import app.filemanager.service.BaseSocketManager.Companion.CONNECT_TIMEOUT
+import app.filemanager.service.BaseSocketManager.Companion.PORT
 import app.filemanager.service.BaseSocketManager.Companion.SEND_IDENTIFIER
 import app.filemanager.service.BaseSocketManager.Companion.SEND_LENGTH
 import app.filemanager.service.data.SocketDevice
@@ -13,13 +14,13 @@ import app.filemanager.ui.state.main.DeviceState
 import io.ktor.network.selector.*
 import io.ktor.network.sockets.*
 import io.ktor.network.sockets.Socket
+import io.ktor.util.network.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
-import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.net.Inet4Address
 import java.net.NetworkInterface
@@ -30,18 +31,18 @@ class JvmSocketServer(private val coroutineContext: CoroutineContext = Dispatche
     private val settings = createSettings()
     private val devices = mutableMapOf<String, Pair<SocketDevice, ByteWriteChannel>>()
     private val database by inject<FileManagerDatabase>()
-
-    private val socketDeviceHandler = SocketDeviceHandler()
+    private val mainScope = MainScope()
 
     // TODO 捕获断开的信息
     @OptIn(ExperimentalSerializationApi::class)
     override suspend fun start(port: Int, callback: (clientId: String, message: SocketMessage) -> Unit) {
         withContext(coroutineContext) {
             val selectorManager = SelectorManager(Dispatchers.IO)
-            val serverSocket = aSocket(selectorManager).tcp().bind("0.0.0.0", 1204)
+            val serverSocket = aSocket(selectorManager).tcp().bind("0.0.0.0", PORT)
             println("Server is listening at ${serverSocket.localAddress}")
             while (true) {
                 val socket = serverSocket.accept()
+                val remoteAddress = socket.remoteAddress.toString()
                 println("Accepted ${socket.remoteAddress}")
                 launch {
                     val receiveChannel = socket.openReadChannel()
@@ -50,7 +51,9 @@ class JvmSocketServer(private val coroutineContext: CoroutineContext = Dispatche
                     val buffer = ByteArray(SEND_LENGTH)
                     while (true) {
                         val bufferLength = receiveChannel.readAvailable(buffer)
+                        // 设备离线
                         if (bufferLength == -1) {
+                            devices.remove(remoteAddress)
                             break
                         }
 
@@ -59,37 +62,108 @@ class JvmSocketServer(private val coroutineContext: CoroutineContext = Dispatche
                                 val socketMessage =
                                     ProtoBuf.decodeFromByteArray<SocketMessage>(buffer.copyOf(bufferLength))
                                 if (socketMessage.header.command == "connect") {
-                                    socketDeviceHandler.handleSocketDevice(socketMessage, sendChannel, socket)
+                                    handleSocketDevice(socketMessage, sendChannel, socket)
                                 } else {
-                                    callback(socket.remoteAddress.toString(), socketMessage)
+                                    callback(remoteAddress, socketMessage)
                                 }
                             } else {
                                 val index = findIdentifierIndex(buffer)
                                 val socketMessage =
                                     ProtoBuf.decodeFromByteArray<SocketMessage>(buffer.copyOf(if (index == -1) bufferLength else index))
                                 println("【server】 header = ${socketMessage.header} params = ${socketMessage.params} it=${if (index == -1) bufferLength else index}")
-                                callback(socket.remoteAddress.toString(), socketMessage)
+                                callback(remoteAddress, socketMessage)
                             }
                         } catch (e: Exception) {
                             println("Error handling connection: ${e.message}")
-                            sendChannel.writeFully(
-                                ProtoBuf.encodeToByteArray(
-                                    SocketMessage.sendDevice(
-                                        deviceId = settings.getString("deviceId", ""),
-                                        deviceName = settings.getString("deviceName", ""),
-                                        host = socket.localAddress.toString(),
-                                        type = DeviceType.JVM
-                                    )
-                                )
-                            )
+                            sendDeviceResponse(sendChannel, socket)
                             socket.close()
                         }
                     }
                 }
-
-
             }
         }
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private fun handleSocketDevice(
+        socketMessage: SocketMessage,
+        sendChannel: ByteWriteChannel,
+        socket: Socket
+    ) {
+        mainScope.launch {
+            val socketDevice = ProtoBuf.decodeFromByteArray<SocketDevice>(socketMessage.body)
+            val queriedDevice = database.deviceQueries.queryById(socketDevice.id).executeAsOneOrNull()
+
+            if (queriedDevice != null) {
+                when (queriedDevice.connectionType) {
+                    PERMANENTLY_BANNED -> sendResponse(sendChannel, byteArrayOf())
+                    AUTO_CONNECT -> {
+                        devices[socket.remoteAddress.toString()] = socketDevice to sendChannel
+                        sendDeviceResponse(sendChannel, socket)
+                    }
+
+                    else -> {}
+                }
+            } else {
+                deviceState.connectionRequest[socketDevice.id] = WAITING
+                try {
+                    withTimeout(CONNECT_TIMEOUT * 1000L) {
+                        while (deviceState.connectionRequest[socketDevice.id] == WAITING) {
+                            delay(300L)
+                        }
+                        when (deviceState.connectionRequest[socketDevice.id]) {
+                            AUTO_CONNECT, PERMANENTLY_BANNED -> {
+                                database.deviceQueries.insert(
+                                    id = socketDevice.id,
+                                    name = socketDevice.name,
+                                    type = socketDevice.type,
+                                    connectionType = deviceState.connectionRequest[socketDevice.id]!!
+                                )
+                                if (deviceState.connectionRequest[socketDevice.id] == PERMANENTLY_BANNED) {
+                                    throw Exception()
+                                }
+                            }
+
+                            APPROVED -> {}
+                            else -> throw Exception()
+                        }
+
+                        devices[socket.remoteAddress.toString()] = socketDevice to sendChannel
+                        sendDeviceResponse(sendChannel, socket)
+                    }
+                } catch (e: Exception) {
+                    sendResponse(sendChannel, byteArrayOf())
+                    deviceState.connectionRequest.remove(socketDevice.id)
+                }
+            }
+        }
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private suspend fun sendResponse(sendChannel: ByteWriteChannel, body: ByteArray) {
+        sendChannel.writeFully(
+            ProtoBuf.encodeToByteArray(
+                SocketMessage(
+                    header = SocketHeader(command = "connect", devices = emptyList()),
+                    params = emptyMap(),
+                    body = body
+                )
+            )
+        )
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private suspend fun sendDeviceResponse(sendChannel: ByteWriteChannel, socket: Socket) {
+        sendChannel.writeFully(
+            ProtoBuf.encodeToByteArray(
+                SocketMessage.sendDevice(
+                    deviceId = settings.getString("deviceId", ""),
+                    deviceName = settings.getString("deviceName", ""),
+                    host = socket.localAddress.toJavaAddress().address,
+                    type = DeviceType.JVM
+                )
+            )
+        )
     }
 
     override suspend fun stop() {
@@ -128,7 +202,7 @@ class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatche
                     SocketMessage.sendDevice(
                         deviceId = settings.getString("deviceId", ""),
                         deviceName = settings.getString("deviceName", ""),
-                        host = socket.localAddress.toString(),
+                        host = socket.localAddress.toJavaAddress().address,
                         type = DeviceType.JVM
                     )
                 )
@@ -171,14 +245,14 @@ class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatche
             NetworkInterface.getNetworkInterfaces()
         }
             .asSequence()
+            .filter { it.isUp } // 过滤掉未启用的网络接口
             .flatMap { netInterface ->
-                netInterface.inetAddresses.asSequence()
-                    .filter {
-                        !it.isLoopbackAddress && (it is Inet4Address/* || it is Inet6Address*/)
-                    }
+                netInterface.inetAddresses
+                    .asSequence()
+                    .filter { !it.isLoopbackAddress && it is Inet4Address } // 过滤掉回环地址和非 IPv4 地址
                     .map { addr -> netInterface.displayName to addr.hostAddress }
             }
-            .groupBy { it.first }
+            .groupBy { it.first } // 按接口名称分组
 
         return networkAddresses.map { it.value.map { pair -> pair.second } }.flatten()
     }
@@ -196,7 +270,7 @@ class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatche
         for (ips in ipAddresses.chunked(51)) {
             mainScope.launch {
                 for (ip in ips) {
-                    val socketDevice = scanPort(ip, 1204)
+                    val socketDevice = scanPort(ip, PORT)
                     if (socketDevice != null) {
                         callback(socketDevice)
                     }
@@ -252,110 +326,4 @@ class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatche
 
 actual fun createSocketClient(): SocketClient {
     return JvmSocketClient()
-}
-
-
-@OptIn(ExperimentalSerializationApi::class)
-class SocketDeviceHandler : KoinComponent {
-    private val deviceState by inject<DeviceState>()
-    private val settings = createSettings()
-    private val devices = mutableMapOf<String, Pair<SocketDevice, ByteWriteChannel>>()
-    private val database by inject<FileManagerDatabase>()
-
-    suspend fun handleSocketDevice(
-        socketMessage: SocketMessage,
-        sendChannel: ByteWriteChannel,
-        socket: Socket
-    ) = coroutineScope {
-        val socketDevice = ProtoBuf.decodeFromByteArray<SocketDevice>(socketMessage.body)
-        val queriedDevice = database.deviceQueries.queryById(socketDevice.id).executeAsOneOrNull()
-
-        if (queriedDevice != null) {
-            when (queriedDevice.connectionType) {
-                PERMANENTLY_BANNED -> sendResponse(sendChannel, byteArrayOf())
-                AUTO_CONNECT -> {
-                    devices[socket.remoteAddress.toString()] = socketDevice to sendChannel
-                    sendDeviceResponse(sendChannel, socket)
-                }
-
-                else -> {}
-            }
-        } else {
-            handleFirstConnection(socketDevice, sendChannel, socket)
-        }
-    }
-
-    private suspend fun handleFirstConnection(
-        socketDevice: SocketDevice,
-        sendChannel: ByteWriteChannel,
-        socket: Socket
-    ) {
-        coroutineScope {
-            deviceState.connectionRequest[socketDevice.id] = WAITING
-            launch {
-                try {
-                    withTimeout(CONNECT_TIMEOUT * 1000L) {
-                        while (deviceState.connectionRequest[socketDevice.id] == WAITING) {
-                            delay(300L)
-                        }
-                        processConnectionRequest(socketDevice, sendChannel, socket)
-                    }
-                } catch (e: Exception) {
-                    sendResponse(sendChannel, byteArrayOf())
-                    deviceState.connectionRequest.remove(socketDevice.id)
-                }
-            }
-        }
-    }
-
-    private suspend fun processConnectionRequest(
-        socketDevice: SocketDevice,
-        sendChannel: ByteWriteChannel,
-        socket: Socket
-    ) {
-        when (deviceState.connectionRequest[socketDevice.id]) {
-            AUTO_CONNECT, PERMANENTLY_BANNED -> {
-                database.deviceQueries.insert(
-                    id = socketDevice.id,
-                    name = socketDevice.name,
-                    type = socketDevice.type,
-                    connectionType = deviceState.connectionRequest[socketDevice.id]!!
-                )
-                if (deviceState.connectionRequest[socketDevice.id] == PERMANENTLY_BANNED) {
-                    throw Exception()
-                }
-            }
-
-            APPROVED -> {}
-            else -> throw Exception()
-        }
-
-        devices[socket.remoteAddress.toString()] = socketDevice to sendChannel
-        sendDeviceResponse(sendChannel, socket)
-    }
-
-    private suspend fun sendResponse(sendChannel: ByteWriteChannel, body: ByteArray) {
-        sendChannel.writeFully(
-            ProtoBuf.encodeToByteArray(
-                SocketMessage(
-                    header = SocketHeader(command = "connect", devices = emptyList()),
-                    params = emptyMap(),
-                    body = body
-                )
-            )
-        )
-    }
-
-    private suspend fun sendDeviceResponse(sendChannel: ByteWriteChannel, socket: Socket) {
-        sendChannel.writeFully(
-            ProtoBuf.encodeToByteArray(
-                SocketMessage.sendDevice(
-                    deviceId = settings.getString("deviceId", ""),
-                    deviceName = settings.getString("deviceName", ""),
-                    host = socket.localAddress.toString(),
-                    type = DeviceType.JVM
-                )
-            )
-        )
-    }
 }
