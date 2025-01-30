@@ -1,30 +1,52 @@
 import app.filemanager.data.main.DeviceType;
 import app.filemanager.data.main.DeviceConnectType;
+import app.filemanager.data.main.DeviceCategory;
 
-
-CREATE TABLE Device
-(
-    id            TEXT               NOT NULL CONSTRAINT Device_pk PRIMARY KEY CONSTRAINT Device_pk_2 UNIQUE,
-    name          TEXT               NOT NULL,
-    type          TEXT AS DeviceType NOT NULL,
-    connectionType TEXT  AS  DeviceConnectType            NOT NULL
+CREATE TABLE Device (
+    id              TEXT               NOT NULL CONSTRAINT Device_pk PRIMARY KEY CONSTRAINT Device_pk_2 UNIQUE,
+    name            TEXT               NOT NULL,
+    type            TEXT AS DeviceType NOT NULL,
+    connectionType  TEXT AS DeviceConnectType NOT NULL,
+    firstConnection INTEGER          NOT NULL,
+    lastConnection  INTEGER          NOT NULL,
+    category        TEXT AS DeviceCategory NOT NULL,
+    CONSTRAINT unique_id_category UNIQUE (id, category)
 );
 
 insert:
-INSERT INTO Device (id, name, type, connectionType)
-VALUES (?, ?, ?, ?);
+INSERT INTO Device (id, name, type, connectionType, firstConnection, lastConnection, category)
+VALUES (?, ?, ?, ?, strftime('%s', 'now'), strftime('%s', 'now'), ?);
 
 updateNameById:
-UPDATE Device SET name = ? WHERE id = ? LIMIT 1;
+UPDATE Device
+SET name = ?
+WHERE id = ?;
 
 updateConnectionTypeById:
-UPDATE Device SET connectionType = ? WHERE id = ? LIMIT 1;
-
-queryByIdAndNotPermanentlyBanned:
-SELECT * FROM Device WHERE id = ? AND connectionType != 'PERMANENTLY_BANNED';
+UPDATE Device
+SET connectionType = ?
+WHERE id = ?;
 
 queryAll:
-SELECT * FROM Device;
+SELECT *
+FROM Device;
 
 queryById:
-SELECT * FROM Device WHERE id = ?;
+SELECT *
+FROM Device
+WHERE id = ? AND category = ?;
+
+queryByCategory:
+SELECT *
+FROM Device
+WHERE category = ?;
+
+updateLastConnectionByCategoryAndId:
+UPDATE Device
+SET lastConnection = strftime('%s', 'now')
+WHERE id = ? AND category = ?;
+
+queryByNameLikeAndCategory:
+SELECT *
+FROM Device
+WHERE name LIKE ? AND category = ?;

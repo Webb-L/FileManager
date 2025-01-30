@@ -83,6 +83,25 @@ enum class DeviceConnectType(type: String) {
     WAITING("WAITING")
 }
 
+/**
+ * 表示设备类别的枚举类。
+ *
+ * 该枚举类用于区分设备是客户端类型还是服务器类型。
+ */
+enum class DeviceCategory(type: String) {
+    /**
+     * 代表设备类别中的客户端类型。
+     * CLIENT 表明该设备是客户端设备。
+     * 枚举常量用来区分不同的设备类型。
+     */
+    CLIENT("CLIENT"),
+    /**
+     * 表示设备类别中的服务器类型。
+     * SERVER 是设备类别的枚举常量之一，代表服务器设备。
+     */
+    SERVER("SERVER")
+}
+
 
 data class Device(
     val id: String,

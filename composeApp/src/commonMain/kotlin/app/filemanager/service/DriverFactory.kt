@@ -4,6 +4,7 @@ import app.cash.sqldelight.ColumnAdapter
 import app.cash.sqldelight.db.SqlDriver
 import app.filemanager.data.file.FileFilterType
 import app.filemanager.data.file.FileProtocol
+import app.filemanager.data.main.DeviceCategory
 import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceType
 import app.filemanager.data.main.DrawerBookmarkType
@@ -16,6 +17,10 @@ val driverAdapter = object : ColumnAdapter<DeviceType, String> {
 val driverConnectTypeAdapter = object : ColumnAdapter<DeviceConnectType, String> {
     override fun decode(databaseValue: String): DeviceConnectType = DeviceConnectType.valueOf(databaseValue)
     override fun encode(value: DeviceConnectType): String = value.name
+}
+val driverCategoryAdapter = object : ColumnAdapter<DeviceCategory, String> {
+    override fun decode(databaseValue: String): DeviceCategory = DeviceCategory.valueOf(databaseValue)
+    override fun encode(value: DeviceCategory): String = value.name
 }
 val fileBookmarkAdapter = object : ColumnAdapter<DrawerBookmarkType, String> {
     override fun decode(databaseValue: String): DrawerBookmarkType = DrawerBookmarkType.valueOf(databaseValue)
@@ -49,7 +54,8 @@ fun createDatabase(driverFactory: DriverFactory): FileManagerDatabase {
         driver = driverFactory.createDriver(),
         DeviceAdapter = Device.Adapter(
             typeAdapter = driverAdapter,
-            connectionTypeAdapter = driverConnectTypeAdapter
+            connectionTypeAdapter = driverConnectTypeAdapter,
+            categoryAdapter = driverCategoryAdapter,
         ),
         FileBookmarkAdapter = FileBookmark.Adapter(
             typeAdapter = fileBookmarkAdapter,
