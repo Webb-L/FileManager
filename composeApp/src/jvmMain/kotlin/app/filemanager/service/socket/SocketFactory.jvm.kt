@@ -1,6 +1,7 @@
 package app.filemanager.service.socket
 
 import app.filemanager.createSettings
+import app.filemanager.data.main.DeviceCategory
 import app.filemanager.data.main.DeviceConnectType.*
 import app.filemanager.data.main.DeviceType
 import app.filemanager.db.FileManagerDatabase
@@ -23,6 +24,7 @@ import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
 import org.koin.core.component.inject
 import java.net.Inet4Address
+import java.net.Inet6Address
 import java.net.NetworkInterface
 import kotlin.coroutines.CoroutineContext
 
@@ -92,7 +94,8 @@ class JvmSocketServer(private val coroutineContext: CoroutineContext = Dispatche
     ) {
         mainScope.launch {
             val socketDevice = ProtoBuf.decodeFromByteArray<SocketDevice>(socketMessage.body)
-            val queriedDevice = database.deviceQueries.queryById(socketDevice.id).executeAsOneOrNull()
+            val queriedDevice =
+                database.deviceQueries.queryById(socketDevice.id, DeviceCategory.SERVER).executeAsOneOrNull()
 
             if (queriedDevice != null) {
                 when (queriedDevice.connectionType) {
@@ -104,6 +107,7 @@ class JvmSocketServer(private val coroutineContext: CoroutineContext = Dispatche
 
                     else -> {}
                 }
+                database.deviceQueries.updateLastConnectionByCategoryAndId(socketDevice.id, DeviceCategory.SERVER)
             } else {
                 deviceState.connectionRequest[socketDevice.id] = WAITING
                 try {
@@ -111,20 +115,15 @@ class JvmSocketServer(private val coroutineContext: CoroutineContext = Dispatche
                         while (deviceState.connectionRequest[socketDevice.id] == WAITING) {
                             delay(300L)
                         }
+                        database.deviceQueries.insert(
+                            id = socketDevice.id,
+                            name = socketDevice.name,
+                            type = socketDevice.type,
+                            connectionType = deviceState.connectionRequest[socketDevice.id] ?: WAITING,
+                            category = DeviceCategory.SERVER
+                        )
                         when (deviceState.connectionRequest[socketDevice.id]) {
-                            AUTO_CONNECT, PERMANENTLY_BANNED -> {
-                                database.deviceQueries.insert(
-                                    id = socketDevice.id,
-                                    name = socketDevice.name,
-                                    type = socketDevice.type,
-                                    connectionType = deviceState.connectionRequest[socketDevice.id]!!
-                                )
-                                if (deviceState.connectionRequest[socketDevice.id] == PERMANENTLY_BANNED) {
-                                    throw Exception()
-                                }
-                            }
-
-                            APPROVED -> {}
+                            AUTO_CONNECT, APPROVED -> {}
                             else -> throw Exception()
                         }
 
@@ -184,6 +183,7 @@ actual fun createSocketServer(): SocketServer {
 
 class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatchers.IO) : SocketClient {
     private val settings = createSettings()
+    private val database by inject<FileManagerDatabase>()
     private lateinit var selectorManager: SelectorManager
     private lateinit var socket: Socket
 
@@ -240,27 +240,32 @@ class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatche
         }
     }
 
-    override suspend fun getAllIPAddresses(): List<String> {
-        val networkAddresses = withContext(Dispatchers.IO) {
-            NetworkInterface.getNetworkInterfaces()
-        }
-            .asSequence()
-            .filter { it.isUp } // 过滤掉未启用的网络接口
-            .flatMap { netInterface ->
-                netInterface.inetAddresses
-                    .asSequence()
-                    .filter { !it.isLoopbackAddress && it is Inet4Address } // 过滤掉回环地址和非 IPv4 地址
-                    .map { addr -> netInterface.displayName to addr.hostAddress }
-            }
-            .groupBy { it.first } // 按接口名称分组
+    override fun getAllIPAddresses(type: SocketClientIPEnum): List<String> {
+        val addresses = mutableListOf<String>()
 
-        return networkAddresses.map { it.value.map { pair -> pair.second } }.flatten()
+        val interfaces = NetworkInterface.getNetworkInterfaces()
+        interfaces.iterator().forEach { networkInterface ->
+            if (type == SocketClientIPEnum.IPV4_UP && (!networkInterface.isUp || networkInterface.isLoopback)) return@forEach
+            // 获取该网络接口下所有的 InetAddress
+            networkInterface.inetAddresses.iterator().forEach { inetAddress ->
+                when (inetAddress) {
+                    is Inet4Address -> addresses.add(inetAddress.hostAddress)
+                    is Inet6Address -> addresses.add("[${inetAddress.hostAddress.replace("%.*$".toRegex(), "")}]")
+                }
+            }
+        }
+
+        if (type == SocketClientIPEnum.ALL) {
+            addresses.addAll(listOf("[::1]", "[0:0:0:0:0:0:0:0]"))
+        }
+
+        return addresses
     }
 
     override suspend fun scanner(address: List<String>, callback: (SocketDevice) -> Unit) {
         val ipAddresses = mutableSetOf<String>().apply {
             for (host in address) {
-                addAll(host.getSubnetIps()/*.filter { it != host }*/)
+                addAll(host.getSubnetIps().filter { it != host })
             }
         }
 
@@ -286,7 +291,7 @@ class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatche
 
 
     @OptIn(ExperimentalSerializationApi::class)
-    suspend fun scanPort(host: String, port: Int): SocketDevice? {
+    override suspend fun scanPort(host: String, port: Int): SocketDevice? {
         val selectorManager = SelectorManager(Dispatchers.IO)
         return try {
             val socket = withTimeout(500L) {

@@ -6,6 +6,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import app.filemanager.di.appModule
 import app.filemanager.service.SocketServerManger
+import app.filemanager.service.socket.SocketClientIPEnum
 import app.filemanager.ui.screen.main.MainScreen
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.MainState
@@ -33,13 +34,9 @@ internal fun App() = KoinApplication(application = {
     }
 
     LaunchedEffect(Unit) {
-        deviceState.updateLoadingDevices(true)
-        val allIPAddresses = mainState.socketClientManger.socket.getAllIPAddresses()
-        mainState.socketClientManger.socket.scanner(allIPAddresses) { socketDevice ->
-            // TODO 判断当前是否是新设备
-            deviceState.socketDevices.add(socketDevice)
-        }
-        deviceState.updateLoadingDevices(false)
+        deviceState.scanner(mainState.socketClientManger.socket.getAllIPAddresses(
+            type = SocketClientIPEnum.IPV4_UP
+        ))
     }
 }
 
