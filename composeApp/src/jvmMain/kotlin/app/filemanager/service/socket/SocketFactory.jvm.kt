@@ -183,7 +183,6 @@ actual fun createSocketServer(): SocketServer {
 
 class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatchers.IO) : SocketClient {
     private val settings = createSettings()
-    private val database by inject<FileManagerDatabase>()
     private lateinit var selectorManager: SelectorManager
     private lateinit var socket: Socket
 
@@ -251,7 +250,7 @@ class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatche
                 when (inetAddress) {
                     is Inet4Address -> addresses.add(inetAddress.hostAddress)
                     is Inet6Address -> {
-                        if (type == SocketClientIPEnum.IPV4_UP) {
+                        if (type == SocketClientIPEnum.ALL) {
                             addresses.add("[${inetAddress.hostAddress.replace("%.*$".toRegex(), "")}]")
                         }
                     }

@@ -32,7 +32,7 @@ class SocketClientManger : KoinComponent, BaseSocketManager("client") {
 
     @OptIn(ExperimentalSerializationApi::class)
     suspend fun connect(connectDevice: SocketDevice) {
-        socket.connect(connectDevice.host, PORT) { message ->
+        socket.connect(connectDevice.host.replace("[", "").replace("]", ""), PORT) { message ->
             when (message.header.command) {
                 "connect" -> {
                     val messageDevice =
@@ -41,7 +41,9 @@ class SocketClientManger : KoinComponent, BaseSocketManager("client") {
                         )
                     val connectType = if (message.body.isEmpty()) ConnectType.Rejected else ConnectType.Connect
                     val index = deviceState.socketDevices.indexOfFirst {
-                        it.id == messageDevice.id && messageDevice.host.contains(it.host)
+                        it.id == messageDevice.id && messageDevice.host.contains(
+                            it.host.replace("[", "").replace("]", "")
+                        )
                     }
                     messageDevice.socketManger = this@SocketClientManger
                     if (index >= 0) {
@@ -50,7 +52,7 @@ class SocketClientManger : KoinComponent, BaseSocketManager("client") {
                         if (deviceState.devices.firstOrNull { it.id == updatedDevice.id } == null) {
                             deviceState.devices.add(updatedDevice.toDevice())
                         }
-                    }else {
+                    } else {
                         deviceState.socketDevices.add(messageDevice)
                         deviceState.devices.add(messageDevice.toDevice())
                     }

@@ -112,7 +112,6 @@ fun AppDrawer() {
         val allIPAddresses = mainState.socketClientManger.socket.getAllIPAddresses(
             type = SocketClientIPEnum.ALL
         )
-        println(allIPAddresses)
         TextFieldDialog(
             "添加设备", label = "IP地址 或 IP地址:端口",
             verifyFun = { text ->
