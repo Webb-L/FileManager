@@ -23,15 +23,22 @@ interface Socket : KoinComponent {
     }
 }
 
+enum class SocketClientIPEnum {
+    ALL,
+    IPV4_UP
+}
+
 interface SocketClient : Socket {
     suspend fun connect(host: String, port: Int, receive: (data: SocketMessage) -> Unit)
 
     override suspend fun send(clientId: String, data: ByteArray)
     fun disconnect(): Boolean
 
-    suspend fun getAllIPAddresses(): List<String>
+    fun getAllIPAddresses(type: SocketClientIPEnum): List<String>
 
     suspend fun scanner(address: List<String>, callback: (SocketDevice) -> Unit)
+
+    suspend fun scanPort(host: String, port: Int): SocketDevice?
 }
 
 interface SocketServer : Socket {
