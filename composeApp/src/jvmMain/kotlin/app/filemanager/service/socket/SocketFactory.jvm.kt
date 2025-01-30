@@ -250,7 +250,11 @@ class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatche
             networkInterface.inetAddresses.iterator().forEach { inetAddress ->
                 when (inetAddress) {
                     is Inet4Address -> addresses.add(inetAddress.hostAddress)
-                    is Inet6Address -> addresses.add("[${inetAddress.hostAddress.replace("%.*$".toRegex(), "")}]")
+                    is Inet6Address -> {
+                        if (type == SocketClientIPEnum.IPV4_UP) {
+                            addresses.add("[${inetAddress.hostAddress.replace("%.*$".toRegex(), "")}]")
+                        }
+                    }
                 }
             }
         }
