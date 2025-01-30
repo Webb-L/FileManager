@@ -43,13 +43,16 @@ class SocketClientManger : KoinComponent, BaseSocketManager("client") {
                     val index = deviceState.socketDevices.indexOfFirst {
                         it.id == messageDevice.id && messageDevice.host.contains(it.host)
                     }
+                    messageDevice.socketManger = this@SocketClientManger
                     if (index >= 0) {
-                        messageDevice.socketManger = this@SocketClientManger
                         val updatedDevice = messageDevice.withCopy(connectType = connectType)
                         deviceState.socketDevices[index] = updatedDevice
                         if (deviceState.devices.firstOrNull { it.id == updatedDevice.id } == null) {
                             deviceState.devices.add(updatedDevice.toDevice())
                         }
+                    }else {
+                        deviceState.socketDevices.add(messageDevice)
+                        deviceState.devices.add(messageDevice.toDevice())
                     }
                 }
 

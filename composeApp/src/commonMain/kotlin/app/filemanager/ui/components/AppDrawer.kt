@@ -24,7 +24,10 @@ import app.filemanager.data.file.toIcon
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceType.*
 import app.filemanager.data.main.DrawerBookmarkType
+import app.filemanager.service.BaseSocketManager.Companion.PORT
 import app.filemanager.service.data.ConnectType.*
+import app.filemanager.service.socket.SocketClientIPEnum
+import app.filemanager.ui.screen.device.DeviceSettingsScreen
 import app.filemanager.ui.screen.file.FavoriteScreen
 import app.filemanager.ui.screen.task.TaskResultScreen
 import app.filemanager.ui.state.file.FileState
@@ -36,12 +39,16 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppDrawer() {
+    val mainState = koinInject<MainState>()
+
     val drawerState = koinInject<DrawerState>()
     val taskState = koinInject<TaskState>()
     val deviceState = koinInject<DeviceState>()
     val isDeviceAdd by deviceState.isDeviceAdd.collectAsState()
 
     val isExpandNetwork by drawerState.isExpandNetwork.collectAsState()
+
+    val scope = rememberCoroutineScope()
 
     ModalDrawerSheet {
         TopAppBar(
@@ -102,8 +109,70 @@ fun AppDrawer() {
     }
 
     if (isDeviceAdd) {
-        TextFieldDialog("设备服务", label = "IP地址") {
+        val allIPAddresses = mainState.socketClientManger.socket.getAllIPAddresses(
+            type = SocketClientIPEnum.ALL
+        )
+        println(allIPAddresses)
+        TextFieldDialog(
+            "添加设备", label = "IP地址 或 IP地址:端口",
+            verifyFun = { text ->
+                if (text.isEmpty()) {
+                    Pair(true, "请输入IP地址 或 IP地址:端口")
+                } else {
+                    if (allIPAddresses.any { text.indexOf(it) == 0 }) {
+                        Pair(true, "禁止使用本地地址")
+                    } else {
+                        val regex = Regex(
+                            "^(([0-9]{1,3}\\.){3}[0-9]{1,3}|\\[([a-fA-F0-9:]+)])(:([0-9]{1,5}))?$"
+                        )
+                        if (regex.matches(text)) {
+                            Pair(false, "")
+                        } else {
+                            Pair(true, "请输入正确的IP地址 或 IP地址:端口")
+                        }
+                    }
+                }
+            }
+        ) {
+            if (it.isEmpty()) {
+                deviceState.updateDeviceAdd(false)
+                return@TextFieldDialog
+            }
+            val inputText = it
+
+            val ip: String
+            var port: String? = null
+
+            if (inputText.startsWith("[")) {
+                val rightBracketIndex = inputText.indexOf(']')
+                if (rightBracketIndex != -1) {
+                    // 截取完整的 IPv6 地址部分，如 [2001:db8::1]
+                    ip = inputText.substring(0, rightBracketIndex + 1)
+                    // 检查是否存在端口部分
+                    if (rightBracketIndex + 1 < inputText.length && inputText[rightBracketIndex + 1] == ':') {
+                        port = inputText.substring(rightBracketIndex + 2)
+                    }
+                } else {
+                    // 若没有找到 ']'，则默认为整串都是 IP；也可根据需要进行异常处理
+                    ip = inputText
+                }
+            } else {
+                // 普通情况（如 IPv4 或不带中括号的 IPv6），用冒号分割
+                val parts = inputText.split(":")
+                ip = parts[0]
+                if (parts.size > 1) {
+                    port = parts[1]
+                }
+            }
+
             deviceState.updateDeviceAdd(false)
+
+            scope.launch {
+                val socketDevice = mainState.socketClientManger.socket.scanPort(ip, (port ?: PORT).toString().toInt())
+                if (socketDevice != null) {
+                    deviceState.socketDevices.add(socketDevice)
+                }
+            }
         }
     }
 }
@@ -341,10 +410,22 @@ private fun AppDrawerDevice() {
                         .alpha(if (loadingDevices) 0.5f else 1f)
                         .clickable {
                             if (loadingDevices) return@clickable
+                            scope.launch {
+                                deviceState.scanner(mainState.socketClientManger.socket.getAllIPAddresses(type = SocketClientIPEnum.IPV4_UP))
+                            }
                         }
                 )
                 Spacer(Modifier.width(8.dp))
                 IpsButton()
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    Icons.Default.Settings,
+                    null,
+                    Modifier.clip(RoundedCornerShape(25.dp))
+                        .clickable {
+                            mainState.updateScreen(DeviceSettingsScreen())
+                        }
+                )
                 Spacer(Modifier.width(8.dp))
                 Icon(
                     if (isExpandDevice) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -417,9 +498,7 @@ private fun AppDrawerDevice() {
                             }
                         }
 
-                        Connect -> {
-                            // TODO 断开连接
-                        }
+                        Connect -> {}
 
                         Loading -> {}
                     }

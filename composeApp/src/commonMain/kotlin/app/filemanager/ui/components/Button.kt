@@ -6,17 +6,23 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.SwitchLeft
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileFilterSort
+import app.filemanager.service.socket.SocketClientIPEnum
 import app.filemanager.ui.state.file.FileFilterState
+import app.filemanager.ui.state.main.DeviceState
+import app.filemanager.ui.state.main.MainState
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @Composable
@@ -159,30 +165,41 @@ fun SortButton() {
 
 @Composable
 fun IpsButton() {
-    var expanded by remember { mutableStateOf(false) }
+    val mainState = koinInject<MainState>()
+    val deviceState = koinInject<DeviceState>()
+    val loadingDevices by deviceState.loadingDevices.collectAsState()
 
-    Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
+    var expanded by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+
+    Box(modifier = Modifier.wrapContentSize(Alignment.TopStart).alpha(if (loadingDevices) 0.5f else 1f)) {
         Icon(
             Icons.Default.Sensors,
             null,
             Modifier
                 .clip(RoundedCornerShape(25.dp))
-                .clickable { expanded = true }
+                .clickable {
+                    if (loadingDevices) return@clickable
+                    expanded = true
+                }
         )
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            // TODO 需要重写
-//            for (ip in WebSocketService().getNetworkIp()) {
-//                DropdownMenuItem(
-//                    text = { Text(ip) },
-//                    onClick = {
-//                        expanded = false
-//                    },
-//                    leadingIcon = { Icon(Icons.Default.Dns, null) },
-//                )
-//            }
+            for (ip in mainState.socketClientManger.socket.getAllIPAddresses(type = SocketClientIPEnum.IPV4_UP)) {
+                DropdownMenuItem(
+                    text = { Text(ip) },
+                    onClick = {
+                        scope.launch {
+                            deviceState.scanner(listOf(ip))
+                        }
+                        expanded = false
+                    },
+                    leadingIcon = { Icon(Icons.Default.Dns, null) },
+                )
+            }
         }
     }
 }

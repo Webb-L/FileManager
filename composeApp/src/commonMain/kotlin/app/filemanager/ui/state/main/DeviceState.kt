@@ -7,8 +7,12 @@ import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.service.data.SocketDevice
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
-class DeviceState() {
+class DeviceState:KoinComponent {
+    private val mainState by inject<MainState>()
+
     private val _isDeviceAdd: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isDeviceAdd: StateFlow<Boolean> = _isDeviceAdd
     fun updateDeviceAdd(value: Boolean) {
@@ -27,4 +31,12 @@ class DeviceState() {
 
 
     val connectionRequest = mutableStateMapOf<String, DeviceConnectType>()
+
+    suspend fun scanner(ips:List<String>){
+        updateLoadingDevices(true)
+        mainState.socketClientManger.socket.scanner(ips) { socketDevice ->
+            socketDevices.add(socketDevice)
+        }
+        updateLoadingDevices(false)
+    }
 }
