@@ -185,9 +185,10 @@ class DeviceSettingsScreen() : Screen {
                                             for (entry in connectTypeNameMap.filter { it.key != device.connectionType }) {
                                                 DropdownMenuItem(
                                                     onClick = {
-                                                        database.deviceQueries.updateConnectionTypeById(
+                                                        database.deviceQueries.updateConnectionTypeByIdAndCategory(
                                                             entry.key,
-                                                            device.id
+                                                            device.id,
+                                                            category
                                                         )
                                                         deviceList.apply {
                                                             clear()

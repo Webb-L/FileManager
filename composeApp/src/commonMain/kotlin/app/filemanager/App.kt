@@ -34,7 +34,7 @@ internal fun App() = KoinApplication(application = {
     }
 
     LaunchedEffect(Unit) {
-        deviceState.scanner(mainState.socketClientManger.socket.getAllIPAddresses(
+        deviceState.scanner(deviceState.socketClientManger.socket.getAllIPAddresses(
             type = SocketClientIPEnum.IPV4_UP
         ))
     }

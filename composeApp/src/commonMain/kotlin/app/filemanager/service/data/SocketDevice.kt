@@ -2,6 +2,7 @@ package app.filemanager.service.data
 
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceType
+import app.filemanager.service.BaseSocketManager.Companion.PORT
 import app.filemanager.service.SocketClientManger
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
@@ -22,6 +23,7 @@ data class SocketDevice(
     val id: String,
     val name: String,
     var host: String = "",
+    var port: Int = PORT,
     val type: DeviceType,
     var connectType: ConnectType = ConnectType.New,
 ) {
@@ -36,11 +38,12 @@ data class SocketDevice(
         id: String = this.id,
         name: String = this.name,
         host: String = this.host,
+        port: Int = this.port,
         type: DeviceType = this.type,
         connectType: ConnectType = this.connectType,
         socketManger: SocketClientManger? = this.socketManger
     ): SocketDevice {
-        return SocketDevice(id, name, host, type, connectType).apply {
+        return SocketDevice(id, name, host, port, type, connectType).apply {
             this.socketManger = socketManger
         }
     }

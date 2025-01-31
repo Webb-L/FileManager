@@ -21,7 +21,6 @@ import app.filemanager.data.file.FileFilterSort
 import app.filemanager.service.socket.SocketClientIPEnum
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.main.DeviceState
-import app.filemanager.ui.state.main.MainState
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -165,7 +164,6 @@ fun SortButton() {
 
 @Composable
 fun IpsButton() {
-    val mainState = koinInject<MainState>()
     val deviceState = koinInject<DeviceState>()
     val loadingDevices by deviceState.loadingDevices.collectAsState()
 
@@ -188,7 +186,7 @@ fun IpsButton() {
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            for (ip in mainState.socketClientManger.socket.getAllIPAddresses(type = SocketClientIPEnum.IPV4_UP)) {
+            for (ip in deviceState.socketClientManger.socket.getAllIPAddresses(type = SocketClientIPEnum.IPV4_UP)) {
                 DropdownMenuItem(
                     text = { Text(ip) },
                     onClick = {
