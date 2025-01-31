@@ -104,11 +104,11 @@ kotlin {
 
 android {
     namespace = "app.filemanager"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
 
         applicationId = "app.filemanager.androidApp"
         versionCode = 1

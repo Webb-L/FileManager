@@ -29,7 +29,7 @@ import java.net.Inet6Address
 import java.net.NetworkInterface
 import kotlin.coroutines.CoroutineContext
 
-class JvmSocketServer(private val coroutineContext: CoroutineContext = Dispatchers.IO) : SocketServer {
+class AndroidSocketServer(private val coroutineContext: CoroutineContext = Dispatchers.IO) : SocketServer {
     private val deviceState by inject<DeviceState>()
     private val settings = createSettings()
     private val devices = mutableMapOf<String, Pair<SocketDevice, ByteWriteChannel>>()
@@ -192,7 +192,7 @@ class JvmSocketServer(private val coroutineContext: CoroutineContext = Dispatche
                     deviceId = settings.getString("deviceId", ""),
                     deviceName = settings.getString("deviceName", ""),
                     host = socket.localAddress.toJavaAddress().address,
-                    type = DeviceType.JVM
+                    type = DeviceType.Android
                 )
             )
         )
@@ -210,11 +210,11 @@ class JvmSocketServer(private val coroutineContext: CoroutineContext = Dispatche
 
 
 actual fun createSocketServer(): SocketServer {
-    return JvmSocketServer()
+    return AndroidSocketServer()
 }
 
 
-class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatchers.IO) : SocketClient {
+class AndroidSocketClient(private val coroutineContext: CoroutineContext = Dispatchers.IO) : SocketClient {
     private val settings = createSettings()
     private lateinit var selectorManager: SelectorManager
     private lateinit var socket: Socket
@@ -237,7 +237,7 @@ class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatche
                         deviceId = settings.getString("deviceId", ""),
                         deviceName = settings.getString("deviceName", ""),
                         host = socket.localAddress.toJavaAddress().address,
-                        type = DeviceType.JVM
+                        type = DeviceType.Android
                     )
                 )
             )
@@ -379,5 +379,5 @@ class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatche
 }
 
 actual fun createSocketClient(): SocketClient {
-    return JvmSocketClient()
+    return AndroidSocketClient()
 }
