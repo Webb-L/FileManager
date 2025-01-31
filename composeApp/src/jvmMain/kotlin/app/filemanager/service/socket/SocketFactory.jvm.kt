@@ -10,6 +10,7 @@ import app.filemanager.service.BaseSocketManager.Companion.CONNECT_TIMEOUT
 import app.filemanager.service.BaseSocketManager.Companion.PORT
 import app.filemanager.service.BaseSocketManager.Companion.SEND_IDENTIFIER
 import app.filemanager.service.BaseSocketManager.Companion.SEND_LENGTH
+import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.ui.state.main.DeviceState
 import io.ktor.network.selector.*
@@ -98,11 +99,44 @@ class JvmSocketServer(private val coroutineContext: CoroutineContext = Dispatche
                 database.deviceQueries.queryById(socketDevice.id, DeviceCategory.SERVER).executeAsOneOrNull()
 
             if (queriedDevice != null) {
+                println(queriedDevice)
                 when (queriedDevice.connectionType) {
-                    PERMANENTLY_BANNED -> sendResponse(sendChannel, byteArrayOf())
+                    PERMANENTLY_BANNED,
                     AUTO_CONNECT -> {
-                        devices[socket.remoteAddress.toString()] = socketDevice to sendChannel
-                        sendDeviceResponse(sendChannel, socket)
+                        if (queriedDevice.connectionType == PERMANENTLY_BANNED) {
+                            sendResponse(sendChannel, byteArrayOf())
+                        }
+                        if (queriedDevice.connectionType == AUTO_CONNECT) {
+                            devices[socket.remoteAddress.toString()] = socketDevice to sendChannel
+                            sendDeviceResponse(sendChannel, socket)
+                        }
+                        database.deviceQueries.updateConnectionTypeByIdAndCategory(
+                            connectionType = queriedDevice.connectionType,
+                            id = socketDevice.id,
+                            category = DeviceCategory.SERVER
+                        )
+                    }
+
+                    APPROVED, REJECTED -> {
+                        deviceState.connectionRequest[socketDevice.id] = WAITING
+                        try {
+                            withTimeout(CONNECT_TIMEOUT * 1000L) {
+                                while (deviceState.connectionRequest[socketDevice.id] == WAITING) {
+                                    delay(300L)
+                                }
+                                when (deviceState.connectionRequest[socketDevice.id]) {
+                                    AUTO_CONNECT, APPROVED -> {}
+                                    else -> throw Exception()
+                                }
+
+                                devices[socket.remoteAddress.toString()] = socketDevice to sendChannel
+                                sendDeviceResponse(sendChannel, socket)
+                            }
+                        } catch (e: Exception) {
+                            println(e)
+                            sendResponse(sendChannel, byteArrayOf())
+                            deviceState.connectionRequest.remove(socketDevice.id)
+                        }
                     }
 
                     else -> {}
@@ -185,6 +219,8 @@ class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatche
     private val settings = createSettings()
     private lateinit var selectorManager: SelectorManager
     private lateinit var socket: Socket
+    private val database by inject<FileManagerDatabase>()
+
 
     private var sendChannel: ByteWriteChannel? = null
 
@@ -319,6 +355,17 @@ class JvmSocketClient(private val coroutineContext: CoroutineContext = Dispatche
                 }
 
                 ProtoBuf.decodeFromByteArray<SocketDevice>(socketMessage.body).apply {
+                    val deviceConfig =
+                        database.deviceQueries.queryById(this.id, DeviceCategory.CLIENT).executeAsOneOrNull()
+                    if (deviceConfig != null) {
+                        if (deviceConfig.connectionType == AUTO_CONNECT) {
+                            this.connectType = ConnectType.Loading
+                        } else {
+                            this.connectType = ConnectType.UnConnect
+                        }
+                    } else {
+                        this.connectType = ConnectType.New
+                    }
                     this.host = host
                 }
             }

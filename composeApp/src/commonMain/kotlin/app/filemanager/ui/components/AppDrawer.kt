@@ -22,10 +22,14 @@ import androidx.compose.ui.unit.dp
 import app.filemanager.data.StatusEnum
 import app.filemanager.data.file.toIcon
 import app.filemanager.data.main.Device
+import app.filemanager.data.main.DeviceCategory
+import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceType.*
 import app.filemanager.data.main.DrawerBookmarkType
+import app.filemanager.db.FileManagerDatabase
 import app.filemanager.service.BaseSocketManager.Companion.PORT
 import app.filemanager.service.data.ConnectType.*
+import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.socket.SocketClientIPEnum
 import app.filemanager.ui.screen.device.DeviceSettingsScreen
 import app.filemanager.ui.screen.file.FavoriteScreen
@@ -39,8 +43,6 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppDrawer() {
-    val mainState = koinInject<MainState>()
-
     val drawerState = koinInject<DrawerState>()
     val taskState = koinInject<TaskState>()
     val deviceState = koinInject<DeviceState>()
@@ -109,7 +111,7 @@ fun AppDrawer() {
     }
 
     if (isDeviceAdd) {
-        val allIPAddresses = mainState.socketClientManger.socket.getAllIPAddresses(
+        val allIPAddresses = deviceState.socketClientManger.socket.getAllIPAddresses(
             type = SocketClientIPEnum.ALL
         )
         TextFieldDialog(
@@ -167,9 +169,12 @@ fun AppDrawer() {
             deviceState.updateDeviceAdd(false)
 
             scope.launch {
-                val socketDevice = mainState.socketClientManger.socket.scanPort(ip, (port ?: PORT).toString().toInt())
+                val socketDevice = deviceState.socketClientManger.socket.scanPort(ip, (port ?: PORT).toString().toInt())
                 if (socketDevice != null) {
                     deviceState.socketDevices.add(socketDevice)
+                    if (socketDevice.connectType == Loading) {
+                        deviceState.connect(socketDevice)
+                    }
                 }
             }
         }
@@ -386,6 +391,10 @@ private fun AppDrawerDevice() {
 
     val scope = rememberCoroutineScope()
 
+    var socketDevice by remember {
+        mutableStateOf<SocketDevice?>(null)
+    }
+
     AppDrawerItem(
         "设备",
         actions = {
@@ -410,7 +419,7 @@ private fun AppDrawerDevice() {
                         .clickable {
                             if (loadingDevices) return@clickable
                             scope.launch {
-                                deviceState.scanner(mainState.socketClientManger.socket.getAllIPAddresses(type = SocketClientIPEnum.IPV4_UP))
+                                deviceState.scanner(deviceState.socketClientManger.socket.getAllIPAddresses(type = SocketClientIPEnum.IPV4_UP))
                             }
                         }
                 )
@@ -482,29 +491,30 @@ private fun AppDrawerDevice() {
                 selected = false,
                 onClick = {
                     when (device.connectType) {
-                        New, UnConnect, Fail, Rejected -> {
+                        UnConnect, Fail, Rejected -> {
                             deviceState.socketDevices[index] = device.withCopy(
                                 connectType = Loading
                             )
-                            scope.launch {
-                                try {
-                                    mainState.socketClientManger.connect(device)
-                                } catch (e: Exception) {
-                                    deviceState.socketDevices[index] = device.withCopy(
-                                        connectType = Fail
-                                    )
-                                }
-                            }
+                            deviceState.connect(device)
                         }
 
-                        Connect -> {}
+                        New -> {
+                            socketDevice = device
+                        }
 
-                        Loading -> {}
+                        Connect, Loading -> {}
                     }
                 },
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
             )
         }
+    }
+
+    if (socketDevice != null) {
+        DeviceConnectNewDialog(
+            socketDevice!!,
+            onCancel = { socketDevice = null },
+        )
     }
 }
 
@@ -520,4 +530,56 @@ private fun AppDrawerHeader(title: String, actions: @Composable () -> Unit) {
         Spacer(Modifier.weight(1f))
         actions()
     }
+}
+
+@Composable
+fun DeviceConnectNewDialog(
+    socketDevice: SocketDevice,
+    onCancel: () -> Unit
+) {
+    val database = koinInject<FileManagerDatabase>()
+    val deviceState = koinInject<DeviceState>()
+
+    val onConnect: (Boolean) -> Unit = { isAuto ->
+        database.deviceQueries.insert(
+            id = socketDevice.id,
+            name = socketDevice.name,
+            type = socketDevice.type,
+            connectionType = if (isAuto) DeviceConnectType.AUTO_CONNECT else DeviceConnectType.WAITING,
+            category = DeviceCategory.CLIENT
+        )
+        val index = deviceState.socketDevices.indexOfFirst { it.id == socketDevice.id }
+        if (index >= 0) {
+            deviceState.socketDevices[index] = socketDevice.withCopy(
+                connectType = Loading
+            )
+            deviceState.connect(socketDevice)
+            onCancel()
+        } else {
+            onCancel()
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = { onCancel() },
+        title = {
+            Text(text = "连接新设备")
+        },
+        text = {
+            Text(text = "发现新设备「${socketDevice.name}」，是否要进行连接？")
+        },
+        confirmButton = {
+            TextButton(onClick = { onConnect(false) }) {
+                Text("连接")
+            }
+            TextButton(onClick = { onConnect(true) }) {
+                Text("自动连接")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { onCancel() }) {
+                Text("取消")
+            }
+        },
+    )
 }

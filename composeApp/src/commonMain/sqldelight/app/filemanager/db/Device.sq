@@ -3,7 +3,7 @@ import app.filemanager.data.main.DeviceConnectType;
 import app.filemanager.data.main.DeviceCategory;
 
 CREATE TABLE Device (
-    id              TEXT               NOT NULL CONSTRAINT Device_pk PRIMARY KEY CONSTRAINT Device_pk_2 UNIQUE,
+    id              TEXT               NOT NULL,
     name            TEXT               NOT NULL,
     type            TEXT AS DeviceType NOT NULL,
     connectionType  TEXT AS DeviceConnectType NOT NULL,
@@ -22,10 +22,10 @@ UPDATE Device
 SET name = ?
 WHERE id = ?;
 
-updateConnectionTypeById:
+updateConnectionTypeByIdAndCategory:
 UPDATE Device
 SET connectionType = ?
-WHERE id = ?;
+WHERE id = ? AND category = ?;
 
 queryAll:
 SELECT *
