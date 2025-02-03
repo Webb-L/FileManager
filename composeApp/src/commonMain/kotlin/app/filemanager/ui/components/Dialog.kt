@@ -32,8 +32,6 @@ import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileOperationType
 import app.filemanager.ui.state.file.FileState
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import kotlin.math.roundToInt
 
@@ -45,28 +43,24 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
 
     val fileFilterState = koinInject<FileFilterState>()
 
-    val emptyFileSizeInfo = FileSizeInfo(
-        fileSize = 0,
-        fileCount = 0,
-        folderCount = 0,
-        totalSpace = -1,
-        freeSpace = -1
-    )
-
     var errorText by remember {
         mutableStateOf("")
     }
     var fileSize by remember {
-        mutableStateOf(emptyFileSizeInfo)
+        mutableStateOf<FileSizeInfo?>(null)
     }
 
     LaunchedEffect(fileInfo) {
-        val result = withContext(Dispatchers.Default) {
-            fileState.getSizeInfo(fileInfo, rootPath)
-        }
+        val result = fileState.getSizeInfo(fileInfo, rootPath)
 
         if (result.isSuccess) {
-            fileSize = result.getOrNull() ?: emptyFileSizeInfo
+            fileSize = result.getOrNull() ?: FileSizeInfo(
+                fileSize = 0,
+                fileCount = 0,
+                folderCount = 0,
+                totalSpace = -1,
+                freeSpace = -1
+            )
         } else {
             errorText = result.exceptionOrNull()?.message ?: ""
         }
@@ -77,7 +71,8 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
         text = {
             SelectionContainer {
                 Column {
-                    val progressValue = (fileSize.fileSize.toFloat() / fileSize.totalSpace.toFloat())
+                    val progressValue =
+                        if (fileSize == null) 0F else (fileSize!!.fileSize.toFloat() / fileSize!!.totalSpace.toFloat())
                     LinearProgressIndicator(
                         progress = { progressValue },
                         modifier = Modifier
@@ -99,10 +94,10 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            if (fileSize.totalSpace < 0) {
+                            if (fileSize==null) {
                                 Text("计算中 总计")
                             } else {
-                                Text("${fileSize.totalSpace.formatFileSize()} 总计")
+                                Text("${fileSize!!.totalSpace.formatFileSize()} 总计")
                             }
                             Spacer(Modifier.width(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -113,10 +108,10 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                                         .background(ProgressIndicatorDefaults.linearColor)
                                 )
                                 Spacer(Modifier.width(4.dp))
-                                if (fileSize.totalSpace < 0 && fileSize.fileSize < 0 && fileSize.freeSpace < 0) {
+                                if (fileSize==null) {
                                     Text("计算中 已用")
                                 } else {
-                                    Text("${fileSize.fileSize.formatFileSize()} 已用(${(progressValue * 100).roundToInt()}%)")
+                                    Text("${fileSize!!.fileSize.formatFileSize()} 已用(${(progressValue * 100).roundToInt()}%)")
                                 }
                             }
                             Spacer(Modifier.width(8.dp))
@@ -128,10 +123,10 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                                         .background(ProgressIndicatorDefaults.linearTrackColor)
                                 )
                                 Spacer(Modifier.width(4.dp))
-                                if (fileSize.freeSpace < 0) {
+                                if (fileSize==null) {
                                     Text("计算中 剩余")
                                 } else {
-                                    Text("${fileSize.freeSpace.formatFileSize()} 剩余")
+                                    Text("${fileSize!!.freeSpace.formatFileSize()} 剩余")
                                 }
                             }
                         }
@@ -168,22 +163,22 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                         Spacer(Modifier.width(8.dp))
                         Text("Column 2", Modifier.weight(0.7f))
                     }
-                    if (fileSize.fileCount > 0) {
+                    if (fileSize!=null) {
                         Row(Modifier.fillMaxWidth().padding(4.dp)) {
                             DisableSelection {
                                 Text("文件", Modifier.weight(0.3f))
                             }
                             Spacer(Modifier.width(8.dp))
-                            Text("${fileSize.fileCount}", Modifier.weight(0.7f))
+                            Text("${fileSize!!.fileCount}", Modifier.weight(0.7f))
                         }
                     }
-                    if (fileSize.folderCount > 0) {
+                    if (fileSize!=null) {
                         Row(Modifier.fillMaxWidth().padding(4.dp)) {
                             DisableSelection {
                                 Text("文件夹", Modifier.weight(0.3f))
                             }
                             Spacer(Modifier.width(8.dp))
-                            Text("${fileSize.folderCount}", Modifier.weight(0.7f))
+                            Text("${fileSize!!.folderCount}", Modifier.weight(0.7f))
                         }
                     }
                     Row(Modifier.fillMaxWidth().padding(4.dp)) {

@@ -30,6 +30,7 @@ import app.filemanager.db.FileManagerDatabase
 import app.filemanager.service.BaseSocketManager.Companion.PORT
 import app.filemanager.service.data.ConnectType.*
 import app.filemanager.service.data.SocketDevice
+import app.filemanager.service.rpc.getAllIPAddresses
 import app.filemanager.service.socket.SocketClientIPEnum
 import app.filemanager.ui.screen.device.DeviceSettingsScreen
 import app.filemanager.ui.screen.file.FavoriteScreen
@@ -37,7 +38,9 @@ import app.filemanager.ui.screen.task.TaskResultScreen
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.*
 import app.filemanager.ui.state.main.DrawerState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -111,7 +114,7 @@ fun AppDrawer() {
     }
 
     if (isDeviceAdd) {
-        val allIPAddresses = deviceState.socketClientManger.socket.getAllIPAddresses(
+        val allIPAddresses = getAllIPAddresses(
             type = SocketClientIPEnum.ALL
         )
         TextFieldDialog(
@@ -169,7 +172,9 @@ fun AppDrawer() {
             deviceState.updateDeviceAdd(false)
 
             scope.launch {
-                val socketDevice = deviceState.socketClientManger.socket.scanPort(ip, (port ?: PORT).toString().toInt())
+                val socketDevice = withContext(Dispatchers.Default) {
+                    deviceState.socketClientManger.socket.scanPort(ip, (port ?: PORT).toString().toInt())
+                }
                 if (socketDevice != null) {
                     deviceState.socketDevices.add(socketDevice)
                     if (socketDevice.connectType == Loading) {
@@ -419,7 +424,7 @@ private fun AppDrawerDevice() {
                         .clickable {
                             if (loadingDevices) return@clickable
                             scope.launch {
-                                deviceState.scanner(deviceState.socketClientManger.socket.getAllIPAddresses(type = SocketClientIPEnum.IPV4_UP))
+                                deviceState.scanner(getAllIPAddresses(type = SocketClientIPEnum.IPV4_UP))
                             }
                         }
                 )
@@ -468,7 +473,7 @@ private fun AppDrawerDevice() {
                             Modifier
                                 .clip(RoundedCornerShape(25.dp))
                                 .clickable {
-                                    if (device.socketManger?.disconnect() == true) {
+                                    if (device.client?.disconnect() == true) {
                                         deviceState.socketDevices[index] = device.withCopy(
                                             connectType = UnConnect
                                         )

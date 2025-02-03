@@ -380,7 +380,7 @@ class FileState : KoinComponent {
     }
 
     suspend fun copyFile(srcPath: String, destPath: String): Result<Boolean> {
-        // TODO 创建任务
+        // TODO 创建任务 复制单个文件
         if (_deskType.value is Local) {
             val mainScope = MainScope()
             var successCount = 0
@@ -736,58 +736,6 @@ class FileState : KoinComponent {
             addAll(fileOperations)
         }
         return fileOperations.any { it.isConflict }
-
-        // 保留文件
-//        if (fileOperationState.warningOperationType.value == FileOperationType.Reserve) {
-//            val path = newDestFileInfo.path.replaceLast(newDestFileInfo.name, "")
-//            val fileName = if (newDestFileInfo.isDirectory)
-//                newDestFileInfo.name
-//            else
-//                newDestFileInfo.name.replaceLast(newDestFileInfo.mineType, "")
-//
-//            val fileNameRegex = "${Regex.escape(fileName)}(\\(\\d*\\))?".toRegex()
-//
-//            val fileAndFolderResult = getFileAndFolder(path)
-//            if (fileAndFolderResult.isSuccess) {
-//
-//            }
-//
-//            // 获取相同文件名
-//            val files = (fileAndFolderResult.getOrNull() ?: emptyList())
-//                .asSequence()
-//                .filter {
-//                    if (it.isDirectory) {
-//                        true
-//                    } else {
-//                        !it.isDirectory
-//                    }
-//                }
-//                .map {
-//                    if (it.isDirectory) {
-//                        it.name
-//                    } else {
-//                        it.name.replace(it.mineType, "")
-//                    }
-//                }
-//                .map { fileNameRegex.find(it) }
-//                .filter { it != null }
-//                .map { it!!.value }
-//                .sortedByDescending { it }
-//                .toSet()
-//
-//            // 只存在一个文件
-//            val size: Int
-//            if (files.isEmpty() || files.size == 1) {
-//                size = 1
-//            } else {
-//                // 存在多个文件
-//                val oldSize = "\\([^()]*\\)\$".toRegex().find(files.first())!!.value
-//                    .replace("(", "")
-//                    .replace(")", "")
-//                size = oldSize.toInt()
-//            }
-//            return "$path$fileName(${size + 1})${newDestFileInfo.mineType}"
-//        }
     }
 
     suspend fun writeBytes(): Result<Boolean> {
@@ -795,7 +743,7 @@ class FileState : KoinComponent {
         if (_deskType.value is Device) {
             val device = _deskType.value as Device
             var result: Result<Boolean> = Result.success(false)
-            device.writeBytes("/home/webb/OSX-KVM2/random_file", "/home/webb/下载/writeTest") {
+            device.writeBytes("/home/webb/OSX-KVM2/random_file", "/storage/emulated/0/random_file") {
                 result = it
                 isReturn = true
             }

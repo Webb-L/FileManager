@@ -3,23 +3,16 @@ package app.filemanager.service.handle
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.service.BaseSocketManager.Companion.MAX_LENGTH
-import app.filemanager.service.SocketClientManger
-import app.filemanager.service.WebSocketResult
 import app.filemanager.service.data.RenameInfo
-import app.filemanager.service.socket.SocketHeader
+import app.filemanager.service.rpc.FileService
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
-import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromByteArray
-import kotlinx.serialization.protobuf.ProtoBuf
 import kotlin.math.ceil
-import kotlin.random.Random
 
-class FileHandle(private val socket: SocketClientManger) {
+class FileHandle(private val fileService: FileService) {
     /**
      * 重命名文件和文件夹
      *
@@ -28,7 +21,6 @@ class FileHandle(private val socket: SocketClientManger) {
      * @param oldName
      * @param newName
      */
-    @OptIn(ExperimentalSerializationApi::class)
     suspend fun rename(
         remoteId: String,
         path: String,
@@ -36,50 +28,29 @@ class FileHandle(private val socket: SocketClientManger) {
         newName: String,
         replyCallback: (Result<Boolean>) -> Unit
     ) {
-        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        socket.send(
-            header = SocketHeader(command = "rename"),
-            params = mapOf(
-                "replyKey" to replyKey.toString(),
-            ),
-            value = listOf(RenameInfo(path, oldName, newName))
+        val result = fileService.rename(
+            renameInfos = listOf(RenameInfo(path, oldName, newName))
         )
+        if (!result.isSuccess) {
+            replyCallback(Result.failure(result.deSerializable()))
+            return
+        }
 
-        socket.waitFinish(replyKey, callback = { result ->
-            if (result.isFailure) {
-                replyCallback(Result.failure(result.exceptionOrNull() ?: Exception()))
-                return@waitFinish
-            }
 
-            val webSocketResult =
-                ProtoBuf.decodeFromByteArray<WebSocketResult<List<WebSocketResult<Boolean>>>>(
-                    result.getOrDefault(
-                        byteArrayOf()
-                    )
-                )
+        // 若解码结果成功，则获取内层列表
+        val webSocketResults = result.value.orEmpty()
+        if (webSocketResults.isEmpty()) {
+            replyCallback(Result.failure(Exception("重命名失败")))
+            return
+        }
 
-            // 若解码结果本身不成功，则直接回调错误并返回
-            if (!webSocketResult.isSuccess) {
-                replyCallback(Result.failure(webSocketResult.deSerializable()))
-                return@waitFinish
-            }
-
-            // 若解码结果成功，则获取内层列表
-            val webSocketResults = webSocketResult.value.orEmpty()
-            if (webSocketResults.isEmpty()) {
-                replyCallback(Result.failure(Exception("重命名失败")))
-                return@waitFinish
-            }
-
-            // 获取列表中的第一个元素并判断其是否成功
-            val firstResult = webSocketResults.first()
-            if (firstResult.isSuccess) {
-                replyCallback(Result.success(firstResult.value ?: false))
-            } else {
-                replyCallback(Result.failure(firstResult.deSerializable()))
-            }
-
-        })
+        // 获取列表中的第一个元素并判断其是否成功
+        val firstResult = webSocketResults.first()
+        if (firstResult.isSuccess) {
+            replyCallback(Result.success(firstResult.value ?: false))
+        } else {
+            replyCallback(Result.failure(firstResult.deSerializable()))
+        }
     }
 
     /**
@@ -91,37 +62,26 @@ class FileHandle(private val socket: SocketClientManger) {
      * @param replyCallback
      * @receiver
      */
-    @OptIn(ExperimentalSerializationApi::class)
     suspend fun createFolder(remoteId: String, path: String, name: String, replyCallback: (Result<Boolean>) -> Unit) {
-        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        socket.send(
-            header = SocketHeader(command = "createFolder"),
-            params = mapOf("replyKey" to replyKey.toString()),
-            value = listOf("$path${PathUtils.getPathSeparator()}$name")
-        )
-        socket.waitFinish(replyKey, callback = { result ->
-            if (result.isFailure) {
-                replyCallback(Result.failure(result.exceptionOrNull() ?: Exception()))
-                return@waitFinish
-            }
+        val result = fileService.createFolder(listOf("$path${PathUtils.getPathSeparator()}$name"))
+        if (!result.isSuccess) {
+            replyCallback(Result.failure(result.deSerializable()))
+            return
+        }
 
-            val resultList = ProtoBuf.decodeFromByteArray<List<WebSocketResult<Boolean>>>(
-                result.getOrDefault(byteArrayOf())
-            )
-            if (resultList.isNotEmpty()) {
-                val first = resultList.first()
-                if (first.isSuccess) {
-                    replyCallback(Result.success(first.value ?: false))
-                } else {
-                    replyCallback(Result.failure(first.deSerializable()))
-                }
+        val resultList = result.value.orEmpty()
+        if (resultList.isNotEmpty()) {
+            val first = resultList.first()
+            if (first.isSuccess) {
+                replyCallback(Result.success(first.value ?: false))
             } else {
-                replyCallback(Result.failure(Exception("文件夹创建失败")))
+                replyCallback(Result.failure(first.deSerializable()))
             }
-        })
+        } else {
+            replyCallback(Result.failure(Exception("文件夹创建失败")))
+        }
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     suspend fun getFileSizeInfo(
         id: String,
         fileSimpleInfo: FileSimpleInfo,
@@ -129,110 +89,61 @@ class FileHandle(private val socket: SocketClientManger) {
         freeSpace: Long,
         replyCallback: (Result<FileSizeInfo>) -> Unit
     ) {
-        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        socket.send(
-            header = SocketHeader(command = "getSizeInfo"),
-            params = mapOf(
-                "replyKey" to replyKey.toString(),
-                "totalSpace" to totalSpace.toString(),
-                "freeSpace" to freeSpace.toString()
-            ),
-            value = fileSimpleInfo
-        )
-        socket.waitFinish(replyKey, callback = { result ->
-            if (result.isFailure) {
-                replyCallback(Result.failure(result.exceptionOrNull() ?: Exception()))
-                return@waitFinish
-            }
-
-            val decodeFromHexString =
-                ProtoBuf.decodeFromByteArray<WebSocketResult<FileSizeInfo>>(
-                    result.getOrDefault(byteArrayOf())
-                )
-            if (decodeFromHexString.isSuccess) {
-                replyCallback(Result.success(decodeFromHexString.value as FileSizeInfo))
-            } else {
-                replyCallback(Result.failure(decodeFromHexString.deSerializable()))
-            }
-        })
+        val result = fileService.getSizeInfo(totalSpace, freeSpace, fileSimpleInfo)
+        if (!result.isSuccess) {
+            replyCallback(Result.failure(result.deSerializable()))
+            return
+        }
+        replyCallback(Result.success(result.value as FileSizeInfo))
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     suspend fun deleteFile(id: String, paths: List<String>, replyCallback: (Result<List<Boolean>>) -> Unit) {
-        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        socket.send(
-            header = SocketHeader(command = "deleteFile"),
-            params = mapOf(
-                "replyKey" to replyKey.toString(),
-            ),
-            value = paths
-        )
+        val result = fileService.delete(paths)
 
-        socket.waitFinish(replyKey, callback = { result ->
-            if (result.isFailure) {
-                replyCallback(Result.failure(result.exceptionOrNull() ?: Exception()))
-                return@waitFinish
-            }
+        if (!result.isSuccess) {
+            replyCallback(Result.failure(result.deSerializable()))
+            return
+        }
 
-            val decodeFromHexString =
-                ProtoBuf.decodeFromByteArray<WebSocketResult<List<Boolean>>>(
-                    result.getOrDefault(byteArrayOf())
-                )
-            if (decodeFromHexString.isSuccess) {
-                replyCallback(Result.success(decodeFromHexString.value as List<Boolean>))
-            } else {
-                replyCallback(Result.failure(decodeFromHexString.deSerializable()))
-            }
-        })
+        replyCallback(Result.success(result.value.orEmpty().map { it.value ?: false }))
     }
 
     suspend fun writeBytes(id: String, srcPath: String, destPath: String, replyCallback: (Result<Boolean>) -> Unit) {
-        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
         val file = FileUtils.getFile(srcPath)
-        val length = ceil(file.size / MAX_LENGTH.toFloat()).toInt()
+        val length = ceil(file.size / MAX_LENGTH.toFloat()).toLong()
         val mainScope = MainScope()
+
+        var successCount = 0L
+        var failureCount = 0L
+
         FileUtils.readFileChunks(srcPath, MAX_LENGTH.toLong()) {
             if (it.isSuccess) {
-                val result = it.getOrNull() ?: Pair(0, byteArrayOf())
+                val result = it.getOrNull() ?: Pair(0L, byteArrayOf())
                 mainScope.launch {
-                    if (socket.cancelKeys.contains(replyKey)) {
-                        mainScope.cancel()
-                        return@launch
-                    }
-                    socket.send(
-                        header = SocketHeader(command = "writeBytes"),
-                        params = mapOf(
-                            "replyKey" to replyKey.toString(),
-                            "fileSize" to file.size.toString(),
-                            "blockIndex" to result.first.toString(),
-                            "blockLength" to length.toString(),
-                            "path" to destPath,
-                        ),
-                        value = result.second
+                    val resultWrite = fileService.writeBytes(
+                        fileSize = file.size,
+                        blockIndex = result.first,
+                        blockLength = length,
+                        path = destPath,
+                        byteArray = result.second,
                     )
+                    if (resultWrite.isSuccess) {
+                        successCount++
+                    } else {
+                        failureCount++
+                    }
                 }
             } else {
                 replyCallback(Result.failure(it.exceptionOrNull() ?: Exception()))
+                failureCount++
             }
         }
 
 
-        socket.waitFinish<List<Long>>(replyKey, callback = { result ->
-            if (result.isFailure) {
-                replyCallback(Result.failure(result.exceptionOrNull() ?: Exception()))
-                return@waitFinish
-            }
-            socket.cancelKeys.remove(replyKey)
+        while (successCount + failureCount < length) {
+            delay(100L)
+        }
 
-            val decodeFromHexString = result.getOrDefault(listOf())
-
-//            println("写入失败的块 = ${decodeFromHexString}")
-
-            if (decodeFromHexString.isEmpty()) {
-                replyCallback(Result.success(true))
-            } else {
-                replyCallback(Result.failure(Exception()))
-            }
-        })
+        replyCallback(Result.success(successCount == length && failureCount == 0L))
     }
 }

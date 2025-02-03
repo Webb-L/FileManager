@@ -25,7 +25,6 @@ import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.utils.NaturalOrderComparator
 import app.filemanager.utils.PathUtils
-import app.filemanager.utils.PathUtils.getBookmarks
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -50,11 +49,6 @@ fun AppBarPath() {
             ) { protocol, type ->
                 fileState.updateDesk(protocol, type)
                 drawerState.getBookmarks(fileState.deskType.value)
-                drawerState.bookmarks.apply {
-                    clear()
-                    fileState.deskType
-                    addAll(getBookmarks())
-                }
             }
         }
 

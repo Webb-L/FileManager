@@ -3,9 +3,9 @@ package app.filemanager.service.data
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceType
 import app.filemanager.service.BaseSocketManager.Companion.PORT
-import app.filemanager.service.SocketClientManger
-import kotlinx.serialization.Contextual
+import app.filemanager.service.rpc.RpcClientManager
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 
 @Serializable
@@ -27,11 +27,11 @@ data class SocketDevice(
     val type: DeviceType,
     var connectType: ConnectType = ConnectType.New,
 ) {
-    @Contextual
-    var socketManger: SocketClientManger? = null
+    @Transient
+    var client: RpcClientManager? = null
 
     fun toDevice(): Device {
-        return Device(id = id, name = name, host = mutableMapOf(host to socketManger!!), type = type)
+        return Device(id = id, name = name, host = mutableMapOf(host to client!!), type = type)
     }
 
     fun withCopy(
@@ -41,10 +41,10 @@ data class SocketDevice(
         port: Int = this.port,
         type: DeviceType = this.type,
         connectType: ConnectType = this.connectType,
-        socketManger: SocketClientManger? = this.socketManger
+        client: RpcClientManager? = this.client
     ): SocketDevice {
         return SocketDevice(id, name, host, port, type, connectType).apply {
-            this.socketManger = socketManger
+            this.client = client
         }
     }
 }

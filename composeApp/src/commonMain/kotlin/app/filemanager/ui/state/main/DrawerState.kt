@@ -45,7 +45,6 @@ class DrawerState() {
         if (deskType is Device) {
             bookmarks.clear()
             deskType.getBookmark {
-                // TODO 解决错误问题。
                 if (it.isSuccess) {
                     bookmarks.addAll(it.getOrNull() ?: listOf())
                 }

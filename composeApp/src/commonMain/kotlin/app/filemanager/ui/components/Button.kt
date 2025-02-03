@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileFilterSort
+import app.filemanager.service.rpc.getAllIPAddresses
 import app.filemanager.service.socket.SocketClientIPEnum
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.main.DeviceState
@@ -186,7 +187,7 @@ fun IpsButton() {
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            for (ip in deviceState.socketClientManger.socket.getAllIPAddresses(type = SocketClientIPEnum.IPV4_UP)) {
+            for (ip in getAllIPAddresses(type = SocketClientIPEnum.IPV4_UP)) {
                 DropdownMenuItem(
                     text = { Text(ip) },
                     onClick = {

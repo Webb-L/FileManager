@@ -1,26 +1,19 @@
 package app.filemanager.service.handle
 
-import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.PathInfo
 import app.filemanager.extensions.pathLevel
-import app.filemanager.service.SocketClientManger
-import app.filemanager.service.WebSocketResult
-import app.filemanager.service.WebSocketResultMapListFileSimpleInfo
-import app.filemanager.service.socket.SocketHeader
+import app.filemanager.service.rpc.RpcClientManager
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
+import kotlinx.rpc.krpc.streamScoped
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromByteArray
-import kotlinx.serialization.protobuf.ProtoBuf
-import kotlin.random.Random
 
 
-class PathHandle(private val socket: SocketClientManger) {
+class PathHandle(private val rpc: RpcClientManager) {
     /**
      * 从远程设备获取指定路径下的文件和文件夹列表。
      *
@@ -29,102 +22,55 @@ class PathHandle(private val socket: SocketClientManger) {
      */
     @OptIn(ExperimentalSerializationApi::class)
     suspend fun getList(path: String, remoteId: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
-        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        socket.send(
-            header = SocketHeader(command = "list"),
-            params = mapOf("replyKey" to replyKey.toString(), "path" to path),
-            value = ""
-        )
-
         val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
 
-        socket.waitFinish(replyKey, callback = { result ->
-            if (result.isFailure) {
-                replyCallback(Result.failure(result.exceptionOrNull() ?: Exception()))
-                return@waitFinish
-            }
+        val result = rpc.pathService.list(path)
+        if (!result.isSuccess) {
+            replyCallback(Result.failure(result.deSerializable()))
+            return
+        }
 
-            val decodeFromHexString =
-                ProtoBuf.decodeFromByteArray<WebSocketResult<WebSocketResultMapListFileSimpleInfo>>(
-                    result.getOrDefault(byteArrayOf())
-                )
-
-            if (decodeFromHexString.isSuccess) {
-                (decodeFromHexString.value as Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>).forEach {
-                    it.value.forEach { fileSimpleInfo ->
-                        fileSimpleInfos.add(fileSimpleInfo.apply {
-                            protocol = it.key.first
-                            protocolId = it.key.second
-                            this.path = path + this.path
-                        })
-                    }
-                }
-                replyCallback(Result.success(fileSimpleInfos))
-            } else {
-                replyCallback(Result.failure(decodeFromHexString.deSerializable()))
+        result.value?.forEach {
+            it.value.forEach { fileSimpleInfo ->
+                fileSimpleInfos.add(fileSimpleInfo.apply {
+                    protocol = it.key.first
+                    protocolId = it.key.second
+                    this.path = path + this.path
+                })
             }
-        })
+        }
+        replyCallback(Result.success(fileSimpleInfos))
     }
 
     suspend fun getRootPaths(remoteId: String, replyCallback: (List<PathInfo>) -> Unit) {
-        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        socket.send(
-            header = SocketHeader(command = "rootPaths"),
-            params = mapOf("replyKey" to replyKey.toString()),
-            value = ""
-        )
-
-
-        // TODO 需要优化
-        val paths: MutableList<PathInfo> = mutableListOf()
-        socket.waitFinish(replyKey, callback = { result ->
-            if (result.isFailure) {
-                replyCallback(listOf())
-                return@waitFinish
-            }
-            paths.addAll(result.getOrDefault(listOf()))
-        })
-
-        replyCallback(paths)
+        val result = rpc.pathService.rootPaths()
+        if (!result.isSuccess) {
+            replyCallback(listOf())
+        }
+        replyCallback(result.value.orEmpty())
     }
 
-    @OptIn(ExperimentalSerializationApi::class)
     suspend fun getTraversePath(path: String, remoteId: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
-        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
-        socket.send(
-            header = SocketHeader(command = "traversePath"),
-            params = mapOf("replyKey" to replyKey.toString(), "path" to path),
-            value = ""
-        )
-
-
-        socket.waitFinish(replyKey, callback = { result ->
-            if (result.isFailure) {
-                replyCallback(Result.failure(result.exceptionOrNull() ?: Exception()))
-                return@waitFinish
-            }
-
-            val decodeFromHexString =
-                ProtoBuf.decodeFromByteArray<WebSocketResult<WebSocketResultMapListFileSimpleInfo>>(
-                    result.getOrDefault(byteArrayOf())
-                )
-
-            if (decodeFromHexString.isSuccess) {
-                val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
-                (decodeFromHexString.value as WebSocketResultMapListFileSimpleInfo).forEach {
-                    it.value.forEach { fileSimpleInfo ->
-                        fileSimpleInfos.add(fileSimpleInfo.apply {
-                            protocol = it.key.first
-                            protocolId = it.key.second
-                            this.path = path + this.path
-                        })
+        streamScoped {
+            rpc.pathService.traversePath(path).collect { result ->
+                if (!result.isSuccess) {
+                    replyCallback(Result.failure(result.deSerializable()))
+                } else {
+                    val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
+                    result.value?.forEach {
+                        it.value.forEach { fileSimpleInfo ->
+                            fileSimpleInfos.add(fileSimpleInfo.apply {
+                                protocol = it.key.first
+                                protocolId = it.key.second
+                                this.path = path + this.path
+                            })
+                        }
                     }
+
+                    replyCallback(Result.success(fileSimpleInfos))
                 }
-                replyCallback(Result.success(fileSimpleInfos))
-            } else {
-                replyCallback(Result.failure(decodeFromHexString.deSerializable()))
             }
-        })
+        }
     }
 
     // TODO 遍历目录->创建文件夹->创建文件
@@ -141,6 +87,7 @@ class PathHandle(private val socket: SocketClientManger) {
         val mainScope = MainScope()
         var successCount = 0
         var failureCount = 0
+
         // TODO 2.本地复制到远程
         val list = mutableListOf<FileSimpleInfo>()
         PathUtils.traverse(srcPath) { fileAndFolder ->
@@ -156,38 +103,19 @@ class PathHandle(private val socket: SocketClientManger) {
             .groupBy { it.isDirectory }.forEach { (isDir, fileSimpleInfos) ->
                 if (isDir) {
                     for (paths in fileSimpleInfos.map { it.path.replaceFirst(srcPath, destPath) }.chunked(30)) {
-                        val replyKey = Clock.System.now().toEpochMilliseconds() + Random.nextInt()
                         mainScope.launch {
-                            socket.send(
-                                header = SocketHeader(command = "createFolder"),
-                                params = mapOf(
-                                    "replyKey" to replyKey.toString()
-                                ),
-                                value = paths
-                            )
-                            socket.waitFinish(replyKey, callback = { result ->
-                                if (result.isFailure) {
-                                    replyCallback(Result.failure(result.exceptionOrNull() ?: Exception()))
-                                    return@waitFinish
-                                }
-                                socket.cancelKeys.remove(replyKey)
-
-                                val webSocketResponse =
-                                    ProtoBuf.decodeFromByteArray<WebSocketResult<List<WebSocketResult<Boolean>>>>(
-                                        result.getOrDefault(byteArrayOf())
-                                    )
-                                if (webSocketResponse.isSuccess) {
-                                    webSocketResponse.value.orEmpty().forEach { item ->
-                                        when {
-                                            item.isSuccess && item.value == true -> successCount++
-                                            item.isSuccess -> failureCount++
-                                            else -> failureCount++ // TODO 记录文件夹创建错误
-                                        }
+                            val result = rpc.fileService.createFolder(paths)
+                            if (result.isSuccess) {
+                                result.value.orEmpty().forEach { item ->
+                                    when {
+                                        item.isSuccess && item.value == true -> successCount++
+                                        item.isSuccess -> failureCount++
+                                        else -> failureCount++ // TODO 记录文件夹创建错误
                                     }
-                                } else {
-                                    failureCount += paths.size
                                 }
-                            })
+                            } else {
+                                failureCount += paths.size
+                            }
                         }
                     }
 
@@ -198,7 +126,7 @@ class PathHandle(private val socket: SocketClientManger) {
                     for (files in fileSimpleInfos.chunked(maxOf(30, fileSimpleInfos.size / 30))) {
                         mainScope.launch {
                             for (file in files) {
-                                socket.fileHandle.writeBytes(
+                                rpc.fileHandle.writeBytes(
                                     remoteId,
                                     file.path,
                                     file.path.replaceFirst(srcPath, destPath)

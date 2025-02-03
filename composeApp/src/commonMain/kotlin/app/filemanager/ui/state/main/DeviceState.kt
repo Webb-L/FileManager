@@ -4,14 +4,24 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceConnectType
+import app.filemanager.extensions.getSubnetIps
 import app.filemanager.service.SocketClientManger
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
-import io.ktor.util.network.*
+import app.filemanager.service.rpc.RpcClientManager
+import io.ktor.client.*
+import io.ktor.client.plugins.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.decodeFromByteArray
+import kotlinx.serialization.protobuf.ProtoBuf
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -39,32 +49,71 @@ class DeviceState : KoinComponent {
 
     val connectionRequest = mutableStateMapOf<String, DeviceConnectType>()
 
-    // TODO 获取断开的链接
-    suspend fun scanner(ips: List<String>) {
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun scanner(address: List<String>) {
         updateLoadingDevices(true)
-        socketClientManger.socket.scanner(ips) { socketDevice ->
-            if (socketDevice.connectType == ConnectType.Loading) {
-                connect(socketDevice)
+        val ipAddresses = mutableSetOf<String>().apply {
+            for (host in address) {
+                addAll(host.getSubnetIps()/*.filter { it != host }*/)
             }
-            socketDevices.add(socketDevice)
         }
+
+        var remainingAddresses = ipAddresses.size
+        val client = HttpClient {
+            expectSuccess = false
+            install(HttpTimeout) {
+                requestTimeoutMillis = 1000
+                connectTimeoutMillis = 1000
+                socketTimeoutMillis = 1000
+            }
+        }
+
+        ipAddresses.chunked(51).forEach { chunk ->
+            mainScope.launch {
+                chunk.forEach { ip ->
+                    try {
+                        val response = client.get {
+                            url {
+                                host = ip
+                                path("/ping")
+                                port = 1204
+                            }
+                        }
+
+                        val socketDevice = if (response.bodyAsBytes().isNotEmpty()) {
+                            ProtoBuf.decodeFromByteArray<SocketDevice>(response.bodyAsBytes())
+                        } else null
+
+                        socketDevice?.let { device ->
+                            device.host = ip
+                            if (device.connectType == ConnectType.Loading) {
+                                connect(device)
+                            }
+                            if (socketDevices.firstOrNull { it.id == device.id } == null) {
+                                socketDevices.add(device)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        socketDevices.removeAll { it.host == ip }
+                    } finally {
+                        remainingAddresses--
+                    }
+                }
+            }
+        }
+
+        while (remainingAddresses > 0) {
+            delay(300L)
+        }
+
+        client.close()
         updateLoadingDevices(false)
     }
 
     fun connect(connectDevice: SocketDevice) {
         mainScope.launch {
-            try {
-                socketClientManger.connect(connectDevice)
-            } catch (e: UnresolvedAddressException) {
-                println(e)
-                socketDevices.indexOfFirst { it.id == connectDevice.id }.takeIf { it >= 0 }?.let { index ->
-                    socketDevices[index] = connectDevice.withCopy(
-                        connectType = ConnectType.Fail
-                    )
-                }
-            } catch (e: Exception) {
-                println(e)
-            }
+            val rpcClientManager = RpcClientManager()
+            rpcClientManager.connect(connectDevice)
         }
     }
 }

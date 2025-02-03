@@ -3,7 +3,7 @@ package app.filemanager.data.main
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.data.file.PathInfo
-import app.filemanager.service.SocketClientManger
+import app.filemanager.service.rpc.RpcClientManager
 import kotlinx.serialization.Serializable
 
 enum class DrawerBookmarkType {
@@ -106,10 +106,10 @@ enum class DeviceCategory(type: String) {
 data class Device(
     val id: String,
     override val name: String,
-    val host: MutableMap<String, SocketClientManger>,
+    val host: MutableMap<String, RpcClientManager>,
     val type: DeviceType
 ) : DiskBase() {
-    private fun getConnect(): SocketClientManger? {
+    private fun getConnect(): RpcClientManager? {
 //        for (key in host.keys) {
 //            if (key.isPrivateIPAddress()) {
 //                return host[key]

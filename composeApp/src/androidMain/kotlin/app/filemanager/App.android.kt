@@ -10,6 +10,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.core.content.FileProvider
+import app.filemanager.service.rpc.startRpcServer
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.io.File
 
 
@@ -18,9 +23,14 @@ class AndroidApp : Application() {
         lateinit var INSTANCE: AndroidApp
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate() {
         super.onCreate()
         INSTANCE = this
+
+        GlobalScope.launch(Dispatchers.IO) {
+            startRpcServer()
+        }
     }
 }
 

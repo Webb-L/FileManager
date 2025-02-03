@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.kotlinx.serialization)
     alias(libs.plugins.sqlDelight)
     alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlinx.rpc)
 }
 
 kotlin {
@@ -48,7 +49,6 @@ kotlin {
             implementation(libs.composeImageLoader)
             implementation(libs.napier)
             implementation(libs.kotlinx.coroutines.core)
-            implementation(libs.ktor.core)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.serialization.protobuf)
             implementation(libs.kotlinx.datetime)
@@ -57,6 +57,15 @@ kotlin {
             implementation(libs.koin.test)
             implementation(libs.koin.compose)
             implementation(libs.sqlDelight.driver.adapters)
+
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.websockets)
+
+            implementation(libs.kotlinx.rpc.core)
+            implementation(libs.kotlinx.rpc.krpc.client)
+            implementation(libs.kotlinx.rpc.krpc.ktor.client)
+            implementation(libs.kotlinx.rpc.krpc.serialization.json)
+            implementation(libs.kotlinx.rpc.krpc.serialization.protobuf)
 
             @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
             implementation(compose.components.resources)
@@ -76,6 +85,16 @@ kotlin {
             implementation(libs.koin.android)
             implementation(libs.androidx.security.crypto)
             implementation(libs.ktor.network)
+            implementation(libs.ktor.network.tls)
+
+            implementation(libs.ktor.server.core)
+            implementation(libs.ktor.server.cio)
+            implementation(libs.ktor.server.cors)
+            implementation(libs.ktor.server.websockets)
+            implementation(libs.ktor.server.host.common)
+
+            implementation(libs.kotlinx.rpc.krpc.server)
+            implementation(libs.kotlinx.rpc.krpc.ktor.server)
         }
 
         jvmMain.dependencies {
@@ -85,6 +104,16 @@ kotlin {
             implementation(libs.sqlDelight.driver.sqlite)
             implementation(libs.jasypt)
             implementation(libs.ktor.network)
+
+            implementation(libs.ktor.client.cio)
+            implementation(libs.ktor.server.core)
+            implementation(libs.ktor.server.netty)
+            implementation(libs.ktor.server.cors)
+            implementation(libs.ktor.server.websockets)
+            implementation(libs.ktor.server.host.common)
+
+            implementation(libs.kotlinx.rpc.krpc.server)
+            implementation(libs.kotlinx.rpc.krpc.ktor.server)
         }
 
         jsMain.dependencies {
