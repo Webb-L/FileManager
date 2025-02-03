@@ -5,9 +5,9 @@ import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.exception.ParameterErrorException
 import app.filemanager.exception.toSocketResult
-import app.filemanager.service.BaseSocketManager.Companion.MAX_LENGTH
 import app.filemanager.service.WebSocketResult
 import app.filemanager.service.data.RenameInfo
+import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
 import app.filemanager.utils.FileUtils
 import kotlinx.rpc.RemoteService
 import kotlinx.rpc.annotations.Rpc

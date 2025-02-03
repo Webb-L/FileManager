@@ -2,8 +2,8 @@ package app.filemanager.service.data
 
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceType
-import app.filemanager.service.BaseSocketManager.Companion.PORT
 import app.filemanager.service.rpc.RpcClientManager
+import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 

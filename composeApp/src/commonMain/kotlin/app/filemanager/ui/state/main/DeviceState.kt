@@ -5,7 +5,6 @@ import androidx.compose.runtime.mutableStateMapOf
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.extensions.getSubnetIps
-import app.filemanager.service.SocketClientManger
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager
@@ -27,7 +26,6 @@ import org.koin.core.component.inject
 
 class DeviceState : KoinComponent {
     private val mainState by inject<MainState>()
-    val socketClientManger = SocketClientManger()
     private val mainScope = MainScope()
 
     private val _isDeviceAdd: MutableStateFlow<Boolean> = MutableStateFlow(false)

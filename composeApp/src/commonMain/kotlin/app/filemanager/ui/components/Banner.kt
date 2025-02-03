@@ -11,8 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.main.DeviceConnectType
-import app.filemanager.service.BaseSocketManager.Companion.CONNECT_TIMEOUT
 import app.filemanager.service.data.SocketDevice
+import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
 import app.filemanager.ui.state.main.DeviceState
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject

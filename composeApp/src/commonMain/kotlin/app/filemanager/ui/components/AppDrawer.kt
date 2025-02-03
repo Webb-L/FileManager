@@ -27,20 +27,17 @@ import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceType.*
 import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.db.FileManagerDatabase
-import app.filemanager.service.BaseSocketManager.Companion.PORT
 import app.filemanager.service.data.ConnectType.*
 import app.filemanager.service.data.SocketDevice
+import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
-import app.filemanager.service.socket.SocketClientIPEnum
 import app.filemanager.ui.screen.device.DeviceSettingsScreen
 import app.filemanager.ui.screen.file.FavoriteScreen
 import app.filemanager.ui.screen.task.TaskResultScreen
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.*
 import app.filemanager.ui.state.main.DrawerState
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -172,15 +169,15 @@ fun AppDrawer() {
             deviceState.updateDeviceAdd(false)
 
             scope.launch {
-                val socketDevice = withContext(Dispatchers.Default) {
-                    deviceState.socketClientManger.socket.scanPort(ip, (port ?: PORT).toString().toInt())
-                }
-                if (socketDevice != null) {
-                    deviceState.socketDevices.add(socketDevice)
-                    if (socketDevice.connectType == Loading) {
-                        deviceState.connect(socketDevice)
-                    }
-                }
+//                val socketDevice = withContext(Dispatchers.Default) {
+//                    deviceState.socketClientManger.socket.scanPort(ip, (port ?: PORT).toString().toInt())
+//                }
+//                if (socketDevice != null) {
+//                    deviceState.socketDevices.add(socketDevice)
+//                    if (socketDevice.connectType == Loading) {
+//                        deviceState.connect(socketDevice)
+//                    }
+//                }
             }
         }
     }

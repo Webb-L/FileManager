@@ -18,8 +18,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileFilterSort
+import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
-import app.filemanager.service.socket.SocketClientIPEnum
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.main.DeviceState
 import kotlinx.coroutines.launch

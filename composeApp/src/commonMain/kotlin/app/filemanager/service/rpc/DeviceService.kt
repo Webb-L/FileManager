@@ -4,9 +4,9 @@ import app.filemanager.data.main.DeviceCategory
 import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceConnectType.*
 import app.filemanager.db.FileManagerDatabase
-import app.filemanager.service.BaseSocketManager.Companion.CONNECT_TIMEOUT
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
+import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
 import app.filemanager.ui.state.main.DeviceState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout

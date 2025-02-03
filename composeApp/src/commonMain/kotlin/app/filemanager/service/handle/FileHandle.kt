@@ -2,9 +2,9 @@ package app.filemanager.service.handle
 
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.FileSizeInfo
-import app.filemanager.service.BaseSocketManager.Companion.MAX_LENGTH
 import app.filemanager.service.data.RenameInfo
 import app.filemanager.service.rpc.FileService
+import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.MainScope

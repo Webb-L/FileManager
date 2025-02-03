@@ -4,7 +4,7 @@ import app.filemanager.createSettings
 import app.filemanager.data.main.DeviceType
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
-import app.filemanager.service.socket.SocketClientIPEnum
+import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -25,7 +25,7 @@ import java.net.NetworkInterface
 actual suspend fun startRpcServer() {
     val settings = createSettings()
 
-    embeddedServer(Netty, 1204) {
+    embeddedServer(Netty, PORT) {
         install(Krpc)
 
         routing {
