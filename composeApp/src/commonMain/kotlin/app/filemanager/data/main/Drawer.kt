@@ -1,10 +1,16 @@
 package app.filemanager.data.main
 
+import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.data.file.PathInfo
+import app.filemanager.service.data.ConnectType
 import app.filemanager.service.rpc.RpcClientManager
+import app.filemanager.ui.state.file.FileState
+import app.filemanager.ui.state.main.DeviceState
 import kotlinx.serialization.Serializable
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
 enum class DrawerBookmarkType {
     Home,
@@ -95,6 +101,7 @@ enum class DeviceCategory(type: String) {
      * 枚举常量用来区分不同的设备类型。
      */
     CLIENT("CLIENT"),
+
     /**
      * 表示设备类别中的服务器类型。
      * SERVER 是设备类别的枚举常量之一，代表服务器设备。
@@ -108,38 +115,68 @@ data class Device(
     override val name: String,
     val host: MutableMap<String, RpcClientManager>,
     val type: DeviceType
-) : DiskBase() {
-    private fun getConnect(): RpcClientManager? {
-//        for (key in host.keys) {
-//            if (key.isPrivateIPAddress()) {
-//                return host[key]
-//            }
-//        }
+) : DiskBase(), KoinComponent {
+
+    private val fileState: FileState by inject()
+    private val deviceState: DeviceState by inject()
+
+    private fun getConnect(): RpcClientManager {
         return host.values.first()
     }
 
+    private fun handleError() {
+        deviceState.devices.remove(this)
+        deviceState.socketDevices.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let { index ->
+            deviceState.socketDevices[index] = deviceState.socketDevices[index].withCopy(
+                connectType = ConnectType.Fail
+            )
+        }
+        fileState.updateDesk(FileProtocol.Local, Local())
+    }
+
+
     suspend fun getRootPaths(replyCallback: (List<PathInfo>) -> Unit) {
-        getConnect()?.pathHandle?.getRootPaths(id, replyCallback)
+        getConnect().pathHandle.getRootPaths(id, replyCallback)
     }
 
     suspend fun getFileList(path: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
-        getConnect()?.pathHandle?.getList(path, id, replyCallback)
+        try {
+            getConnect().pathHandle.getList(path, id, replyCallback)
+        } catch (e: Exception) {
+            handleError()
+        }
     }
 
     suspend fun getTraversePath(path: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
-        getConnect()?.pathHandle?.getTraversePath(path, id, replyCallback)
+        try {
+            getConnect().pathHandle.getTraversePath(path, id, replyCallback)
+        } catch (e: Exception) {
+            handleError()
+        }
     }
 
     suspend fun getBookmark(replyCallback: (Result<List<DrawerBookmark>>) -> Unit) {
-        getConnect()?.bookmarkHandle?.getBookmark(id, replyCallback)
+        try {
+            getConnect().bookmarkHandle.getBookmark(id, replyCallback)
+        } catch (e: Exception) {
+            handleError()
+        }
     }
 
     suspend fun rename(path: String, oldName: String, newName: String, replyCallback: (Result<Boolean>) -> Unit) {
-        getConnect()?.fileHandle?.rename(id, path, oldName, newName, replyCallback)
+        try {
+            getConnect().fileHandle.rename(id, path, oldName, newName, replyCallback)
+        } catch (e: Exception) {
+            handleError()
+        }
     }
 
     suspend fun createFolder(path: String, name: String, replyCallback: (Result<Boolean>) -> Unit) {
-        getConnect()?.fileHandle?.createFolder(id, path, name, replyCallback)
+        try {
+            getConnect().fileHandle.createFolder(id, path, name, replyCallback)
+        } catch (e: Exception) {
+            handleError()
+        }
     }
 
     suspend fun getFileSizeInfo(
@@ -148,14 +185,22 @@ data class Device(
         freeSpace: Long,
         replyCallback: (Result<FileSizeInfo>) -> Unit
     ) {
-        getConnect()?.fileHandle?.getFileSizeInfo(id, fileSimpleInfo, totalSpace, freeSpace, replyCallback)
+        try {
+            getConnect().fileHandle.getFileSizeInfo(id, fileSimpleInfo, totalSpace, freeSpace, replyCallback)
+        } catch (e: Exception) {
+            handleError()
+        }
     }
 
     suspend fun deleteFile(
         paths: List<String>,
         replyCallback: (Result<List<Boolean>>) -> Unit
     ) {
-        getConnect()?.fileHandle?.deleteFile(id, paths, replyCallback)
+        try {
+            getConnect().fileHandle.deleteFile(id, paths, replyCallback)
+        } catch (e: Exception) {
+            handleError()
+        }
     }
 
     suspend fun writeBytes(
@@ -163,7 +208,11 @@ data class Device(
         destPath: String,
         replyCallback: (Result<Boolean>) -> Unit
     ) {
-        getConnect()?.fileHandle?.writeBytes(id, srcPath, destPath, replyCallback)
+        try {
+            getConnect().fileHandle.writeBytes(id, srcPath, destPath, replyCallback)
+        } catch (e: Exception) {
+            handleError()
+        }
     }
 
     suspend fun copyFile(
@@ -171,7 +220,11 @@ data class Device(
         destPath: String,
         replyCallback: (Result<Boolean>) -> Unit
     ) {
-        getConnect()?.pathHandle?.copyFile(id, srcPath, destPath, replyCallback)
+        try {
+            getConnect().pathHandle.copyFile(id, srcPath, destPath, replyCallback)
+        } catch (e: Exception) {
+            handleError()
+        }
     }
 }
 

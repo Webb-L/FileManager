@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.main.DeviceCategory
+import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceConnectType.*
 import app.filemanager.data.main.DeviceType.*
 import app.filemanager.db.Device
@@ -34,35 +35,23 @@ class DeviceSettingsScreen() : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-
         val mainState = koinInject<MainState>()
-
         val database = koinInject<FileManagerDatabase>()
-
-        val deviceList = mutableStateListOf<Device>()
-
-        val drawerState = rememberDrawerState(DrawerValue.Closed)
-
         val scope = rememberCoroutineScope()
 
-        var category by remember {
-            mutableStateOf(DeviceCategory.SERVER)
-        }
-
-        var deviceName by remember {
-            mutableStateOf("")
-        }
-
+        val deviceList = remember { mutableStateListOf<Device>() }
+        val drawerState = rememberDrawerState(DrawerValue.Closed)
+        var category by remember { mutableStateOf(DeviceCategory.SERVER) }
+        var deviceName by remember { mutableStateOf("") }
+        val isRefreshing = remember { mutableStateOf(false) }
         val state = rememberPullToRefreshState()
-        var isRefreshing by remember {
-            mutableStateOf(false)
-        }
+
         val onRefresh: () -> Unit = {
             deviceList.apply {
                 clear()
                 addAll(
                     database.deviceQueries.queryByNameLikeAndCategory(
-                        "%${deviceName}%",
+                        "%$deviceName%",
                         category
                     ).executeAsList()
                 )
@@ -72,8 +61,12 @@ class DeviceSettingsScreen() : Screen {
         val connectTypeNameMap = mapOf(
             AUTO_CONNECT to "自动同意",
             PERMANENTLY_BANNED to "自动拒绝",
-            APPROVED to "同意",
-            REJECTED to "拒绝",
+            APPROVED to "等待",
+        )
+
+        val connectTypeNameClientMap = mapOf(
+            AUTO_CONNECT to "自动连接",
+            APPROVED to "手动连接",
         )
 
         LaunchedEffect(category, deviceName) {
@@ -97,27 +90,17 @@ class DeviceSettingsScreen() : Screen {
                     actions = {
                         IconButton({
                             scope.launch {
-                                if (drawerState.isClosed) {
-                                    drawerState.open()
-                                } else {
-                                    drawerState.close()
-                                }
+                                if (drawerState.isClosed) drawerState.open() else drawerState.close()
                             }
                         }) {
-                            if (drawerState.isClosed) {
-                                Icon(Icons.Default.Search, null)
-                            } else {
-                                Icon(Icons.Default.Close, null)
-                            }
+                            Icon(if (drawerState.isClosed) Icons.Default.Search else Icons.Default.Close, null)
                         }
                     }
                 )
             }
         ) { paddingValues ->
             DismissibleNavigationDrawer(
-                modifier = Modifier
-                    .padding(paddingValues)
-                    .fillMaxWidth(),
+                modifier = Modifier.padding(paddingValues).fillMaxWidth(),
                 drawerState = drawerState,
                 drawerContent = {
                     DismissibleDrawerSheet {
@@ -130,127 +113,141 @@ class DeviceSettingsScreen() : Screen {
                                 value = deviceName,
                                 onValueChange = { deviceName = it },
                                 label = { Text("设备名") },
-                                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                                leadingIcon = { Icon(Icons.Default.Search, null) },
                                 trailingIcon = {
-                                    if (deviceName.isEmpty()) return@TextField
-                                    IconButton(onClick = { deviceName = "" }) {
-                                        Icon(Icons.Default.Close, contentDescription = "清除")
+                                    if (deviceName.isNotEmpty()) {
+                                        IconButton(onClick = { deviceName = "" }) {
+                                            Icon(Icons.Default.Close, "清除")
+                                        }
                                     }
                                 }
                             )
-                            Spacer(Modifier.height(8.dp))
-                            Text("设备分类")
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                FilterChip(
-                                    selected = category == DeviceCategory.SERVER,
-                                    onClick = {
-                                        category = DeviceCategory.SERVER
-                                    },
-                                    label = { Text("其他设备访问我的设备") }
-                                )
-                                FilterChip(
-                                    selected = category == DeviceCategory.CLIENT,
-                                    onClick = {
-                                        category = DeviceCategory.CLIENT
-                                    },
-                                    label = { Text("我的设备访问其他设备") }
-                                )
-                            }
+                        }
+                    }
+                }
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            DeviceCategory.SERVER to "其他设备访问我的设备",
+                            DeviceCategory.CLIENT to "我的设备访问其他设备"
+                        ).forEach { (cat, label) ->
+                            FilterChip(
+                                selected = category == cat,
+                                onClick = { category = cat },
+                                label = { Text(label) },
+                            )
                         }
                     }
 
-                }
-            ) {
-                PullToRefreshBox(
-                    state = state,
-                    isRefreshing = isRefreshing,
-                    onRefresh = onRefresh
-                ) {
-                    GridList(
-                        exception = if (deviceList.isEmpty()) EmptyDataException() else null
+                    PullToRefreshBox(
+                        state = state,
+                        isRefreshing = isRefreshing.value,
+                        onRefresh = onRefresh
                     ) {
-                        items(deviceList) { device ->
-                            var expanded by remember { mutableStateOf(false) }
-                            ListItem(
-                                headlineContent = { Text(text = device.name) },
-                                trailingContent = {
-                                    IconButton(onClick = { expanded = true }) {
-                                        Icon(Icons.Default.MoreVert, null)
-                                        DropdownMenu(
-                                            expanded = expanded,
-                                            onDismissRequest = { expanded = false }
-                                        ) {
-                                            for (entry in connectTypeNameMap.filter { it.key != device.connectionType }) {
-                                                DropdownMenuItem(
-                                                    onClick = {
-                                                        database.deviceQueries.updateConnectionTypeByIdAndCategory(
-                                                            entry.key,
-                                                            device.id,
-                                                            category
-                                                        )
-                                                        deviceList.apply {
-                                                            clear()
-                                                            addAll(
-                                                                database.deviceQueries.queryByNameLikeAndCategory(
-                                                                    "%${deviceName}%",
-                                                                    category
-                                                                ).executeAsList()
-                                                            )
-                                                        }
-                                                    },
-                                                    text = { Text(entry.value) }
-                                                )
-                                            }
-                                        }
-                                    }
-                                },
-                                overlineContent = {
-                                    Text(
-                                        text = "上次连接时间: ${
-                                            Instant.fromEpochSeconds(device.lastConnection)
-                                                .toLocalDateTime(TimeZone.currentSystemDefault())
-                                                .run { "$date $time" }
-                                        }"
-                                    )
-                                },
-                                leadingContent = {
-                                    when (device.type) {
-                                        Android -> Icon(Icons.Default.PhoneAndroid, null)
-                                        IOS -> Icon(Icons.Default.PhoneIphone, null)
-                                        JVM -> Icon(Icons.Default.Devices, null)
-                                        JS -> Icon(Icons.Default.Javascript, null)
-                                    }
-                                },
-                                supportingContent = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        if (listOf(AUTO_CONNECT, PERMANENTLY_BANNED).contains(device.connectionType)) {
-                                            Icon(
-                                                if (device.connectionType == AUTO_CONNECT)
-                                                    Icons.Default.Check
-                                                else
-                                                    Icons.Default.Close,
-                                                null
-                                            )
-                                            Spacer(Modifier.width(4.dp))
-                                        }
-                                        Text(
-                                            when (device.connectionType) {
-                                                AUTO_CONNECT -> "自动同意"
-                                                PERMANENTLY_BANNED -> "自动拒绝"
-                                                APPROVED -> "同意"
-                                                REJECTED -> "拒绝"
-                                                WAITING -> "等待"
-                                            }
+                        GridList(
+                            exception = if (deviceList.isEmpty()) EmptyDataException() else null
+                        ) {
+                            items(deviceList) { device ->
+                                DeviceListItem(
+                                    device = device,
+                                    connectTypeNameMap = connectTypeNameMap,
+                                    connectTypeNameClientMap = connectTypeNameClientMap,
+                                    updateConnectionType = { connectionType, deviceId ->
+                                        database.deviceQueries.updateConnectionTypeByIdAndCategory(
+                                            connectionType,
+                                            deviceId,
+                                            category
                                         )
+                                        onRefresh()
                                     }
-                                },
-                            )
+                                )
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+
+    @Composable
+    fun DeviceListItem(
+        device: Device,
+        connectTypeNameMap: Map<DeviceConnectType, String>,
+        connectTypeNameClientMap: Map<DeviceConnectType, String>,
+        updateConnectionType: (DeviceConnectType, String) -> Unit
+    ) {
+        var expanded by remember { mutableStateOf(false) }
+
+        ListItem(
+            headlineContent = { Text(device.name) },
+            trailingContent = {
+                IconButton(onClick = { expanded = true }) {
+                    Icon(Icons.Default.MoreVert, null)
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        val connectionMap =
+                            if (device.category == DeviceCategory.SERVER) connectTypeNameMap else connectTypeNameClientMap
+                        connectionMap.filter { it.key != device.connectionType }.forEach { (type, label) ->
+                            DropdownMenuItem(
+                                onClick = {
+                                    updateConnectionType(type, device.id)
+                                    expanded = false
+                                },
+                                text = { Text(label) }
+                            )
+                        }
+                    }
+                }
+            },
+            overlineContent = {
+                Text(
+                    "上次连接时间: ${
+                        Instant.fromEpochSeconds(device.lastConnection)
+                            .toLocalDateTime(TimeZone.currentSystemDefault())
+                            .run { "$date $time" }
+                    }"
+                )
+            },
+            leadingContent = {
+                val icon = when (device.type) {
+                    Android -> Icons.Default.PhoneAndroid
+                    IOS -> Icons.Default.PhoneIphone
+                    JVM -> Icons.Default.Devices
+                    JS -> Icons.Default.Javascript
+                }
+                Icon(icon, null)
+            },
+            supportingContent = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (device.connectionType in listOf(AUTO_CONNECT, PERMANENTLY_BANNED)) {
+                        Icon(
+                            if (device.connectionType == AUTO_CONNECT) Icons.Default.Check else Icons.Default.Close,
+                            null
+                        )
+                        Spacer(Modifier.width(4.dp))
+                    }
+                    val text = if (device.category == DeviceCategory.SERVER) {
+                        when (device.connectionType) {
+                            AUTO_CONNECT -> "自动同意"
+                            PERMANENTLY_BANNED -> "自动拒绝"
+                            else -> "等待"
+                        }
+                    } else {
+                        when (device.connectionType) {
+                            AUTO_CONNECT -> "自动连接"
+                            else -> "手动连接"
+                        }
+                    }
+                    Text(text)
+                }
+            }
+        )
     }
 }

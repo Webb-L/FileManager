@@ -8,13 +8,14 @@ import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.data.file.PathInfo
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DiskBase
+import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.data.main.Local
-import app.filemanager.data.main.Network
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.pathLevel
 import app.filemanager.extensions.replaceLast
 import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
+import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.ui.state.main.Task
 import app.filemanager.ui.state.main.TaskState
 import app.filemanager.utils.FileUtils
@@ -31,6 +32,9 @@ import kotlin.math.ceil
 class FileState : KoinComponent {
     val taskState: TaskState by inject()
     val fileOperationState: FileOperationState by inject()
+    val drawerState: DrawerState by inject()
+
+
     val fileAndFolder = mutableStateListOf<FileSimpleInfo>()
 
     private val _rootPath: MutableStateFlow<PathInfo> =
@@ -56,27 +60,24 @@ class FileState : KoinComponent {
 
     private val _deskType: MutableStateFlow<DiskBase> = MutableStateFlow(Local())
     val deskType: StateFlow<DiskBase> = _deskType
-    suspend fun updateDesk(protocol: FileProtocol, type: DiskBase) {
-        _deskType.value = type
-        when (protocol) {
-            FileProtocol.Local -> {
+    fun updateDesk(protocol: FileProtocol, type: DiskBase) {
+        if (_deskType.value == type) return
+        MainScope().launch {
+            _deskType.value = type
 
+            drawerState.getBookmarks(type)
+            val rootPaths = getRootPaths()
+            if (rootPaths.isNotEmpty()) {
+                _rootPath.value = rootPaths.first()
             }
 
-            FileProtocol.Device -> {
-                val device = type as Device
+            val homeBookmark = drawerState.bookmarks.firstOrNull { it.iconType == DrawerBookmarkType.Home }
+            if (homeBookmark!=null) {
+                updatePath(homeBookmark.path)
             }
 
-            FileProtocol.Network -> {
-                val network = type as Network
-            }
+            updateFileAndFolder()
         }
-        val rootPaths = getRootPaths()
-        if (rootPaths.isNotEmpty()) {
-            _rootPath.value = rootPaths.first()
-        }
-
-        updateFileAndFolder()
     }
 
     // 加载状态

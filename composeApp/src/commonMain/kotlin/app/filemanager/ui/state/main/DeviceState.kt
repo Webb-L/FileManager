@@ -3,11 +3,14 @@ package app.filemanager.ui.state.main
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import app.filemanager.data.main.Device
+import app.filemanager.data.main.DeviceCategory
 import app.filemanager.data.main.DeviceConnectType
+import app.filemanager.db.FileManagerDatabase
 import app.filemanager.extensions.getSubnetIps
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager
+import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
@@ -25,8 +28,17 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 class DeviceState : KoinComponent {
+    private val database by inject<FileManagerDatabase>()
     private val mainState by inject<MainState>()
     private val mainScope = MainScope()
+    private val client = HttpClient {
+        expectSuccess = false
+        install(HttpTimeout) {
+            requestTimeoutMillis = 1000
+            connectTimeoutMillis = 1000
+            socketTimeoutMillis = 1000
+        }
+    }
 
     private val _isDeviceAdd: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isDeviceAdd: StateFlow<Boolean> = _isDeviceAdd
@@ -47,8 +59,7 @@ class DeviceState : KoinComponent {
 
     val connectionRequest = mutableStateMapOf<String, DeviceConnectType>()
 
-    @OptIn(ExperimentalSerializationApi::class)
-    suspend fun scanner(address: List<String>) {
+    suspend fun scanner(address: List<String>, port: Int = PORT) {
         updateLoadingDevices(true)
         val ipAddresses = mutableSetOf<String>().apply {
             for (host in address) {
@@ -57,40 +68,12 @@ class DeviceState : KoinComponent {
         }
 
         var remainingAddresses = ipAddresses.size
-        val client = HttpClient {
-            expectSuccess = false
-            install(HttpTimeout) {
-                requestTimeoutMillis = 1000
-                connectTimeoutMillis = 1000
-                socketTimeoutMillis = 1000
-            }
-        }
 
         ipAddresses.chunked(51).forEach { chunk ->
             mainScope.launch {
                 chunk.forEach { ip ->
                     try {
-                        val response = client.get {
-                            url {
-                                host = ip
-                                path("/ping")
-                                port = 1204
-                            }
-                        }
-
-                        val socketDevice = if (response.bodyAsBytes().isNotEmpty()) {
-                            ProtoBuf.decodeFromByteArray<SocketDevice>(response.bodyAsBytes())
-                        } else null
-
-                        socketDevice?.let { device ->
-                            device.host = ip
-                            if (device.connectType == ConnectType.Loading) {
-                                connect(device)
-                            }
-                            if (socketDevices.firstOrNull { it.id == device.id } == null) {
-                                socketDevices.add(device)
-                            }
-                        }
+                        pingDevice(ip, port)
                     } catch (e: Exception) {
                         socketDevices.removeAll { it.host == ip }
                     } finally {
@@ -106,6 +89,37 @@ class DeviceState : KoinComponent {
 
         client.close()
         updateLoadingDevices(false)
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun pingDevice(ip: String, port: Int) {
+        val response = client.get {
+            url {
+                host = ip
+                path("/ping")
+                this.port = port
+            }
+        }
+
+        val socketDevice = if (response.bodyAsBytes().isNotEmpty()) {
+            ProtoBuf.decodeFromByteArray<SocketDevice>(response.bodyAsBytes())
+        } else null
+
+        socketDevice?.let { device ->
+            device.host = ip
+
+            // 自动连接
+            database.deviceQueries.queryById(device.id, DeviceCategory.CLIENT).executeAsOneOrNull()?.let {
+                if (it.connectionType == DeviceConnectType.AUTO_CONNECT) {
+                    device.connectType = ConnectType.Loading
+                    connect(device)
+                }
+            }
+
+            if (socketDevices.firstOrNull { it.id == device.id } == null) {
+                socketDevices.add(device)
+            }
+        }
     }
 
     fun connect(connectDevice: SocketDevice) {

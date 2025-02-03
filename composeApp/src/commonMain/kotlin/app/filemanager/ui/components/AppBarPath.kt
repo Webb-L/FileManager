@@ -22,7 +22,6 @@ import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.buttons.DiskSwitchButton
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileState
-import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.utils.NaturalOrderComparator
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.launch
@@ -38,8 +37,6 @@ fun AppBarPath() {
     val rootPath by fileState.rootPath.collectAsState()
     val deskType by fileState.deskType.collectAsState()
 
-    val drawerState = koinInject<DrawerState>()
-
     val paths = path.parsePath()
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = paths.size - 1)
     LazyRow(state = listState) {
@@ -48,7 +45,6 @@ fun AppBarPath() {
                 deskType
             ) { protocol, type ->
                 fileState.updateDesk(protocol, type)
-                drawerState.getBookmarks(fileState.deskType.value)
             }
         }
 

@@ -17,17 +17,14 @@ import app.filemanager.data.main.Local
 import app.filemanager.data.main.Network
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.NetworkState
-import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 
 @Composable
 fun DiskSwitchButton(
     deskType: DiskBase,
-    onSelectDesk: suspend (FileProtocol, DiskBase) -> Unit,
+    onSelectDesk: (FileProtocol, DiskBase) -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
-
     var expanded by remember { mutableStateOf(false) }
     var expandedDevice by remember { mutableStateOf(false) }
     var expandedNetwork by remember { mutableStateOf(false) }
@@ -70,9 +67,7 @@ fun DiskSwitchButton(
         DropdownMenuItem(
             text = { Text("本地") },
             onClick = {
-                scope.launch {
-                    onSelectDesk(FileProtocol.Local, Local())
-                }
+                onSelectDesk(FileProtocol.Local, Local())
                 expanded = false
             },
         )
@@ -82,9 +77,7 @@ fun DiskSwitchButton(
                 expandedDevice,
                 devices,
                 onSelect = {
-                    scope.launch {
-                        onSelectDesk(FileProtocol.Device, it)
-                    }
+                    onSelectDesk(FileProtocol.Device, it)
                     expanded = false
                 },
                 onDismissRequest = { expandedDevice = it }
@@ -95,9 +88,7 @@ fun DiskSwitchButton(
                 expandedNetwork,
                 networkState.networks,
                 onSelect = {
-                    scope.launch {
-                        onSelectDesk(FileProtocol.Network, it)
-                    }
+                    onSelectDesk(FileProtocol.Network, it)
                     expanded = false
                 },
                 onDismissRequest = { expandedNetwork = it }

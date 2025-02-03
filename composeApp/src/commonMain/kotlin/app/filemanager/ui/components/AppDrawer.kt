@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.StatusEnum
+import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.toIcon
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceCategory
@@ -29,6 +30,7 @@ import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.service.data.ConnectType.*
 import app.filemanager.service.data.SocketDevice
+import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
 import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
 import app.filemanager.ui.screen.device.DeviceSettingsScreen
@@ -169,15 +171,10 @@ fun AppDrawer() {
             deviceState.updateDeviceAdd(false)
 
             scope.launch {
-//                val socketDevice = withContext(Dispatchers.Default) {
-//                    deviceState.socketClientManger.socket.scanPort(ip, (port ?: PORT).toString().toInt())
-//                }
-//                if (socketDevice != null) {
-//                    deviceState.socketDevices.add(socketDevice)
-//                    if (socketDevice.connectType == Loading) {
-//                        deviceState.connect(socketDevice)
-//                    }
-//                }
+                try {
+                    deviceState.pingDevice(ip, (port ?: PORT).toString().toInt())
+                } catch (e: Exception) {
+                }
             }
         }
     }
@@ -371,6 +368,7 @@ private fun AppDrawerItem(
 @Composable
 private fun AppDrawerDevice() {
     val mainState = koinInject<MainState>()
+    val fileState = koinInject<FileState>()
 
     val drawerState = koinInject<DrawerState>()
     val isExpandDevice by drawerState.isExpandDevice.collectAsState()
@@ -504,7 +502,13 @@ private fun AppDrawerDevice() {
                             socketDevice = device
                         }
 
-                        Connect, Loading -> {}
+                        Connect -> {
+                            deviceState.devices.firstOrNull { it.id == device.id }?.let {
+                                fileState.updateDesk(FileProtocol.Device, it)
+                            }
+                        }
+
+                        Loading -> {}
                     }
                 },
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
