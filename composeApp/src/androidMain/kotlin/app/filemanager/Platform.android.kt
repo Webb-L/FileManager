@@ -3,6 +3,7 @@ package app.filemanager
 import android.os.Build
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import app.filemanager.data.main.DeviceType
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.SharedPreferencesSettings
 import java.security.Key
@@ -46,3 +47,5 @@ actual fun createSettings(): Settings {
     }
     return SharedPreferencesSettings(preferences)
 }
+
+actual val PlatformType: DeviceType = DeviceType.Android

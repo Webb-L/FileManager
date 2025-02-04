@@ -1,5 +1,6 @@
 package app.filemanager
 
+import app.filemanager.data.main.DeviceType
 import com.russhwolf.settings.PreferencesSettings
 import com.russhwolf.settings.Settings
 import org.jasypt.encryption.pbe.StandardPBEStringEncryptor
@@ -21,3 +22,5 @@ actual fun createSettings(): Settings {
     }
     return PreferencesSettings(preferences)
 }
+
+actual val PlatformType: DeviceType = DeviceType.JVM
