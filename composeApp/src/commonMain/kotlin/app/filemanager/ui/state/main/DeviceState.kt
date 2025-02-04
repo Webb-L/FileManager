@@ -34,9 +34,9 @@ class DeviceState : KoinComponent {
     private val client = HttpClient {
         expectSuccess = false
         install(HttpTimeout) {
-            requestTimeoutMillis = 1000
-            connectTimeoutMillis = 1000
-            socketTimeoutMillis = 1000
+            requestTimeoutMillis = 500
+            connectTimeoutMillis = 500
+            socketTimeoutMillis = 500
         }
     }
 
@@ -57,7 +57,7 @@ class DeviceState : KoinComponent {
     }
 
 
-    val connectionRequest = mutableStateMapOf<String, DeviceConnectType>()
+    val connectionRequest = mutableStateMapOf<String, Pair<DeviceConnectType, Long>>()
 
     suspend fun scanner(address: List<String>, port: Int = PORT) {
         updateLoadingDevices(true)

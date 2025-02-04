@@ -1,9 +1,10 @@
 package app.filemanager.service.rpc
 
+import app.filemanager.PlatformType
 import app.filemanager.createSettings
-import app.filemanager.data.main.DeviceType
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
+import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
@@ -24,7 +25,7 @@ import java.net.NetworkInterface
 actual suspend fun startRpcServer() {
     val settings = createSettings()
 
-    embeddedServer(CIO, 1204) {
+    embeddedServer(CIO, PORT) {
         install(Krpc)
 
         routing {
@@ -33,7 +34,7 @@ actual suspend fun startRpcServer() {
                     id = settings.getString("deviceId", ""),
                     name = settings.getString("deviceName", ""),
                     host = InetAddress.getLocalHost().hostAddress,
-                    type = DeviceType.Android,
+                    type = PlatformType,
                     connectType = ConnectType.UnConnect
                 )
 

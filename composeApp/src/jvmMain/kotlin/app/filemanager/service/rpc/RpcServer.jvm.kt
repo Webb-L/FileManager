@@ -1,7 +1,7 @@
 package app.filemanager.service.rpc
 
+import app.filemanager.PlatformType
 import app.filemanager.createSettings
-import app.filemanager.data.main.DeviceType
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
@@ -34,7 +34,7 @@ actual suspend fun startRpcServer() {
                     id = settings.getString("deviceId", ""),
                     name = settings.getString("deviceName", ""),
                     host = InetAddress.getLocalHost().hostAddress,
-                    type = DeviceType.JVM,
+                    type = PlatformType,
                     connectType = ConnectType.UnConnect
                 )
 

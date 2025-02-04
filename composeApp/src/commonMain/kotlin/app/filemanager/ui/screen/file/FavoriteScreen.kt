@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import app.filemanager.exception.EmptyDataException
 import app.filemanager.ui.components.FileFavoriteCard
 import app.filemanager.ui.components.GridList
 import app.filemanager.ui.state.file.FileFavoriteState
@@ -56,7 +57,8 @@ class FavoriteScreen : Screen {
         ) {
             val favorites = fileFavoriteState.favorites
             GridList(
-                modifier = Modifier.padding(it)
+                modifier = Modifier.padding(it),
+                exception = if (favorites.isEmpty()) EmptyDataException() else null
             ) {
                 items(favorites) { favorite ->
                     FileFavoriteCard(favorite = favorite,

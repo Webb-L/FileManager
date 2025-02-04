@@ -10,6 +10,7 @@ import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
 import app.filemanager.ui.state.main.DeviceState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
+import kotlinx.datetime.Clock
 import kotlinx.rpc.RemoteService
 import kotlinx.rpc.annotations.Rpc
 import org.koin.core.component.KoinComponent
@@ -25,9 +26,9 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
     private val database by inject<FileManagerDatabase>()
     private val deviceState by inject<DeviceState>()
 
-    override suspend fun connect(socketDevice: SocketDevice): DeviceConnectType {
+    override suspend fun connect(device: SocketDevice): DeviceConnectType {
         val queriedDevice =
-            database.deviceQueries.queryById(socketDevice.id, DeviceCategory.SERVER).executeAsOneOrNull()
+            database.deviceQueries.queryById(device.id, DeviceCategory.SERVER).executeAsOneOrNull()
 
         if (queriedDevice != null) {
             when (queriedDevice.connectionType) {
@@ -41,32 +42,26 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
                     }
                     database.deviceQueries.updateConnectionTypeByIdAndCategory(
                         connectionType = queriedDevice.connectionType,
-                        id = socketDevice.id,
+                        id = device.id,
                         category = DeviceCategory.SERVER
                     )
                 }
 
                 APPROVED, REJECTED -> {
-                    deviceState.connectionRequest[socketDevice.id] = WAITING
-                    val index = deviceState.socketDevices.indexOfFirst { it.id == socketDevice.id }
-                    if (index >= 0) {
-                        deviceState.socketDevices[index] =
-                            socketDevice.withCopy(
-                                connectType = ConnectType.Loading
-                            )
-                    } else {
+                    deviceState.connectionRequest[device.id] = Pair(WAITING, Clock.System.now().toEpochMilliseconds())
+                    if (deviceState.socketDevices.firstOrNull { it.id == device.id } == null) {
                         deviceState.socketDevices.add(
-                            socketDevice.withCopy(
-                                connectType = ConnectType.Loading
+                            device.withCopy(
+                                connectType = ConnectType.UnConnect
                             )
                         )
                     }
                     return try {
                         withTimeout(CONNECT_TIMEOUT * 1000L) {
-                            while (deviceState.connectionRequest[socketDevice.id] == WAITING) {
+                            while (deviceState.connectionRequest[device.id]!!.first == WAITING) {
                                 delay(300L)
                             }
-                            when (deviceState.connectionRequest[socketDevice.id]) {
+                            when (deviceState.connectionRequest[device.id]!!.first) {
                                 AUTO_CONNECT, APPROVED -> {
                                     return@withTimeout APPROVED
                                 }
@@ -75,42 +70,36 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
                             }
                         }
                     } catch (e: Exception) {
-                        deviceState.connectionRequest.remove(socketDevice.id)
+                        deviceState.connectionRequest.remove(device.id)
                         REJECTED
                     }
                 }
 
                 else -> {}
             }
-            database.deviceQueries.updateLastConnectionByCategoryAndId(socketDevice.id, DeviceCategory.SERVER)
+            database.deviceQueries.updateLastConnectionByCategoryAndId(device.id, DeviceCategory.SERVER)
         } else {
-            deviceState.connectionRequest[socketDevice.id] = WAITING
-            val index = deviceState.socketDevices.indexOfFirst { it.id == socketDevice.id }
-            if (index >= 0) {
-                deviceState.socketDevices[index] =
-                    socketDevice.withCopy(
-                        connectType = ConnectType.Loading
-                    )
-            } else {
+            deviceState.connectionRequest[device.id] = Pair(WAITING, Clock.System.now().toEpochMilliseconds())
+            if (deviceState.socketDevices.firstOrNull { it.id == device.id } == null) {
                 deviceState.socketDevices.add(
-                    socketDevice.withCopy(
-                        connectType = ConnectType.Loading
+                    device.withCopy(
+                        connectType = ConnectType.UnConnect
                     )
                 )
             }
             return try {
                 withTimeout(CONNECT_TIMEOUT * 1000L) {
-                    while (deviceState.connectionRequest[socketDevice.id] == WAITING) {
+                    while (deviceState.connectionRequest[device.id]!!.first == WAITING) {
                         delay(300L)
                     }
                     database.deviceQueries.insert(
-                        id = socketDevice.id,
-                        name = socketDevice.name,
-                        type = socketDevice.type,
-                        connectionType = deviceState.connectionRequest[socketDevice.id] ?: WAITING,
+                        id = device.id,
+                        name = device.name,
+                        type = device.type,
+                        connectionType = deviceState.connectionRequest[device.id]?.first ?: WAITING,
                         category = DeviceCategory.SERVER
                     )
-                    when (deviceState.connectionRequest[socketDevice.id]) {
+                    when (deviceState.connectionRequest[device.id]!!.first) {
                         AUTO_CONNECT, APPROVED -> {}
                         else -> throw Exception()
                     }
@@ -118,7 +107,7 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
                     return@withTimeout APPROVED
                 }
             } catch (e: Exception) {
-                deviceState.connectionRequest.remove(socketDevice.id)
+                deviceState.connectionRequest.remove(device.id)
                 REJECTED
             }
         }

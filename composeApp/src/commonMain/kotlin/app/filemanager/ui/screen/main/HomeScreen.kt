@@ -71,7 +71,7 @@ object HomeScreen : Screen {
         ) {
             Column(Modifier.padding(it)) {
                 deviceState.connectionRequest.entries
-                    .firstOrNull { it.value == DeviceConnectType.WAITING }
+                    .firstOrNull { it.value.first == DeviceConnectType.WAITING }
                     ?.let { entry ->
                         deviceState.socketDevices.firstOrNull { it.id == entry.key }?.let { device ->
                             MaterialBannerDeviceConnect(device)

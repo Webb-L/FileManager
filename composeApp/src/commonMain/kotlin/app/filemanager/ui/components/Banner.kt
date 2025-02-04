@@ -15,6 +15,7 @@ import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
 import app.filemanager.ui.state.main.DeviceState
 import kotlinx.coroutines.delay
+import kotlinx.datetime.Clock
 import org.koin.compose.koinInject
 
 @Composable
@@ -22,16 +23,22 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
     val deviceState = koinInject<DeviceState>()
 
     var expanded by remember { mutableStateOf(false) }
-    var timeRemaining by remember { mutableStateOf(CONNECT_TIMEOUT) } // 10 minutes in seconds
+
+    val remainingConnectionTime = (CONNECT_TIMEOUT + ((deviceState.connectionRequest[socketDevice.id]!!.second - Clock.System.now()
+        .toEpochMilliseconds()) / 1000L)).toInt()
+    var timeRemaining by remember { mutableStateOf(remainingConnectionTime) } // 10 minutes in seconds
+
 
     LaunchedEffect(Unit) {
         while (timeRemaining > 0) {
             delay(1000)
-            timeRemaining--
+            timeRemaining = (CONNECT_TIMEOUT + ((deviceState.connectionRequest[socketDevice.id]!!.second - Clock.System.now()
+                .toEpochMilliseconds()) / 1000L)).toInt()
         }
         // Automatically reject after the countdown ends
-        if (timeRemaining == 0) {
-            deviceState.connectionRequest[socketDevice.id] = DeviceConnectType.REJECTED
+        if (timeRemaining <= 0) {
+            deviceState.connectionRequest[socketDevice.id] =
+                Pair(DeviceConnectType.REJECTED, Clock.System.now().toEpochMilliseconds())
         }
     }
 
@@ -42,10 +49,11 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
     }
 
     MaterialBanner(
-        message = "${socketDevice.name} 请求和您创建连接。\n${timeText} 后将会自动拒绝",
+        message = "${socketDevice.name} 请求和您创建连接。\n${timeText} 后将会自动拒绝。",
         actionLabel = "同意",
         onActionClick = {
-            deviceState.connectionRequest[socketDevice.id] = DeviceConnectType.APPROVED
+            deviceState.connectionRequest[socketDevice.id] =
+                Pair(DeviceConnectType.APPROVED, deviceState.connectionRequest[socketDevice.id]!!.second)
         },
         menu = {
             Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
@@ -64,21 +72,30 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
                     DropdownMenuItem(
                         text = { Text("自动同意") },
                         onClick = {
-                            deviceState.connectionRequest[socketDevice.id] = DeviceConnectType.AUTO_CONNECT
+                            deviceState.connectionRequest[socketDevice.id] = Pair(
+                                DeviceConnectType.AUTO_CONNECT,
+                                deviceState.connectionRequest[socketDevice.id]!!.second
+                            )
                             expanded = false
                         }
                     )
                     DropdownMenuItem(
                         text = { Text("自动拒绝") },
                         onClick = {
-                            deviceState.connectionRequest[socketDevice.id] = DeviceConnectType.PERMANENTLY_BANNED
+                            deviceState.connectionRequest[socketDevice.id] = Pair(
+                                DeviceConnectType.PERMANENTLY_BANNED,
+                                deviceState.connectionRequest[socketDevice.id]!!.second
+                            )
                             expanded = false
                         }
                     )
                     DropdownMenuItem(
                         text = { Text("拒绝") },
                         onClick = {
-                            deviceState.connectionRequest[socketDevice.id] = DeviceConnectType.REJECTED
+                            deviceState.connectionRequest[socketDevice.id] = Pair(
+                                DeviceConnectType.REJECTED,
+                                deviceState.connectionRequest[socketDevice.id]!!.second
+                            )
                             expanded = false
                         }
                     )
