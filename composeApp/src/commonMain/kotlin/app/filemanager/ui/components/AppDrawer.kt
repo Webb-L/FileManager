@@ -85,30 +85,31 @@ fun AppDrawer() {
                 item { HorizontalDivider() }
                 item { AppDrawerTask() }
             }
-            item { HorizontalDivider() }
+//            item { HorizontalDivider() }
             item { AppDrawerBookmark() }
             item { HorizontalDivider() }
             item { AppDrawerDevice() }
-            item { HorizontalDivider() }
-            item {
-                AppDrawerItem(
-                    "网络",
-                    actions = {
-                        Row {
-                            Icon(Icons.Default.Add, null, Modifier)
-                            Spacer(Modifier.width(8.dp))
-                            Icon(
-                                if (isExpandNetwork) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                null,
-                                Modifier.clip(RoundedCornerShape(25.dp))
-                                    .clickable { drawerState.updateExpandNetwork(!isExpandNetwork) }
-                            )
-                        }
-                    }
-                ) {
-                }
-            }
-            item { HorizontalDivider() }
+// TODO 3.0版本
+//            item { HorizontalDivider() }
+//            item {
+//                AppDrawerItem(
+//                    "网络",
+//                    actions = {
+//                        Row {
+//                            Icon(Icons.Default.Add, null, Modifier)
+//                            Spacer(Modifier.width(8.dp))
+//                            Icon(
+//                                if (isExpandNetwork) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+//                                null,
+//                                Modifier.clip(RoundedCornerShape(25.dp))
+//                                    .clickable { drawerState.updateExpandNetwork(!isExpandNetwork) }
+//                            )
+//                        }
+//                    }
+//                ) {
+//                }
+//            }
+//            item { HorizontalDivider() }
         }
     }
 

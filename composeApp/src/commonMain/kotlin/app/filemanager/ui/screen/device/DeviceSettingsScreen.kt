@@ -127,19 +127,18 @@ class DeviceSettingsScreen() : Screen {
                 }
             ) {
                 Column {
-                    Row(
+                    SingleChoiceSegmentedButtonRow(
                         modifier = Modifier.padding(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
                             DeviceCategory.SERVER to "其他设备访问我的设备",
                             DeviceCategory.CLIENT to "我的设备访问其他设备"
-                        ).forEach { (cat, label) ->
-                            FilterChip(
+                        ).forEachIndexed { index, (cat, label) ->
+                            SegmentedButton(
                                 selected = category == cat,
                                 onClick = { category = cat },
-                                label = { Text(label) },
-                            )
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                            ) { Text(label) }
                         }
                     }
 

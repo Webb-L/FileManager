@@ -87,7 +87,6 @@ class DeviceState : KoinComponent {
             delay(300L)
         }
 
-        client.close()
         updateLoadingDevices(false)
     }
 
