@@ -45,6 +45,18 @@ interface FileService : RemoteService {
         path: String,
         byteArray: ByteArray,
     ): WebSocketResult<Boolean>
+
+    // 获取文件信息
+    // TODO 检查权限
+    suspend fun getFileByPath(path: String): WebSocketResult<FileSimpleInfo>
+
+    // 获取文件信息
+    // TODO 检查权限
+    suspend fun getFileByPathAndName(path: String, name: String): WebSocketResult<FileSimpleInfo>
+
+    // 创建文件
+    // TODO 检查权限
+    suspend fun createFile(path: String): WebSocketResult<Boolean>
 }
 
 class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileService {
@@ -153,5 +165,60 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
         }
 
         return WebSocketResult(value = writeResult.getOrNull() ?: false)
+    }
+
+    override suspend fun getFileByPath(path: String): WebSocketResult<FileSimpleInfo> {
+        if (path.isEmpty()) {
+            return ParameterErrorException().toSocketResult()
+        }
+
+        val result = FileUtils.getFile(path)
+        if (result.isFailure) {
+            val exceptionOrNull = result.exceptionOrNull() ?: EmptyDataException()
+            return WebSocketResult(
+                exceptionOrNull.message,
+                exceptionOrNull::class.simpleName,
+                null
+            )
+        }
+
+        return WebSocketResult(value = result.getOrNull()!!)
+    }
+
+    override suspend fun getFileByPathAndName(path: String, name: String): WebSocketResult<FileSimpleInfo> {
+        if (path.isEmpty() || name.isEmpty()) {
+            return ParameterErrorException().toSocketResult()
+        }
+
+        val result = FileUtils.getFile(path)
+        if (result.isFailure) {
+            val exceptionOrNull = result.exceptionOrNull() ?: EmptyDataException()
+            return WebSocketResult(
+                exceptionOrNull.message,
+                exceptionOrNull::class.simpleName,
+                null
+            )
+        }
+
+        return WebSocketResult(value = result.getOrNull()!!)
+    }
+
+    override suspend fun createFile(path: String): WebSocketResult<Boolean> {
+        if (path.isEmpty()) {
+            return ParameterErrorException().toSocketResult()
+        }
+
+        val result = FileUtils.createFile(path)
+        if (result.isFailure) {
+            val exceptionOrNull = result.exceptionOrNull() ?: EmptyDataException()
+            return WebSocketResult(
+                exceptionOrNull.message,
+                exceptionOrNull::class.simpleName,
+                null
+            )
+        }
+
+
+        return WebSocketResult(value = result.getOrNull()!!)
     }
 }

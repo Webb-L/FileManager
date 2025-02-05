@@ -1,6 +1,7 @@
 package app.filemanager.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -255,11 +256,11 @@ internal fun FileManagerTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    SystemAppearance(dynamicColor)
     val colorScheme = when {
         darkTheme -> darkScheme
         else -> lightScheme
     }
+    SystemAppearance(dynamicColor, colorScheme)
 
     MaterialTheme(
         colorScheme = colorScheme,
@@ -269,4 +270,4 @@ internal fun FileManagerTheme(
 }
 
 @Composable
-internal expect fun SystemAppearance(isDark: Boolean)
+internal expect fun SystemAppearance(isDark: Boolean, colorScheme: ColorScheme)

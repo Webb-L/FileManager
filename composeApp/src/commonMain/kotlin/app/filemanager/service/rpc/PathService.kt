@@ -8,6 +8,7 @@ import app.filemanager.exception.ParameterErrorException
 import app.filemanager.exception.toSocketResult
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.service.WebSocketResult
+import app.filemanager.ui.state.file.FileState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.flow.Flow
@@ -15,6 +16,8 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.launch
 import kotlinx.rpc.RemoteService
 import kotlinx.rpc.annotations.Rpc
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import kotlin.coroutines.CoroutineContext
 
 @Rpc
@@ -32,7 +35,9 @@ interface PathService : RemoteService {
     suspend fun traversePath(path: String): Flow<WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>>
 }
 
-class PathServiceImpl(override val coroutineContext: CoroutineContext) : PathService {
+class PathServiceImpl(override val coroutineContext: CoroutineContext) : PathService, KoinComponent {
+    private val fileState: FileState by inject()
+
     override suspend fun list(path: String): WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>> {
         if (path.isEmpty()) {
             return ParameterErrorException().toSocketResult()
@@ -107,7 +112,7 @@ class PathServiceImpl(override val coroutineContext: CoroutineContext) : PathSer
                         val files: MutableList<FileSimpleInfo> = mutableListOf()
                         files.addAll(fileAndFolder.getOrDefault(listOf()))
                         if (!isFirst) {
-                            files.add(FileUtils.getFile(path))
+                            files.add(FileUtils.getFile(path).getOrNull()!!)
                             isFirst = true
                         }
                         files.forEach { fileSimpleInfo ->

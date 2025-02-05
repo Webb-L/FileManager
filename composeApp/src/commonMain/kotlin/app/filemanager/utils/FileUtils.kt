@@ -12,7 +12,7 @@ internal expect object FileUtils {
      * @param path 文件的完整路径。
      * @return 包含文件基本信息的 FileSimpleInfo 对象。
      */
-    fun getFile(path: String): FileSimpleInfo
+    fun getFile(path: String): Result<FileSimpleInfo>
 
     /**
      * 根据指定路径和文件名获取文件的基本信息。
@@ -21,7 +21,7 @@ internal expect object FileUtils {
      * @param fileName 文件的名称。
      * @return 获取的文件基本信息，包含文件名、描述、是否为目录、是否隐藏、路径等信息。
      */
-    fun getFile(path: String, fileName: String): FileSimpleInfo
+    fun getFile(path: String, fileName: String): Result<FileSimpleInfo>
 
     /**
      * 打开指定路径的文件。
@@ -112,4 +112,12 @@ internal expect object FileUtils {
      * @return 如果写入成功，返回包含 true 的 Result；否则返回包含 false 或错误信息的 Result。
      */
     fun writeBytes(path: String, fileSize: Long, data: ByteArray, offset: Long): Result<Boolean>
+
+    /**
+     * 创建一个指定路径的文件。
+     *
+     * @param path 文件的路径，表示需要创建文件的位置。
+     * @return 如果文件创建成功返回 Result 包含 true，否则返回 Result 包含 false 并附带失败的错误信息。
+     */
+    fun createFile(path: String): Result<Boolean>
 }

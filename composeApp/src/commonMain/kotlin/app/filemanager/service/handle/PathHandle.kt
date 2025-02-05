@@ -4,23 +4,26 @@ import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.PathInfo
 import app.filemanager.extensions.pathLevel
 import app.filemanager.service.rpc.RpcClientManager
+import app.filemanager.ui.state.file.FileState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.rpc.krpc.streamScoped
-import kotlinx.serialization.ExperimentalSerializationApi
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
 
-class PathHandle(private val rpc: RpcClientManager) {
+class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
+    val fileState: FileState by inject()
+
     /**
      * 从远程设备获取指定路径下的文件和文件夹列表。
      *
      * @param path 要获取列表的路径。
      * @param remoteId 远程设备的ID。
      */
-    @OptIn(ExperimentalSerializationApi::class)
     suspend fun getList(path: String, remoteId: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
         val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
 
@@ -77,7 +80,6 @@ class PathHandle(private val rpc: RpcClientManager) {
     // [y] TODO 2.本地复制到远程
     // TODO 3.远程复制到本地
     // TODO 4.远程复制到远程
-    @OptIn(ExperimentalSerializationApi::class)
     suspend fun copyFile(
         remoteId: String,
         srcPath: String,
@@ -89,13 +91,30 @@ class PathHandle(private val rpc: RpcClientManager) {
         var failureCount = 0
 
         // TODO 2.本地复制到远程
+        val file = FileUtils.getFile(srcPath)
+        if (file.isFailure) {
+            replyCallback(Result.failure(file.exceptionOrNull() ?: Exception()))
+            return
+        }
+        if (file.getOrNull()!!.size == 0L) {
+            val result = rpc.fileService.createFile(destPath)
+            if (!result.isSuccess) {
+                replyCallback(Result.failure(result.deSerializable()))
+            }else {
+                replyCallback(Result.success(result.value ?: false))
+            }
+            return
+        }
+
         val list = mutableListOf<FileSimpleInfo>()
+        list.add(file.getOrNull() ?: return)
+
+
         PathUtils.traverse(srcPath) { fileAndFolder ->
             if (fileAndFolder.isSuccess) {
                 list.addAll(fileAndFolder.getOrNull() ?: listOf())
             }
         }
-        list.add(FileUtils.getFile(srcPath))
 
         list.sortedWith(
             compareBy<FileSimpleInfo> { !it.isDirectory }

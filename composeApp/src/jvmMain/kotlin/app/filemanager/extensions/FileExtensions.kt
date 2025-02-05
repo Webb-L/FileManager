@@ -2,7 +2,6 @@ package app.filemanager.extensions
 
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.toLowerCase
-import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.FileSimpleInfo
 import kotlinx.io.IOException
 import java.io.File
@@ -10,7 +9,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
 
-fun File.toFileSimpleInfo(): FileSimpleInfo {
+fun File.toFileSimpleInfo(): Result<FileSimpleInfo> {
     val path = Paths.get(absolutePath)
     val attrs: BasicFileAttributes? = try {
         Files.readAttributes(path, BasicFileAttributes::class.java)
@@ -35,27 +34,18 @@ fun File.toFileSimpleInfo(): FileSimpleInfo {
         }
     }
 
-    return FileSimpleInfo(
-        name = name,
-        description = "",
-        isDirectory = isDirectory,
-        isHidden = isHidden,
-        path = absolutePath,
-        mineType = mineType,
-        // TODO 并不是实际文件实际大小
-        size = if (isDirectory) (listFiles() ?: emptyArray<File>()).size.toLong() else length(),
-        createdDate = attrs?.creationTime()?.toMillis() ?: 0,
-        updatedDate = attrs?.lastModifiedTime()?.toMillis() ?: 0
-    )
-}
-
-fun File.toFileInfo(): FileInfo {
-    // TODO Windows 有问题。
-    // println(Files.getPosixFilePermissions(path))
-    // 输出例如 [OWNER_READ, OWNER_WRITE, GROUP_READ, OTHERS_READ]
-    return toFileSimpleInfo().toFileInfo(
-        permissions = 0,
-        user = "Files.getOwner(path).name",
-        userGroup = "attrs.group().name",
+    return Result.success(
+        FileSimpleInfo(
+            name = name,
+            description = "",
+            isDirectory = isDirectory,
+            isHidden = isHidden,
+            path = absolutePath,
+            mineType = mineType,
+            // TODO 并不是实际文件实际大小
+            size = if (isDirectory) (listFiles() ?: emptyArray<File>()).size.toLong() else length(),
+            createdDate = attrs?.creationTime()?.toMillis() ?: 0,
+            updatedDate = attrs?.lastModifiedTime()?.toMillis() ?: 0
+        )
     )
 }

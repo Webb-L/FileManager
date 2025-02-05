@@ -2,6 +2,7 @@ package app.filemanager.service.handle
 
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.FileSizeInfo
+import app.filemanager.exception.EmptyDataException
 import app.filemanager.service.data.RenameInfo
 import app.filemanager.service.rpc.FileService
 import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
@@ -109,7 +110,21 @@ class FileHandle(private val fileService: FileService) {
     }
 
     suspend fun writeBytes(id: String, srcPath: String, destPath: String, replyCallback: (Result<Boolean>) -> Unit) {
-        val file = FileUtils.getFile(srcPath)
+        val file = fileService.getFileByPath(srcPath).value
+        if (file == null) {
+            replyCallback(Result.failure(EmptyDataException()))
+            return
+        }
+        if (!file.isDirectory) {
+            val result = fileService.createFile(destPath)
+            if (!result.isSuccess) {
+                replyCallback(Result.failure(result.deSerializable()))
+            } else {
+                replyCallback(Result.success(result.value ?: false))
+            }
+            return
+        }
+
         val length = ceil(file.size / MAX_LENGTH.toFloat()).toLong()
         val mainScope = MainScope()
 
@@ -145,5 +160,35 @@ class FileHandle(private val fileService: FileService) {
         }
 
         replyCallback(Result.success(successCount == length && failureCount == 0L))
+    }
+
+    suspend fun getFile(id: String, path: String, replyCallback: (Result<FileSimpleInfo>) -> Unit) {
+        val result = fileService.getFileByPath(path)
+        if (!result.isSuccess) {
+            replyCallback(Result.failure(result.deSerializable()))
+            return
+        }
+
+        if (result.value == null) {
+            replyCallback(Result.failure(EmptyDataException()))
+            return
+        }
+
+        replyCallback(Result.success(result.value))
+    }
+
+    suspend fun getFile(id: String, path: String, name: String, replyCallback: (Result<FileSimpleInfo>) -> Unit) {
+        val result = fileService.getFileByPathAndName(path, name)
+        if (!result.isSuccess) {
+            replyCallback(Result.failure(result.deSerializable()))
+            return
+        }
+
+        if (result.value == null) {
+            replyCallback(Result.failure(EmptyDataException()))
+            return
+        }
+
+        replyCallback(Result.success(result.value))
     }
 }

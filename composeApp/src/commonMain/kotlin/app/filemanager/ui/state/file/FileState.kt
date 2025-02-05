@@ -14,7 +14,6 @@ import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.pathLevel
 import app.filemanager.extensions.replaceLast
-import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
 import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.ui.state.main.Task
 import app.filemanager.ui.state.main.TaskState
@@ -27,7 +26,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import kotlin.math.ceil
 
 class FileState : KoinComponent {
     val taskState: TaskState by inject()
@@ -72,7 +70,7 @@ class FileState : KoinComponent {
             }
 
             val homeBookmark = drawerState.bookmarks.firstOrNull { it.iconType == DrawerBookmarkType.Home }
-            if (homeBookmark!=null) {
+            if (homeBookmark != null) {
                 updatePath(homeBookmark.path)
             }
 
@@ -244,7 +242,7 @@ class FileState : KoinComponent {
                     fileInfos.addAll(it.getOrNull() ?: emptyList())
                 }
             }
-            fileInfos.add(FileUtils.getFile(path))
+            getFile(path).getOrNull()?.let { fileInfos.add(it) }
             task.values["progressMax"] = fileInfos.size.toString()
 
             if (fileInfos.size == 1) {
@@ -380,105 +378,10 @@ class FileState : KoinComponent {
         checkedPath.add(path)
     }
 
-    suspend fun copyFile(srcPath: String, destPath: String): Result<Boolean> {
-        // TODO 创建任务 复制单个文件
+    suspend fun copyFile(srcFileSimpleInfo: FileSimpleInfo, destPath: String): Result<Boolean> {
+        // TODO 创建任务
         if (_deskType.value is Local) {
-            val mainScope = MainScope()
-            var successCount = 0
-            var failureCount = 0
-
-            val list = mutableListOf<FileSimpleInfo>()
-            PathUtils.traverse(srcPath) { fileAndFolder ->
-                if (fileAndFolder.isSuccess) {
-                    list.addAll(fileAndFolder.getOrDefault(listOf()))
-                }
-            }
-
-            val rootFolder = FileUtils.createFolder(destPath)
-            if (rootFolder.isFailure) {
-                return rootFolder
-            }
-
-            list.sortedWith(
-                compareBy<FileSimpleInfo> { !it.isDirectory }
-                    .thenBy { it.path.pathLevel() })
-                .groupBy { it.isDirectory }.forEach { (isDir, fileSimpleInfos) ->
-                    if (isDir) {
-                        for (paths in fileSimpleInfos.map { it.path.replaceFirst(srcPath, destPath) }.chunked(30)) {
-                            mainScope.launch {
-                                val count = paths.count {
-                                    FileUtils.createFolder(it).getOrDefault(false)
-                                }
-
-                                successCount += count
-                                failureCount += paths.size - count
-                            }
-                        }
-
-                        while (successCount + failureCount < fileSimpleInfos.size) {
-                            delay(100L)
-                        }
-                    } else {
-                        for (files in fileSimpleInfos.chunked(maxOf(30, fileSimpleInfos.size / 30))) {
-                            mainScope.launch {
-                                for (file in files) {
-                                    if (file.size == 0L) {
-                                        val writeResult = FileUtils.writeBytes(
-                                            file.path.replaceFirst(srcPath, destPath),
-                                            file.size,
-                                            byteArrayOf(),
-                                            0
-                                        )
-                                        if (writeResult.isFailure) {
-                                            failureCount++
-                                            continue
-                                        }
-                                        successCount++
-                                        continue
-                                    }
-
-
-                                    var length = ceil(file.size / MAX_LENGTH.toFloat()).toInt()
-                                    var isSuccess = true
-                                    FileUtils.readFileChunks(file.path, MAX_LENGTH.toLong()) {
-                                        if (it.isSuccess) {
-                                            val result = it.getOrNull() ?: Pair(0, byteArrayOf())
-                                            val writeResult = FileUtils.writeBytes(
-                                                file.path.replaceFirst(srcPath, destPath),
-                                                file.size,
-                                                result.second,
-                                                result.first.toLong() * MAX_LENGTH
-                                            )
-                                            length--
-                                            if (writeResult.isFailure) {
-                                                isSuccess = false
-                                            }
-                                        } else {
-                                            isSuccess = false
-                                            length--
-                                        }
-                                    }
-                                    if (isSuccess && length <= 0) {
-                                        successCount++
-                                    } else {
-                                        failureCount++
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-            while (successCount + failureCount < list.size) {
-                delay(100L)
-            }
-
-
-            val isFinish = list.size == successCount && failureCount == 0
-//            if (isFinish) {
-//                taskState.tasks.remove(task)
-//            }
-            return Result.success(isFinish)
+            return srcFileSimpleInfo.copyToFile(destPath)
         }
 
         var isReturn = false
@@ -486,7 +389,8 @@ class FileState : KoinComponent {
             val device = _deskType.value as Device
             var result: Result<Boolean> = Result.success(false)
             // println(fileState.copyFile("/home/webb/CLionProjects/Embedded C++","/home/webb/下载/Embedded C++"))
-            device.copyFile(srcPath, destPath) {
+            // TODO srcFileSimpleInfo 路径
+            device.copyFile(srcFileSimpleInfo.path, destPath) {
                 result = it
                 isReturn = true
             }
@@ -503,13 +407,13 @@ class FileState : KoinComponent {
     }
 
     suspend fun pasteCopyFile(destPath: String, fileOperationState: FileOperationState) {
-        val destFileInfo = FileUtils.getFile(destPath)
+        val destFileInfo = getFile(destPath).getOrNull() ?: return
 
         val fileAndFolders = getFileAndFolder(destFileInfo.path).getOrDefault(listOf())
 
         fileOperationState.updateWarningOperationDialog(
             checkIfNameExists(
-                checkedPath.map { FileUtils.getFile(it) },
+                checkedPath.map { getFile(it).getOrThrow() },
                 destFileInfo,
                 fileAndFolders,
                 fileOperationState
@@ -520,7 +424,7 @@ class FileState : KoinComponent {
         }
         if (fileOperationState.files.isEmpty()) return
 
-        val fileOperationPaths = mutableListOf<Pair<String, String>>()
+        val fileOperationPaths = mutableListOf<Pair<FileSimpleInfo, String>>()
 
         for (file in fileOperationState.files) {
             if (file.isConflict) {
@@ -573,7 +477,7 @@ class FileState : KoinComponent {
 
                     fileOperationPaths.add(
                         Pair(
-                            file.src.path,
+                            file.src,
                             "${destFileInfo.path}${PathUtils.getPathSeparator()}$fileName(${size + 1})${destFileInfo.mineType}"
                         )
                     )
@@ -583,7 +487,7 @@ class FileState : KoinComponent {
 
             fileOperationPaths.add(
                 Pair(
-                    file.src.path,
+                    file.src,
                     "${file.dest.path}${PathUtils.getPathSeparator()}${file.src.name}"
                 )
             )
@@ -621,7 +525,7 @@ class FileState : KoinComponent {
         checkedPath.add(path)
     }
 
-    suspend fun pasteMoveFile(destPath: String, fileOperationState: FileOperationState) {
+    fun pasteMoveFile(destPath: String, fileOperationState: FileOperationState) {
 //        val srcFileInfo = FileUtils.getFile(srcPath)
 //        val destFileInfo = FileUtils.getFile(destPath)
 //
@@ -718,16 +622,33 @@ class FileState : KoinComponent {
         val fileOperations = mutableListOf<FileOperation>()
 
         for (srcFileInfo in srcFileInfos) {
+            // 文件夹 to 文件夹
+            val isConflictFolder = srcFileInfo.isDirectory && destFileInfo.isDirectory && (
+                    srcFileInfo.name == destFileInfo.name ||
+                            fileAndFolders.any { it.name == srcFileInfo.name }
+                    )
+            // 文件 to 文件夹
+            val isConflictFileFolder = !srcFileInfo.isDirectory && destFileInfo.isDirectory && (
+                    srcFileInfo.name == destFileInfo.name ||
+                            fileAndFolders.any { it.name == srcFileInfo.name }
+                    )
+            // 文件 to 文件
+            val isConflictFile =
+                !srcFileInfo.isDirectory && !destFileInfo.isDirectory && srcFileInfo.name == destFileInfo.name
+
             // 是否冲突
-            val isConflict = srcFileInfo.name == destFileInfo.name ||
-                    (srcFileInfo.isDirectory && destFileInfo.isDirectory &&
-                            fileAndFolders.any { it.name == srcFileInfo.name })
+            val isConflict = isConflictFolder || isConflictFileFolder || isConflictFile
 
             fileOperations.add(
                 FileOperation(
                     isConflict = isConflict,
                     src = srcFileInfo,
-                    dest = if (isConflict) destFileInfo.withCopy(name = srcFileInfo.name) else destFileInfo,
+                    dest = if (isConflictFolder)
+                        destFileInfo.withCopy(name = srcFileInfo.name)
+                    else if (isConflictFileFolder)
+                        fileAndFolders.first { it.name == srcFileInfo.name }
+                    else
+                        destFileInfo,
                 )
             )
         }
@@ -756,5 +677,29 @@ class FileState : KoinComponent {
         }
 
         return Result.failure(Exception("删除失败"))
+    }
+
+    suspend fun getFile(path: String): Result<FileSimpleInfo> {
+        if (_deskType.value is Local) {
+            return FileUtils.getFile(path)
+        }
+
+        var isReturn = false
+        if (_deskType.value is Device) {
+            val device = _deskType.value as Device
+
+            var result: Result<FileSimpleInfo> = Result.failure(Exception("获取失败"))
+            device.getFile(path) {
+                result = it
+                isReturn = true
+            }
+
+            while (!isReturn) {
+                delay(100L)
+            }
+            return result
+        }
+
+        return Result.failure(Exception("获取失败"))
     }
 }

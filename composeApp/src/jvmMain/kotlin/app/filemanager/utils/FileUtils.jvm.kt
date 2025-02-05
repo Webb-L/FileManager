@@ -8,8 +8,8 @@ import java.io.File
 import java.io.RandomAccessFile
 
 internal actual object FileUtils {
-    actual fun getFile(path: String): FileSimpleInfo = File(path).toFileSimpleInfo()
-    actual fun getFile(path: String, fileName: String): FileSimpleInfo = File(path, fileName).toFileSimpleInfo()
+    actual fun getFile(path: String): Result<FileSimpleInfo> = File(path).toFileSimpleInfo()
+    actual fun getFile(path: String, fileName: String): Result<FileSimpleInfo> = File(path, fileName).toFileSimpleInfo()
     actual fun openFile(file: String) = Desktop.getDesktop().open(File(file))
 
     actual fun deleteFile(path: String): Result<Boolean> {
@@ -189,6 +189,20 @@ internal actual object FileUtils {
             return Result.success(true)
         } catch (e: SecurityException) {
             return Result.failure(AuthorityException("没有权限写入文件"))
+        } catch (e: Exception) {
+            return Result.failure(Exception(e.message))
+        }
+    }
+
+    actual fun createFile(path: String): Result<Boolean> {
+        try {
+            val file = File(path)
+
+            if (!file.exists()) {
+                file.createNewFile()
+            }
+
+            return Result.success(file.exists())
         } catch (e: Exception) {
             return Result.failure(Exception(e.message))
         }

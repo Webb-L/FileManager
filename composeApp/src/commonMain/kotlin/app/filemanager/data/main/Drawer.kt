@@ -136,7 +136,11 @@ data class Device(
 
 
     suspend fun getRootPaths(replyCallback: (List<PathInfo>) -> Unit) {
-        getConnect().pathHandle.getRootPaths(id, replyCallback)
+        try {
+            getConnect().pathHandle.getRootPaths(id, replyCallback)
+        } catch (e: Exception) {
+            handleError()
+        }
     }
 
     suspend fun getFileList(path: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
@@ -222,6 +226,14 @@ data class Device(
     ) {
         try {
             getConnect().pathHandle.copyFile(id, srcPath, destPath, replyCallback)
+        } catch (e: Exception) {
+            handleError()
+        }
+    }
+
+    suspend fun getFile(path: String, replyCallback: (Result<FileSimpleInfo>) -> Unit) {
+        try {
+            getConnect().fileHandle.getFile(id, path, replyCallback)
         } catch (e: Exception) {
             handleError()
         }

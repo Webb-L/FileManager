@@ -24,7 +24,7 @@ internal actual object PathUtils {
         if (listFiles.isEmpty()) return Result.failure(EmptyDataException())
 
         return Result.success(listFiles.map { file ->
-            file.toFileSimpleInfo()
+            file.toFileSimpleInfo().getOrNull()!!
         })
     }
 
@@ -74,7 +74,7 @@ internal actual object PathUtils {
                 val files = directory.listFiles() ?: throw EmptyDataException()
                 for (file in files) {
                     try {
-                        fileList.add(file.toFileSimpleInfo())
+                        fileList.add(file.toFileSimpleInfo().getOrNull()!!)
                         if (file.isDirectory) {
                             traverse(file.path) { result ->
                                 result.fold(
@@ -92,7 +92,7 @@ internal actual object PathUtils {
                     }
                 }
             } else {
-                fileList.add(directory.toFileSimpleInfo())
+                fileList.add(directory.toFileSimpleInfo().getOrNull()!!)
             }
 
             callback(Result.success(fileList))

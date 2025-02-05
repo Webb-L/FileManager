@@ -24,9 +24,7 @@ import app.filemanager.data.file.getFileFilterType
 import app.filemanager.ui.components.*
 import app.filemanager.ui.screen.file.filter.FileFilterScreen
 import app.filemanager.ui.state.file.FileFilterState
-import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
-import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.ui.state.main.Task
 import app.filemanager.ui.state.main.TaskType
 import app.filemanager.utils.FileUtils
@@ -50,10 +48,6 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
 
     val fileFilterState = koinInject<FileFilterState>()
     val updateKey by fileFilterState.updateKey.collectAsState()
-
-    val fileOperationState = koinInject<FileOperationState>()
-
-    val drawerState = koinInject<DrawerState>()
 
     val scope = rememberCoroutineScope()
 

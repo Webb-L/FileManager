@@ -1,7 +1,14 @@
 package app.filemanager.data.file
 
+import app.filemanager.extensions.pathLevel
+import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
+import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
+import kotlin.math.ceil
 
 @Serializable
 data class FileSimpleInfo(
@@ -64,7 +71,7 @@ data class FileSimpleInfo(
         protocolId = protocolId,
     )
 
-    suspend fun getSizeInfo(totalSpace: Long, freeSpace: Long): FileSizeInfo {
+    fun getSizeInfo(totalSpace: Long, freeSpace: Long): FileSizeInfo {
         var fileCount = 0L
         var folderCount = 0L
         var fileSize = -1L
@@ -120,6 +127,113 @@ data class FileSimpleInfo(
             protocol = protocol ?: this.protocol,
             protocolId = protocolId ?: this.protocolId,
         )
+    }
+
+    fun writeToFile(destPath: String): Result<Boolean> {
+        if (size == 0L) {
+            return FileUtils.createFile(destPath)
+        }
+
+        var length = ceil(size / MAX_LENGTH.toFloat()).toInt()
+        var isSuccess = true
+        FileUtils.readFileChunks(path, MAX_LENGTH.toLong()) {
+            if (it.isSuccess) {
+                val result = it.getOrNull() ?: Pair(0, byteArrayOf())
+                val writeResult = FileUtils.writeBytes(
+                    destPath,
+                    size,
+                    result.second,
+                    result.first.toLong() * MAX_LENGTH
+                )
+                length--
+                if (writeResult.isFailure) {
+                    isSuccess = false
+                }
+            } else {
+                isSuccess = false
+                length--
+            }
+        }
+        return Result.success(isSuccess && length <= 0)
+    }
+
+    suspend fun copyToFile(destPath: String): Result<Boolean> {
+        val mainScope = MainScope()
+        var successCount = 0
+        var failureCount = 0
+
+        // 复制文件
+        if (!isDirectory) {
+            val targetFilePath = path.replaceFirst(path, destPath)
+            writeToFile(targetFilePath)
+                .onSuccess { successCount++ }
+                .onFailure { failureCount++ }
+
+            return Result.success(successCount == 1 && failureCount == 0)
+        }
+
+
+        // 复制文件夹
+        val list = mutableListOf<FileSimpleInfo>()
+        PathUtils.traverse(path) { fileAndFolder ->
+            if (fileAndFolder.isSuccess) {
+                list.addAll(fileAndFolder.getOrDefault(listOf()))
+            }
+        }
+
+        val rootFolder = FileUtils.createFolder(destPath)
+        if (rootFolder.isFailure) {
+            return rootFolder
+        }
+
+        list.sortedWith(
+            compareBy<FileSimpleInfo> { !it.isDirectory }
+                .thenBy { it.path.pathLevel() })
+            .groupBy { it.isDirectory }.forEach { (isDir, fileSimpleInfos) ->
+                if (isDir) {
+                    for (paths in fileSimpleInfos.map { it.path.replaceFirst(path, destPath) }
+                        .chunked(30)) {
+                        mainScope.launch {
+                            val count = paths.count {
+                                FileUtils.createFolder(it).getOrDefault(false)
+                            }
+
+                            successCount += count
+                            failureCount += paths.size - count
+                        }
+                    }
+
+                    while (successCount + failureCount < fileSimpleInfos.size) {
+                        delay(100L)
+                    }
+                } else {
+                    for (files in fileSimpleInfos.chunked(maxOf(30, fileSimpleInfos.size / 30))) {
+                        mainScope.launch {
+                            for (file in files) {
+                                file.writeToFile(
+                                    file.path.replaceFirst(
+                                        path,
+                                        destPath
+                                    )
+                                )
+                                    .onSuccess { successCount++ }
+                                    .onFailure { failureCount++ }
+                            }
+                        }
+                    }
+                }
+            }
+
+        while (successCount + failureCount < list.size) {
+            delay(100L)
+        }
+
+
+        val isFinish = list.size == successCount && failureCount == 0
+//            if (isFinish) {
+//                taskState.tasks.remove(task)
+//            }
+        return Result.success(isFinish)
     }
 }
 
