@@ -4,8 +4,10 @@ import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.PathInfo
 import app.filemanager.extensions.pathLevel
+import app.filemanager.service.rpc.FileService
 import app.filemanager.service.rpc.RpcClientManager
 import app.filemanager.ui.state.file.FileState
+import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.MainScope
@@ -15,9 +17,9 @@ import kotlinx.rpc.krpc.streamScoped
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-
 class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
     val fileState: FileState by inject()
+    val deviceState: DeviceState by inject()
 
     /**
      * 从远程设备获取指定路径下的文件和文件夹列表。
@@ -77,24 +79,44 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
         }
     }
 
-    // TODO 遍历目录->创建文件夹->创建文件
-    // [y] TODO 2.本地复制到远程
-    // [y] TODO 3.远程复制到本地
-    // TODO 4.远程复制到远程
+    /**
+     * 复制文件或文件夹到目标路径。
+     *
+     * @param remoteId 远程设备的标识。
+     * @param srcFileSimpleInfo 源文件或文件夹的信息。
+     * @param destFileSimpleInfo 目标文件或文件夹的信息。
+     * @param replyCallback 回调操作结果，返回一个包含布尔值的结果对象，表示操作是否成功。
+     */
     suspend fun copyFile(
         remoteId: String,
         srcFileSimpleInfo: FileSimpleInfo,
         destFileSimpleInfo: FileSimpleInfo,
         replyCallback: (Result<Boolean>) -> Unit
     ) {
+        println("copyFile: $srcFileSimpleInfo -> $destFileSimpleInfo")
         val mainScope = MainScope()
         var successCount = 0
         var failureCount = 0
 
+        // 只复制一个文件
+        if (!srcFileSimpleInfo.isDirectory) {
+            rpc.fileHandle.writeBytes(
+                remoteId,
+                srcFileSimpleInfo,
+                destFileSimpleInfo,
+                srcFileSimpleInfo
+            ) {
+                replyCallback(it)
+            }
+            return
+        }
+
         val list = mutableListOf<FileSimpleInfo>()
 
-        // TODO 2.本地复制到远程
+
+        // 获取本地所有的文件和文件夹
         if (srcFileSimpleInfo.protocol == FileProtocol.Local) {
+            // 只有一个文件夹或文件
             if (srcFileSimpleInfo.size == 0L) {
                 val result = if (srcFileSimpleInfo.isDirectory)
                     FileUtils.createFolder(destFileSimpleInfo.path)
@@ -107,6 +129,7 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
                 return
             }
 
+            // 获取所有文件和文件夹
             PathUtils.traverse(srcFileSimpleInfo.path) { fileAndFolder ->
                 if (fileAndFolder.isSuccess) {
                     list.addAll(fileAndFolder.getOrDefault(listOf()).map {
@@ -117,13 +140,25 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
             }
         }
 
-        // TODO 3.远程复制到本地
+        // 获取远程所有的文件和文件夹
         if (srcFileSimpleInfo.protocol == FileProtocol.Device) {
+            var fileService: FileService = rpc.fileService
+            if (destFileSimpleInfo.protocol == FileProtocol.Device) {
+                val socketDevice =
+                    deviceState.socketDevices.firstOrNull { it.id == destFileSimpleInfo.protocolId && it.client != null }
+                if (socketDevice == null) {
+                    replyCallback(Result.failure(Exception("设备离线")))
+                    return
+                }
+                fileService = socketDevice.client!!.fileService
+            }
+
+            // 只复制文件或文件夹
             if (srcFileSimpleInfo.size == 0L) {
                 val result = if (srcFileSimpleInfo.isDirectory)
-                    rpc.fileService.createFolder(listOf(destFileSimpleInfo.path))
+                    fileService.createFolder(listOf(destFileSimpleInfo.path))
                 else
-                    rpc.fileService.createFile(listOf(destFileSimpleInfo.path))
+                    fileService.createFile(listOf(destFileSimpleInfo.path))
 
                 if (result.isSuccess) {
                     replyCallback(Result.success(result.value?.first()?.value == true))
@@ -137,9 +172,7 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
                 rpc.pathService.traversePath(srcFileSimpleInfo.path).collect { fileAndFolder ->
                     if (fileAndFolder.isSuccess) {
                         fileAndFolder.value?.forEach {
-                            it.value.forEach { fileSimpleInfo ->
-                                list.add(fileSimpleInfo)
-                            }
+                            list.addAll(it.value)
                         }
                     }
                 }
@@ -156,20 +189,45 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
             }
 
             if (destFileSimpleInfo.protocol == FileProtocol.Device) {
-                val createFolder = rpc.fileService.createFolder(listOf(destFileSimpleInfo.path))
+                var fileService: FileService = rpc.fileService
+                if (srcFileSimpleInfo.protocol == FileProtocol.Device) {
+                    val socketDevice =
+                        deviceState.socketDevices.firstOrNull { it.id == destFileSimpleInfo.protocolId && it.client != null }
+                    if (socketDevice == null) {
+                        replyCallback(Result.failure(Exception("设备离线")))
+                        return
+                    }
+                    fileService = socketDevice.client!!.fileService
+                }
+                val createFolder = fileService.createFolder(listOf(destFileSimpleInfo.path))
                 if (!createFolder.isSuccess) {
                     replyCallback(Result.failure(createFolder.deSerializable()))
                     return
+                } else {
+                    if (createFolder.value?.first()?.isSuccess == false) {
+                        replyCallback(Result.failure(createFolder.deSerializable()))
+                        return
+                    }
                 }
             }
         }
-
 
         list.sortedWith(
             compareBy<FileSimpleInfo> { !it.isDirectory }
                 .thenBy { it.path.pathLevel() })
             .groupBy { it.isDirectory }.forEach { (isDir, fileSimpleInfos) ->
                 if (isDir) {
+                    var fileService: FileService  = rpc.fileService
+                    if (srcFileSimpleInfo.protocol == FileProtocol.Device && destFileSimpleInfo.protocol == FileProtocol.Device) {
+                        val socketDevice =
+                            deviceState.socketDevices.firstOrNull { it.id == destFileSimpleInfo.protocolId && it.client != null }
+                        if (socketDevice == null) {
+                            replyCallback(Result.failure(Exception("设备离线")))
+                            return
+                        }
+                        fileService = socketDevice.client!!.fileService
+                    }
+
                     for (paths in fileSimpleInfos.map { "${destFileSimpleInfo.path}${it.path}" }.chunked(30)) {
                         if (destFileSimpleInfo.protocol == FileProtocol.Local) {
                             paths.forEach {
@@ -180,7 +238,7 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
                         }
 
                         if (destFileSimpleInfo.protocol == FileProtocol.Device) {
-                            val result = rpc.fileService.createFolder(paths)
+                            val result = fileService.createFolder(paths)
                             if (result.isSuccess) {
                                 result.value.orEmpty().forEach { item ->
                                     when {

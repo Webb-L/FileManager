@@ -7,14 +7,19 @@ import app.filemanager.exception.EmptyDataException
 import app.filemanager.service.data.RenameInfo
 import app.filemanager.service.rpc.FileService
 import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
+import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.rpc.krpc.streamScoped
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import kotlin.math.ceil
 
-class FileHandle(private val fileService: FileService) {
+class FileHandle(private val fileService: FileService) : KoinComponent {
+    private val deviceState: DeviceState by inject()
+
     /**
      * 重命名文件和文件夹
      *
@@ -117,8 +122,17 @@ class FileHandle(private val fileService: FileService) {
         fileSimpleInfo: FileSimpleInfo,
         replyCallback: (Result<Boolean>) -> Unit
     ) {
-        val srcFileSimpleInfoPath = "${srcFileSimpleInfo.path}${fileSimpleInfo.path}"
-        val destFileSimpleInfoPath = "${destFileSimpleInfo.path}${fileSimpleInfo.path}"
+        val srcFileSimpleInfoPath =
+            if (srcFileSimpleInfo.isDirectory)
+                "${srcFileSimpleInfo.path}${fileSimpleInfo.path}"
+            else
+                srcFileSimpleInfo.path
+
+        val destFileSimpleInfoPath =
+            if (srcFileSimpleInfo.isDirectory)
+                "${destFileSimpleInfo.path}${fileSimpleInfo.path}"
+            else
+                destFileSimpleInfo.path
 
         val length = ceil(fileSimpleInfo.size / MAX_LENGTH.toFloat()).toLong()
         val mainScope = MainScope()
@@ -188,10 +202,54 @@ class FileHandle(private val fileService: FileService) {
         }
 
 
-//        // 远程 to 远程
-//        if (srcFileSimpleInfo.protocol == FileProtocol.Device && destFileSimpleInfo.protocol == FileProtocol.Device) {
-//
-//        }
+        // 远程 to 远程
+        if (srcFileSimpleInfo.protocol == FileProtocol.Device && destFileSimpleInfo.protocol == FileProtocol.Device) {
+            var destFileService: FileService = fileService
+            if (srcFileSimpleInfo.protocol == FileProtocol.Device && destFileSimpleInfo.protocol == FileProtocol.Device) {
+                val socketDevice =
+                    deviceState.socketDevices.firstOrNull { it.id == destFileSimpleInfo.protocolId && it.client != null }
+                if (socketDevice == null) {
+                    replyCallback(Result.failure(Exception("设备离线")))
+                    return
+                }
+                destFileService = socketDevice.client!!.fileService
+            }
+            if (fileSimpleInfo.size == 0L) {
+                val createFile = destFileService.createFile(listOf(destFileSimpleInfoPath))
+                if (!createFile.isSuccess) {
+                    if (createFile.value?.first()?.isSuccess == false) {
+                        replyCallback(Result.failure(createFile.deSerializable()))
+                        return
+                    }
+                }
+                replyCallback(Result.success(createFile.value?.first()?.value == true))
+                return
+            }
+
+
+            var isSuccess = true
+            streamScoped {
+                fileService.readFileChunks(srcFileSimpleInfoPath, MAX_LENGTH.toLong()).collect { result ->
+                    if (result.isSuccess && result.value != null) {
+                        val writeBytes = destFileService.writeBytes(
+                            fileSize = fileSimpleInfo.size,
+                            blockIndex = result.value.first,
+                            blockLength = length,
+                            path = destFileSimpleInfoPath,
+                            byteArray = result.value.second
+                        )
+                        if (!writeBytes.isSuccess) {
+                            isSuccess = false
+                        }
+                    } else {
+                        isSuccess = false
+                    }
+                }
+            }
+            replyCallback(Result.success(isSuccess))
+
+            return
+        }
 
 
         replyCallback(Result.success(false))
