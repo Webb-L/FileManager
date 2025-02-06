@@ -123,8 +123,12 @@ class DeviceState : KoinComponent {
 
     fun connect(connectDevice: SocketDevice) {
         mainScope.launch {
-            val rpcClientManager = RpcClientManager()
-            rpcClientManager.connect(connectDevice)
+            try {
+                val rpcClientManager = RpcClientManager()
+                rpcClientManager.connect(connectDevice)
+            } catch (e: Exception) {
+                println(e)
+            }
         }
     }
 }

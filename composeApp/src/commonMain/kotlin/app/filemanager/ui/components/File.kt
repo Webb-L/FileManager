@@ -197,7 +197,7 @@ fun FileCardMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            val isFileChecked = fileState.checkedPath.contains(file.path)
+            val isFileChecked = fileState.checkedFileSimpleInfo.contains(file)
             // 粘贴文件
             if ((isPasteCopyFile || isPasteMoveFile) && !isFileChecked) {
                 DropdownMenuItem(
@@ -225,7 +225,8 @@ fun FileCardMenu(
                 DropdownMenuItem(
                     text = { Text("复制") },
                     onClick = {
-                        fileState.copyFile(file.path)
+                        fileState.checkedFileSimpleInfo.add(file)
+                        fileState.copyFile()
                         expanded = false
                     },
                     leadingIcon = {
@@ -239,7 +240,8 @@ fun FileCardMenu(
                 DropdownMenuItem(
                     text = { Text("移动") },
                     onClick = {
-                        fileState.moveFile(file.path)
+                        fileState.checkedFileSimpleInfo.add(file)
+                        fileState.moveFile()
                         expanded = false
                     },
                     leadingIcon = {
@@ -362,7 +364,7 @@ fun FileBottomAppMenu() {
                 DropdownMenuItem(
                     text = { Text("复制") },
                     onClick = {
-                        fileState.copyFile("")
+                        fileState.copyFile()
                         expanded = false
                     },
                     leadingIcon = {
@@ -376,7 +378,7 @@ fun FileBottomAppMenu() {
                 DropdownMenuItem(
                     text = { Text("移动") },
                     onClick = {
-                        fileState.moveFile("")
+                        fileState.moveFile()
                         expanded = false
                     },
                     leadingIcon = {

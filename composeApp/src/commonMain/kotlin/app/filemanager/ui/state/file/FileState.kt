@@ -14,6 +14,7 @@ import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.pathLevel
 import app.filemanager.extensions.replaceLast
+import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.ui.state.main.Task
 import app.filemanager.ui.state.main.TaskState
@@ -31,6 +32,7 @@ class FileState : KoinComponent {
     val taskState: TaskState by inject()
     val fileOperationState: FileOperationState by inject()
     val drawerState: DrawerState by inject()
+    val deviceState: DeviceState by inject()
 
 
     val fileAndFolder = mutableStateListOf<FileSimpleInfo>()
@@ -364,33 +366,44 @@ class FileState : KoinComponent {
     }
 
 
-    val checkedPath = mutableStateListOf<String>()
+    val checkedFileSimpleInfo = mutableStateListOf<FileSimpleInfo>()
 
     var srcPath = ""
 
     // 是否在复制文件
     private val _isPasteCopyFile: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isPasteCopyFile: StateFlow<Boolean> = _isPasteCopyFile
-    fun copyFile(path: String) {
+    fun copyFile() {
         _isPasteCopyFile.value = true
-        if (path.isEmpty()) return
-        srcPath = path
-        checkedPath.add(path)
     }
 
-    suspend fun copyFile(srcFileSimpleInfo: FileSimpleInfo, destPath: String): Result<Boolean> {
+    suspend fun copyFile(srcFileSimpleInfo: FileSimpleInfo, destFileSimpleInfo: FileSimpleInfo): Result<Boolean> {
         // TODO 创建任务
-        if (_deskType.value is Local) {
-            return srcFileSimpleInfo.copyToFile(destPath)
+        if (srcFileSimpleInfo.protocol == FileProtocol.Local && destFileSimpleInfo.protocol == FileProtocol.Local) {
+            return srcFileSimpleInfo.copyToFile(destFileSimpleInfo.path)
         }
 
         var isReturn = false
-        if (_deskType.value is Device) {
-            val device = _deskType.value as Device
+        if (srcFileSimpleInfo.protocol == FileProtocol.Device || destFileSimpleInfo.protocol == FileProtocol.Device) {
+            var device: Device? = null
+            // Local to Device
+            if (srcFileSimpleInfo.protocol == FileProtocol.Local && destFileSimpleInfo.protocol == FileProtocol.Device) {
+                device = deviceState.devices.firstOrNull { it.id == destFileSimpleInfo.protocolId }
+            }
+            // Device to Local or Device to Device
+            if (
+                (srcFileSimpleInfo.protocol == FileProtocol.Device && destFileSimpleInfo.protocol == FileProtocol.Local) ||
+                (srcFileSimpleInfo.protocol == FileProtocol.Device && destFileSimpleInfo.protocol == FileProtocol.Device)
+            ) {
+                device = deviceState.devices.firstOrNull { it.id == srcFileSimpleInfo.protocolId }
+            }
+
+            if (device == null) {
+                return Result.failure(EmptyDataException())
+            }
+
             var result: Result<Boolean> = Result.success(false)
-            // println(fileState.copyFile("/home/webb/CLionProjects/Embedded C++","/home/webb/下载/Embedded C++"))
-            // TODO srcFileSimpleInfo 路径
-            device.copyFile(srcFileSimpleInfo.path, destPath) {
+            device.copyFile(srcFileSimpleInfo, destFileSimpleInfo) {
                 result = it
                 isReturn = true
             }
@@ -413,7 +426,7 @@ class FileState : KoinComponent {
 
         fileOperationState.updateWarningOperationDialog(
             checkIfNameExists(
-                checkedPath.map { getFile(it).getOrThrow() },
+                checkedFileSimpleInfo,
                 destFileInfo,
                 fileAndFolders,
                 fileOperationState
@@ -424,7 +437,7 @@ class FileState : KoinComponent {
         }
         if (fileOperationState.files.isEmpty()) return
 
-        val fileOperationPaths = mutableListOf<Pair<FileSimpleInfo, String>>()
+        val fileOperationPaths = mutableListOf<Pair<FileSimpleInfo, FileSimpleInfo>>()
 
         for (file in fileOperationState.files) {
             if (file.isConflict) {
@@ -478,7 +491,10 @@ class FileState : KoinComponent {
                     fileOperationPaths.add(
                         Pair(
                             file.src,
-                            "${destFileInfo.path}${PathUtils.getPathSeparator()}$fileName(${size + 1})${destFileInfo.mineType}"
+                            file.dest.apply {
+                                path =
+                                    "${destFileInfo.path}${PathUtils.getPathSeparator()}$fileName(${size + 1})${destFileInfo.mineType}"
+                            }
                         )
                     )
                     continue
@@ -488,7 +504,9 @@ class FileState : KoinComponent {
             fileOperationPaths.add(
                 Pair(
                     file.src,
-                    "${file.dest.path}${PathUtils.getPathSeparator()}${file.src.name}"
+                    file.dest.apply {
+                        path = "${file.dest.path}${PathUtils.getPathSeparator()}${file.src.name}"
+                    }
                 )
             )
         }
@@ -518,11 +536,8 @@ class FileState : KoinComponent {
     // 是否在移动文件
     private val _isPasteMoveFile: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isPasteMoveFile: StateFlow<Boolean> = _isPasteMoveFile
-    fun moveFile(path: String) {
+    fun moveFile() {
         _isPasteMoveFile.value = true
-        if (path.isEmpty()) return
-        srcPath = path
-        checkedPath.add(path)
     }
 
     fun pasteMoveFile(destPath: String, fileOperationState: FileOperationState) {
@@ -660,24 +675,24 @@ class FileState : KoinComponent {
         return fileOperations.any { it.isConflict }
     }
 
-    suspend fun writeBytes(): Result<Boolean> {
-        var isReturn = false
-        if (_deskType.value is Device) {
-            val device = _deskType.value as Device
-            var result: Result<Boolean> = Result.success(false)
-            device.writeBytes("/home/webb/OSX-KVM2/random_file", "/storage/emulated/0/random_file") {
-                result = it
-                isReturn = true
-            }
-
-            while (!isReturn) {
-                delay(100L)
-            }
-            return result
-        }
-
-        return Result.failure(Exception("删除失败"))
-    }
+//    suspend fun writeBytes(): Result<Boolean> {
+//        var isReturn = false
+//        if (_deskType.value is Device) {
+//            val device = _deskType.value as Device
+//            var result: Result<Boolean> = Result.success(false)
+//            device.writeBytes("/home/webb/OSX-KVM2/random_file", "/storage/emulated/0/random_file") {
+//                result = it
+//                isReturn = true
+//            }
+//
+//            while (!isReturn) {
+//                delay(100L)
+//            }
+//            return result
+//        }
+//
+//        return Result.failure(Exception("删除失败"))
+//    }
 
     suspend fun getFile(path: String): Result<FileSimpleInfo> {
         if (_deskType.value is Local) {

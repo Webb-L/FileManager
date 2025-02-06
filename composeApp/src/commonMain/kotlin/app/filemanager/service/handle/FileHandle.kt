@@ -1,5 +1,6 @@
 package app.filemanager.service.handle
 
+import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.exception.EmptyDataException
@@ -9,8 +10,8 @@ import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.rpc.krpc.streamScoped
 import kotlin.math.ceil
 
 class FileHandle(private val fileService: FileService) {
@@ -109,57 +110,91 @@ class FileHandle(private val fileService: FileService) {
         replyCallback(Result.success(result.value.orEmpty().map { it.value ?: false }))
     }
 
-    suspend fun writeBytes(id: String, srcPath: String, destPath: String, replyCallback: (Result<Boolean>) -> Unit) {
-        val file = fileService.getFileByPath(srcPath).value
-        if (file == null) {
-            replyCallback(Result.failure(EmptyDataException()))
-            return
-        }
-        if (!file.isDirectory) {
-            val result = fileService.createFile(destPath)
-            if (!result.isSuccess) {
-                replyCallback(Result.failure(result.deSerializable()))
-            } else {
-                replyCallback(Result.success(result.value ?: false))
-            }
-            return
-        }
+    suspend fun writeBytes(
+        id: String,
+        srcFileSimpleInfo: FileSimpleInfo,
+        destFileSimpleInfo: FileSimpleInfo,
+        fileSimpleInfo: FileSimpleInfo,
+        replyCallback: (Result<Boolean>) -> Unit
+    ) {
+        val srcFileSimpleInfoPath = "${srcFileSimpleInfo.path}${fileSimpleInfo.path}"
+        val destFileSimpleInfoPath = "${destFileSimpleInfo.path}${fileSimpleInfo.path}"
 
-        val length = ceil(file.size / MAX_LENGTH.toFloat()).toLong()
+        val length = ceil(fileSimpleInfo.size / MAX_LENGTH.toFloat()).toLong()
         val mainScope = MainScope()
 
-        var successCount = 0L
-        var failureCount = 0L
+        // 本地 to 远程
+        if (srcFileSimpleInfo.protocol == FileProtocol.Local && destFileSimpleInfo.protocol == FileProtocol.Device) {
+            if (fileSimpleInfo.size == 0L) {
+                val createFile = fileService.createFile(listOf(destFileSimpleInfoPath))
+                if (createFile.isSuccess) {
+                    replyCallback(Result.success(createFile.value?.first()?.value == true))
+                } else {
+                    replyCallback(Result.failure(createFile.deSerializable()))
+                }
+                return
+            }
+            FileUtils.readFileChunks(srcFileSimpleInfoPath, MAX_LENGTH.toLong()) {
+                if (it.isSuccess) {
+                    val result = it.getOrNull() ?: Pair(0L, byteArrayOf())
+                    mainScope.launch {
+                        val resultWrite = fileService.writeBytes(
+                            fileSize = fileSimpleInfo.size,
+                            blockIndex = result.first,
+                            blockLength = length,
+                            path = destFileSimpleInfoPath,
+                            byteArray = result.second,
+                        )
+                        replyCallback(Result.success(resultWrite.isSuccess))
+                    }
+                } else {
+                    replyCallback(Result.failure(it.exceptionOrNull() ?: Exception()))
+                }
+            }
 
-        FileUtils.readFileChunks(srcPath, MAX_LENGTH.toLong()) {
-            if (it.isSuccess) {
-                val result = it.getOrNull() ?: Pair(0L, byteArrayOf())
-                mainScope.launch {
-                    val resultWrite = fileService.writeBytes(
-                        fileSize = file.size,
-                        blockIndex = result.first,
-                        blockLength = length,
-                        path = destPath,
-                        byteArray = result.second,
-                    )
-                    if (resultWrite.isSuccess) {
-                        successCount++
+            return
+        }
+
+        // 远程 to 本地
+        if (srcFileSimpleInfo.protocol == FileProtocol.Device && destFileSimpleInfo.protocol == FileProtocol.Local) {
+            if (fileSimpleInfo.size == 0L) {
+                FileUtils.createFile(destFileSimpleInfoPath)
+                    .onSuccess { success -> replyCallback(Result.success(success)) }
+                    .onFailure { failure -> replyCallback(Result.failure(failure)) }
+                return
+            }
+
+            var isSuccess = true
+            streamScoped {
+                fileService.readFileChunks(srcFileSimpleInfoPath, MAX_LENGTH.toLong()).collect { result ->
+                    if (result.isSuccess && result.value != null) {
+                        val writeBytes = FileUtils.writeBytes(
+                            path = destFileSimpleInfoPath,
+                            fileSize = fileSimpleInfo.size,
+                            data = result.value.second,
+                            offset = result.value.first * MAX_LENGTH
+                        )
+                        if (writeBytes.isFailure) {
+                            isSuccess = false
+                        }
                     } else {
-                        failureCount++
+                        isSuccess = false
                     }
                 }
-            } else {
-                replyCallback(Result.failure(it.exceptionOrNull() ?: Exception()))
-                failureCount++
             }
+            replyCallback(Result.success(isSuccess))
+
+            return
         }
 
 
-        while (successCount + failureCount < length) {
-            delay(100L)
-        }
+//        // 远程 to 远程
+//        if (srcFileSimpleInfo.protocol == FileProtocol.Device && destFileSimpleInfo.protocol == FileProtocol.Device) {
+//
+//        }
 
-        replyCallback(Result.success(successCount == length && failureCount == 0L))
+
+        replyCallback(Result.success(false))
     }
 
     suspend fun getFile(id: String, path: String, replyCallback: (Result<FileSimpleInfo>) -> Unit) {

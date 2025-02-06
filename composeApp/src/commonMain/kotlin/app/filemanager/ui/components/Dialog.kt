@@ -357,7 +357,7 @@ fun FileWarningOperationDialog() {
                                     trailingContent = {
                                         Badge(
                                             containerColor = MaterialTheme.colorScheme.primaryContainer
-                                        ) { Text("新文件") }
+                                        ) { Text("新") }
                                     },
                                 )
                             }
@@ -370,7 +370,7 @@ fun FileWarningOperationDialog() {
                                     supportingContent = { FileWarningDialogItem(file.dest) },
                                     leadingContent = { FileIcon(file.dest) },
                                     trailingContent = {
-                                        Badge { Text("旧文件") }
+                                        Badge { Text("旧") }
                                     },
                                 )
                             }

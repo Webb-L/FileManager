@@ -131,6 +131,9 @@ data class FileSimpleInfo(
 
     fun writeToFile(destPath: String): Result<Boolean> {
         if (size == 0L) {
+            if (isDirectory) {
+                return FileUtils.createFolder(destPath)
+            }
             return FileUtils.createFile(destPath)
         }
 
@@ -193,18 +196,12 @@ data class FileSimpleInfo(
                 if (isDir) {
                     for (paths in fileSimpleInfos.map { it.path.replaceFirst(path, destPath) }
                         .chunked(30)) {
-                        mainScope.launch {
-                            val count = paths.count {
-                                FileUtils.createFolder(it).getOrDefault(false)
-                            }
-
-                            successCount += count
-                            failureCount += paths.size - count
+                        val count = paths.count {
+                            FileUtils.createFolder(it).getOrDefault(false)
                         }
-                    }
 
-                    while (successCount + failureCount < fileSimpleInfos.size) {
-                        delay(100L)
+                        successCount += count
+                        failureCount += paths.size - count
                     }
                 } else {
                     for (files in fileSimpleInfos.chunked(maxOf(30, fileSimpleInfos.size / 30))) {

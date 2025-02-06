@@ -60,7 +60,7 @@ object HomeScreen : Screen {
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = { HomeBottomBar() },
             floatingActionButton = {
-                if (fileState.checkedPath.isEmpty()) {
+                if (fileState.checkedFileSimpleInfo.isEmpty()) {
                     ExtendedFloatingActionButton({ fileState.updateCreateFolder(true) }) {
                         Icon(Icons.Filled.Add, null)
                         Spacer(Modifier.width(8.dp))
@@ -180,22 +180,23 @@ object HomeScreen : Screen {
         val fileFilterState = koinInject<FileFilterState>()
         val updateKey by fileFilterState.updateKey.collectAsState()
 
-        if (fileState.checkedPath.isNotEmpty()) {
+        if (fileState.checkedFileSimpleInfo.isNotEmpty()) {
             BottomAppBar(
                 actions = {
                     val files = fileFilterState.filter(fileState.fileAndFolder, updateKey)
                     val isCheckedAll =
-                        fileState.checkedPath.size == files.count { fileState.checkedPath.contains(it.path) } &&
-                                fileState.checkedPath.size == files.size
+                        fileState.checkedFileSimpleInfo.size == files.count {
+                            fileState.checkedFileSimpleInfo.contains(it)
+                        } && fileState.checkedFileSimpleInfo.size == files.size
                     Box(
                         modifier = Modifier
                             .padding(16.dp)
                             .toggleable(
                                 value = isCheckedAll,
                                 onValueChange = {
-                                    fileState.checkedPath.clear()
+                                    fileState.checkedFileSimpleInfo.clear()
                                     if (!isCheckedAll) {
-                                        fileState.checkedPath.addAll(files.map { it.path })
+                                        fileState.checkedFileSimpleInfo.addAll(files)
                                     }
                                 },
                                 role = Role.Checkbox,
@@ -225,7 +226,7 @@ object HomeScreen : Screen {
                     IconButton({
                         if (isPasteCopyFile) fileState.cancelCopyFile()
                         if (isPasteMoveFile) fileState.cancelMoveFile()
-                        fileState.checkedPath.clear()
+                        fileState.checkedFileSimpleInfo.clear()
                     }) {
                         Icon(Icons.Filled.Close, null)
                     }

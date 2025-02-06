@@ -60,12 +60,12 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
         items(files, key = { it.path }) {
             FileCard(
                 file = it,
-                checkedState = fileState.checkedPath.contains(it.path),
+                checkedState = fileState.checkedFileSimpleInfo.contains(it),
                 onStateChange = { status ->
                     if (status) {
-                        fileState.checkedPath.add(it.path)
+                        fileState.checkedFileSimpleInfo.add(it)
                     } else {
-                        fileState.checkedPath.remove(it.path)
+                        fileState.checkedFileSimpleInfo.remove(it)
                     }
                 },
                 onClick = {

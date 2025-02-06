@@ -207,25 +207,25 @@ data class Device(
         }
     }
 
-    suspend fun writeBytes(
-        srcPath: String,
-        destPath: String,
-        replyCallback: (Result<Boolean>) -> Unit
-    ) {
-        try {
-            getConnect().fileHandle.writeBytes(id, srcPath, destPath, replyCallback)
-        } catch (e: Exception) {
-            handleError()
-        }
-    }
+//    suspend fun writeBytes(
+//        srcPath: String,
+//        destPath: String,
+//        replyCallback: (Result<Boolean>) -> Unit
+//    ) {
+//        try {
+//            getConnect().fileHandle.writeBytes(id, srcPath, destPath, replyCallback)
+//        } catch (e: Exception) {
+//            handleError()
+//        }
+//    }
 
     suspend fun copyFile(
-        srcPath: String,
-        destPath: String,
+        srcFileSimpleInfo: FileSimpleInfo,
+        destFileSimpleInfo: FileSimpleInfo,
         replyCallback: (Result<Boolean>) -> Unit
     ) {
         try {
-            getConnect().pathHandle.copyFile(id, srcPath, destPath, replyCallback)
+            getConnect().pathHandle.copyFile(id, srcFileSimpleInfo, destFileSimpleInfo, replyCallback)
         } catch (e: Exception) {
             handleError()
         }

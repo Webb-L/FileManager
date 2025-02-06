@@ -1,5 +1,6 @@
 package app.filemanager.service.rpc
 
+import app.filemanager.createSettings
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.PathInfo
@@ -36,6 +37,7 @@ interface PathService : RemoteService {
 }
 
 class PathServiceImpl(override val coroutineContext: CoroutineContext) : PathService, KoinComponent {
+    private val settings = createSettings()
     private val fileState: FileState by inject()
 
     override suspend fun list(path: String): WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>> {
@@ -58,7 +60,7 @@ class PathServiceImpl(override val coroutineContext: CoroutineContext) : PathSer
             value = mutableMapOf<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>().apply {
                 fileAndFolder.getOrNull()?.forEach { fileSimpleInfo ->
                     val key = if (fileSimpleInfo.protocol == FileProtocol.Local)
-                        Pair(FileProtocol.Device, fileSimpleInfo.protocolId)
+                        Pair(FileProtocol.Device, settings.getString("deviceId", ""))
                     else
                         Pair(fileSimpleInfo.protocol, fileSimpleInfo.protocolId)
 
@@ -117,7 +119,7 @@ class PathServiceImpl(override val coroutineContext: CoroutineContext) : PathSer
                         }
                         files.forEach { fileSimpleInfo ->
                             val key = if (fileSimpleInfo.protocol == FileProtocol.Local)
-                                Pair(FileProtocol.Device, fileSimpleInfo.protocolId)
+                                Pair(FileProtocol.Device, settings.getString("deviceId", ""))
                             else
                                 Pair(fileSimpleInfo.protocol, fileSimpleInfo.protocolId)
 

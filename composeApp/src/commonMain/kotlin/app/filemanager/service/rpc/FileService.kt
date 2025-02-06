@@ -1,5 +1,7 @@
 package app.filemanager.service.rpc
 
+import app.filemanager.createSettings
+import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.exception.EmptyDataException
@@ -9,6 +11,9 @@ import app.filemanager.service.WebSocketResult
 import app.filemanager.service.data.RenameInfo
 import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
 import app.filemanager.utils.FileUtils
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.launch
 import kotlinx.rpc.RemoteService
 import kotlinx.rpc.annotations.Rpc
 import kotlin.coroutines.CoroutineContext
@@ -46,6 +51,10 @@ interface FileService : RemoteService {
         byteArray: ByteArray,
     ): WebSocketResult<Boolean>
 
+    // 读取文件数据
+    // TODO 检查权限
+    suspend fun readFileChunks(path: String, chunkSize: Long): Flow<WebSocketResult<Pair<Long, ByteArray>>>
+
     // 获取文件信息
     // TODO 检查权限
     suspend fun getFileByPath(path: String): WebSocketResult<FileSimpleInfo>
@@ -56,10 +65,12 @@ interface FileService : RemoteService {
 
     // 创建文件
     // TODO 检查权限
-    suspend fun createFile(path: String): WebSocketResult<Boolean>
+    suspend fun createFile(paths: List<String>): WebSocketResult<List<WebSocketResult<Boolean>>>
 }
 
 class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileService {
+    private val settings = createSettings()
+
     override suspend fun rename(renameInfos: List<RenameInfo>): WebSocketResult<List<WebSocketResult<Boolean>>> {
         if (renameInfos.isEmpty()) {
             return ParameterErrorException().toSocketResult()
@@ -167,6 +178,26 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
         return WebSocketResult(value = writeResult.getOrNull() ?: false)
     }
 
+    override suspend fun readFileChunks(path: String, chunkSize: Long): Flow<WebSocketResult<Pair<Long, ByteArray>>> {
+        return channelFlow {
+            FileUtils.readFileChunks(path, chunkSize) { result ->
+                val sendData = if (result.isSuccess) {
+                    WebSocketResult(value = result.getOrDefault(Pair(0L, byteArrayOf())))
+                } else {
+                    val exceptionOrNull = result.exceptionOrNull() ?: EmptyDataException()
+                    WebSocketResult(
+                        exceptionOrNull.message,
+                        exceptionOrNull::class.simpleName,
+                        null
+                    )
+                }
+                launch {
+                    send(sendData)
+                }
+            }
+        }
+    }
+
     override suspend fun getFileByPath(path: String): WebSocketResult<FileSimpleInfo> {
         if (path.isEmpty()) {
             return ParameterErrorException().toSocketResult()
@@ -182,7 +213,10 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
             )
         }
 
-        return WebSocketResult(value = result.getOrNull()!!)
+        return WebSocketResult(value = result.getOrNull()?.apply {
+            protocol = FileProtocol.Device
+            protocolId = settings.getString("deviceId", "")
+        }!!)
     }
 
     override suspend fun getFileByPathAndName(path: String, name: String): WebSocketResult<FileSimpleInfo> {
@@ -190,7 +224,7 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
             return ParameterErrorException().toSocketResult()
         }
 
-        val result = FileUtils.getFile(path)
+        val result = FileUtils.getFile(path, name)
         if (result.isFailure) {
             val exceptionOrNull = result.exceptionOrNull() ?: EmptyDataException()
             return WebSocketResult(
@@ -200,25 +234,31 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
             )
         }
 
-        return WebSocketResult(value = result.getOrNull()!!)
+        return WebSocketResult(value = result.getOrNull()?.apply {
+            protocol = FileProtocol.Device
+            protocolId = settings.getString("deviceId", "")
+        }!!)
     }
 
-    override suspend fun createFile(path: String): WebSocketResult<Boolean> {
-        if (path.isEmpty()) {
+    override suspend fun createFile(paths: List<String>): WebSocketResult<List<WebSocketResult<Boolean>>> {
+        if (paths.isEmpty()) {
             return ParameterErrorException().toSocketResult()
         }
 
-        val result = FileUtils.createFile(path)
-        if (result.isFailure) {
-            val exceptionOrNull = result.exceptionOrNull() ?: EmptyDataException()
-            return WebSocketResult(
-                exceptionOrNull.message,
-                exceptionOrNull::class.simpleName,
-                null
-            )
-        }
-
-
-        return WebSocketResult(value = result.getOrNull()!!)
+        return WebSocketResult(
+            value = paths.map {
+                val file = FileUtils.createFile(it)
+                if (file.isFailure) {
+                    val exceptionOrNull = file.exceptionOrNull() ?: EmptyDataException()
+                    WebSocketResult(
+                        exceptionOrNull.message,
+                        exceptionOrNull::class.simpleName,
+                        null
+                    )
+                } else {
+                    WebSocketResult(value = file.getOrNull() ?: false)
+                }
+            }
+        )
     }
 }
