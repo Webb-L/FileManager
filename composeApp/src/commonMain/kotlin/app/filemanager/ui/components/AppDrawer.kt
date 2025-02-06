@@ -82,10 +82,9 @@ fun AppDrawer() {
 //                Spacer(Modifier.height(12.dp))
 //            }
             if (taskState.tasks.isNotEmpty()) {
-                item { HorizontalDivider() }
                 item { AppDrawerTask() }
+                item { HorizontalDivider() }
             }
-//            item { HorizontalDivider() }
             item { AppDrawerBookmark() }
             item { HorizontalDivider() }
             item { AppDrawerDevice() }
