@@ -34,7 +34,7 @@ internal actual object FileUtils {
     actual fun freeSpace(path: String): Long = File(path).freeSpace
     actual fun createFolder(path: String): Result<Boolean> {
         val file = File(path)
-        if (file.exists()) return Result.failure(Exception("已经存在，无法创建"))
+        if (file.exists()) return Result.success(true)
         return try {
             Result.success(file.mkdir())
         } catch (e: SecurityException) {

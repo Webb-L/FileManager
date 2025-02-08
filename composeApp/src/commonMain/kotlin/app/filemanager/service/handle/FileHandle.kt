@@ -11,6 +11,7 @@ import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.rpc.krpc.streamScoped
 import org.koin.core.component.KoinComponent
@@ -134,7 +135,7 @@ class FileHandle(private val fileService: FileService) : KoinComponent {
             else
                 destFileSimpleInfo.path
 
-        val length = ceil(fileSimpleInfo.size / MAX_LENGTH.toFloat()).toLong()
+        var length = ceil(fileSimpleInfo.size / MAX_LENGTH.toFloat()).toLong()
         val mainScope = MainScope()
 
         // 本地 to 远程
@@ -148,6 +149,8 @@ class FileHandle(private val fileService: FileService) : KoinComponent {
                 }
                 return
             }
+
+            var isSuccess = true
             FileUtils.readFileChunks(srcFileSimpleInfoPath, MAX_LENGTH.toLong()) {
                 if (it.isSuccess) {
                     val result = it.getOrNull() ?: Pair(0L, byteArrayOf())
@@ -159,13 +162,25 @@ class FileHandle(private val fileService: FileService) : KoinComponent {
                             path = destFileSimpleInfoPath,
                             byteArray = result.second,
                         )
-                        replyCallback(Result.success(resultWrite.isSuccess))
+                        if (!resultWrite.isSuccess) {
+                            isSuccess = false
+                            // TODO 记录错误
+                        }
+                        length--
                     }
                 } else {
+                    isSuccess = false
+                    // TODO 记录错误
+                    length--
                     replyCallback(Result.failure(it.exceptionOrNull() ?: Exception()))
                 }
             }
 
+            while (length > 0 || isSuccess) {
+                delay(300)
+            }
+
+            replyCallback(Result.success(length == 0L && isSuccess))
             return
         }
 

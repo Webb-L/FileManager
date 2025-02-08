@@ -14,7 +14,7 @@ class WebSocketResult<out T>(
     val isSuccess: Boolean get() = message == null && className == null
 
     fun deSerializable(): Exception {
-        println("[deSerializable] className = $className")
+        println("[deSerializable] className = $className, message = $message")
         return when (className) {
             "EmptyDataException" -> EmptyDataException()
             "AuthorityException" -> AuthorityException(message)

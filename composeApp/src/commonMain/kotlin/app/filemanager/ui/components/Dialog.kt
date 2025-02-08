@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -20,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -387,13 +385,13 @@ fun FileWarningOperationDialog() {
                                     label = {
                                         val labelText = when {
                                             file.dest.isDirectory && file.src.isDirectory -> when (operationType) {
-                                                FileOperationType.Replace -> "替换文件夹"
+                                                FileOperationType.Replace -> "覆盖文件夹"
                                                 FileOperationType.Jump -> "跳过文件夹"
                                                 FileOperationType.Reserve -> "保留文件夹"
                                             }
 
                                             else -> when (operationType) {
-                                                FileOperationType.Replace -> "替换文件"
+                                                FileOperationType.Replace -> "覆盖文件"
                                                 FileOperationType.Jump -> "跳过文件"
                                                 FileOperationType.Reserve -> "保留文件"
                                             }
@@ -410,31 +408,31 @@ fun FileWarningOperationDialog() {
 
                         Spacer(Modifier.height(8.dp))
 
-                        Row(
-                            Modifier
-                                .toggleable(
-                                    value = file.isUseAll,
-                                    onValueChange = {
-                                        operationState.files.indexOf(file).takeIf { it >= 0 }?.let { index ->
-                                            operationState.files[index] = file.withCopy(
-                                                isUseAll = !file.isUseAll
-                                            )
-                                        }
-                                    },
-                                    role = Role.Checkbox
-                                ),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = file.isUseAll,
-                                onCheckedChange = null
-                            )
-                            Text(
-                                text = "应用此操作到所有文件夹和文件",
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(start = 16.dp)
-                            )
-                        }
+//                        Row(
+//                            Modifier
+//                                .toggleable(
+//                                    value = file.isUseAll,
+//                                    onValueChange = {
+//                                        operationState.files.indexOf(file).takeIf { it >= 0 }?.let { index ->
+//                                            operationState.files[index] = file.withCopy(
+//                                                isUseAll = !file.isUseAll
+//                                            )
+//                                        }
+//                                    },
+//                                    role = Role.Checkbox
+//                                ),
+//                            verticalAlignment = Alignment.CenterVertically
+//                        ) {
+//                            Checkbox(
+//                                checked = file.isUseAll,
+//                                onCheckedChange = null
+//                            )
+//                            Text(
+//                                text = "应用此操作到所有文件夹和文件",
+//                                style = MaterialTheme.typography.bodyLarge,
+//                                modifier = Modifier.padding(start = 16.dp)
+//                            )
+//                        }
                     }
 
                     if (index < fileOperations.size - 1) {

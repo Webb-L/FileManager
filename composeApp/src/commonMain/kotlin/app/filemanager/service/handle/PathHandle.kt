@@ -217,7 +217,7 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
                 .thenBy { it.path.pathLevel() })
             .groupBy { it.isDirectory }.forEach { (isDir, fileSimpleInfos) ->
                 if (isDir) {
-                    var fileService: FileService  = rpc.fileService
+                    var fileService: FileService = rpc.fileService
                     if (srcFileSimpleInfo.protocol == FileProtocol.Device && destFileSimpleInfo.protocol == FileProtocol.Device) {
                         val socketDevice =
                             deviceState.socketDevices.firstOrNull { it.id == destFileSimpleInfo.protocolId && it.client != null }

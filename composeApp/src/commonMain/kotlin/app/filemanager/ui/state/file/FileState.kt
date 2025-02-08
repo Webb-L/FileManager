@@ -14,6 +14,7 @@ import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.pathLevel
 import app.filemanager.extensions.replaceLast
+import app.filemanager.ui.state.file.FileOperationType.*
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.ui.state.main.Task
@@ -368,8 +369,6 @@ class FileState : KoinComponent {
 
     val checkedFileSimpleInfo = mutableStateListOf<FileSimpleInfo>()
 
-    var srcPath = ""
-
     // 是否在复制文件
     private val _isPasteCopyFile: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isPasteCopyFile: StateFlow<Boolean> = _isPasteCopyFile
@@ -411,8 +410,6 @@ class FileState : KoinComponent {
             while (!isReturn) {
                 delay(100L)
             }
-
-            updateFileAndFolder()
             return result
         }
 
@@ -441,78 +438,91 @@ class FileState : KoinComponent {
 
         for (file in fileOperationState.files) {
             if (file.isConflict) {
-                // 跳过
-                if (file.type == FileOperationType.Jump) continue
-
-                // 保留
-                if (file.type == FileOperationType.Reserve) {
-                    val fileName = if (file.src.isDirectory)
-                        file.src.name
-                    else
-                        file.src.name.replaceLast(file.src.mineType, "")
-
-                    val fileNameRegex = "${Regex.escape(fileName)}(\\(\\d*\\))?".toRegex()
-
-                    // 获取相同文件名
-                    val files = fileAndFolders
-                        .asSequence()
-                        .filter {
-                            if (it.isDirectory) {
-                                true
-                            } else {
-                                !it.isDirectory
-                            }
-                        }
-                        .map {
-                            if (it.isDirectory) {
-                                it.name
-                            } else {
-                                it.name.replace(it.mineType, "")
-                            }
-                        }
-                        .map { fileNameRegex.find(it) }
-                        .filter { it != null }
-                        .map { it!!.value }
-                        .sortedByDescending { it }
-                        .toSet()
-
-                    // 只存在一个文件
-                    val size: Int
-                    if (files.isEmpty() || files.size == 1) {
-                        size = 1
-                    } else {
-                        // 存在多个文件
-                        val oldSize = "\\([^()]*\\)\$".toRegex().find(files.first())!!.value
-                            .replace("(", "")
-                            .replace(")", "")
-                        size = oldSize.toInt()
-                    }
-
-                    fileOperationPaths.add(
+                when (file.type) {
+                    // 覆盖
+                    Replace -> fileOperationPaths.add(
                         Pair(
                             file.src,
-                            file.dest.apply {
-                                path =
-                                    "${destFileInfo.path}${PathUtils.getPathSeparator()}$fileName(${size + 1})${destFileInfo.mineType}"
-                            }
+                            file.dest
                         )
                     )
-                    continue
+                    // 跳过
+                    Jump -> {}
+                    // 保留
+                    Reserve -> {
+                        val fileName = if (file.src.isDirectory)
+                            file.src.name
+                        else
+                            file.src.name.replaceLast(file.src.mineType, "")
+
+                        val fileNameRegex = "${Regex.escape(fileName)}(\\(\\d*\\))?".toRegex()
+
+                        // 获取相同文件名
+                        val files = fileAndFolders
+                            .asSequence()
+                            .filter {
+                                if (it.isDirectory) {
+                                    true
+                                } else {
+                                    !it.isDirectory
+                                }
+                            }
+                            .map {
+                                if (it.isDirectory) {
+                                    it.name
+                                } else {
+                                    it.name.replace(it.mineType, "")
+                                }
+                            }
+                            .map { fileNameRegex.find(it) }
+                            .filter { it != null }
+                            .map { it!!.value }
+                            .sortedByDescending { it }
+                            .toSet()
+
+                        // 只存在一个文件
+                        val size: Int
+                        if (files.isEmpty() || files.size == 1) {
+                            size = 1
+                        } else {
+                            // 存在多个文件
+                            val oldSize = "\\([^()]*\\)\$".toRegex().find(files.first())!!.value
+                                .replace("(", "")
+                                .replace(")", "")
+                            size = oldSize.toInt()
+                        }
+
+                        fileOperationPaths.add(
+                            Pair(
+                                file.src,
+                                file.dest.copy(
+                                    path = "${destFileInfo.path}${PathUtils.getPathSeparator()}$fileName(${size + 1})${destFileInfo.mineType}"
+                                )
+                            )
+                        )
+                        continue
+                    }
                 }
+                continue
             }
 
             fileOperationPaths.add(
                 Pair(
                     file.src,
-                    file.dest.apply {
-                        path = "${file.dest.path}${PathUtils.getPathSeparator()}${file.src.name}"
-                    }
+                    file.dest.copy(
+                        path = if (!file.src.isDirectory && !file.dest.isDirectory) {
+                            file.dest.path.replaceLast(file.dest.name, file.src.name)
+                        } else {
+                            "${file.dest.path}${PathUtils.getPathSeparator()}${file.src.name}"
+                        }
+                    )
                 )
             )
         }
 
         val mainScope = MainScope()
         var executeCount = 0
+
         for (fileOperationPath in fileOperationPaths) {
             mainScope.launch {
                 copyFile(fileOperationPath.first, fileOperationPath.second)
@@ -530,7 +540,7 @@ class FileState : KoinComponent {
     fun cancelCopyFile() {
         _isPasteCopyFile.value = false
         fileOperationState.files.clear()
-        srcPath = ""
+        checkedFileSimpleInfo.clear()
     }
 
     // 是否在移动文件
@@ -607,7 +617,7 @@ class FileState : KoinComponent {
     fun cancelMoveFile() {
         _isPasteMoveFile.value = false
         fileOperationState.files.clear()
-        srcPath = ""
+        checkedFileSimpleInfo.clear()
     }
 
     private val _isRenameFile: MutableStateFlow<Boolean> = MutableStateFlow(false)
@@ -658,9 +668,7 @@ class FileState : KoinComponent {
                 FileOperation(
                     isConflict = isConflict,
                     src = srcFileInfo,
-                    dest = if (isConflictFolder)
-                        destFileInfo.withCopy(name = srcFileInfo.name)
-                    else if (isConflictFileFolder)
+                    dest = if (isConflict)
                         fileAndFolders.first { it.name == srcFileInfo.name }
                     else
                         destFileInfo,
