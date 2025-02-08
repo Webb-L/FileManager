@@ -92,7 +92,7 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                             horizontalArrangement = Arrangement.Center,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            if (fileSize==null) {
+                            if (fileSize == null) {
                                 Text("计算中 总计")
                             } else {
                                 Text("${fileSize!!.totalSpace.formatFileSize()} 总计")
@@ -106,7 +106,7 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                                         .background(ProgressIndicatorDefaults.linearColor)
                                 )
                                 Spacer(Modifier.width(4.dp))
-                                if (fileSize==null) {
+                                if (fileSize == null) {
                                     Text("计算中 已用")
                                 } else {
                                     Text("${fileSize!!.fileSize.formatFileSize()} 已用(${(progressValue * 100).roundToInt()}%)")
@@ -121,7 +121,7 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                                         .background(ProgressIndicatorDefaults.linearTrackColor)
                                 )
                                 Spacer(Modifier.width(4.dp))
-                                if (fileSize==null) {
+                                if (fileSize == null) {
                                     Text("计算中 剩余")
                                 } else {
                                     Text("${fileSize!!.freeSpace.formatFileSize()} 剩余")
@@ -161,7 +161,7 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                         Spacer(Modifier.width(8.dp))
                         Text("Column 2", Modifier.weight(0.7f))
                     }
-                    if (fileSize!=null) {
+                    if (fileSize != null) {
                         Row(Modifier.fillMaxWidth().padding(4.dp)) {
                             DisableSelection {
                                 Text("文件", Modifier.weight(0.3f))
@@ -170,7 +170,7 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                             Text("${fileSize!!.fileCount}", Modifier.weight(0.7f))
                         }
                     }
-                    if (fileSize!=null) {
+                    if (fileSize != null) {
                         Row(Modifier.fillMaxWidth().padding(4.dp)) {
                             DisableSelection {
                                 Text("文件夹", Modifier.weight(0.3f))
@@ -221,7 +221,7 @@ fun FileRenameDialog(
                 label = { Text("名称") },
                 isError = verify.first,
                 leadingIcon = { FileIcon(fileInfo) },
-                modifier = Modifier.semantics { if (verify.first) error(verify.second) },
+                modifier = Modifier.semantics { if (verify.first) verify.second },
                 trailingIcon = {
                     if (text.isNotEmpty()) {
                         IconButton({ text = "" }) {
@@ -283,8 +283,7 @@ fun TextFieldDialog(
                 onValueChange = { text = it },
                 label = { Text(label) },
                 isError = verify.first,
-                modifier = Modifier.focusRequester(focusRequester)
-                    .semantics { if (verify.first) error(verify.second) },
+                modifier = Modifier.focusRequester(focusRequester),
                 leadingIcon = leadingIcon,
                 trailingIcon = {
                     if (text.isNotEmpty()) {

@@ -76,7 +76,7 @@ class RpcClientManager {
          * 此值用于确保分片在网络传输时的稳定性和效率，避免超出可接受的大小限制。
          * 常量默认为 1024 * 6。
          */
-        const val MAX_LENGTH = 1024 * 6 // 最大分片长度
+        const val MAX_LENGTH = 1024 * 10 // 最大分片长度
 
         /**
          * 定义用于管理请求超时的常量。

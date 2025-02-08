@@ -48,13 +48,6 @@ class DeviceHandle(private val deviceService: DeviceService) : KoinComponent {
                 ) {
                     return
                 }
-                database.deviceQueries.insert(
-                    id = socketDevice.id,
-                    name = socketDevice.name,
-                    type = socketDevice.type,
-                    connectionType = DeviceConnectType.APPROVED,
-                    category = DeviceCategory.CLIENT
-                )
             }
         }
     }
