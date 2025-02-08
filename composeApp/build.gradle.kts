@@ -84,8 +84,6 @@ kotlin {
             implementation(libs.sqlDelight.driver.android)
             implementation(libs.koin.android)
             implementation(libs.androidx.security.crypto)
-            implementation(libs.ktor.network)
-            implementation(libs.ktor.network.tls)
 
             implementation(libs.ktor.server.core)
             implementation(libs.ktor.server.cio)
@@ -103,7 +101,6 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.sqlDelight.driver.sqlite)
             implementation(libs.jasypt)
-            implementation(libs.ktor.network)
 
             implementation(libs.ktor.client.cio)
             implementation(libs.ktor.server.core)
