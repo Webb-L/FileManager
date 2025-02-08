@@ -108,8 +108,11 @@ class DeviceState : KoinComponent {
             device.host = ip
 
             // 自动连接
-            database.deviceQueries.queryById(device.id, DeviceCategory.CLIENT).executeAsOneOrNull()?.let {
-                if (it.connectionType == DeviceConnectType.AUTO_CONNECT) {
+            database.deviceQueries.queryById(device.id, DeviceCategory.CLIENT).executeAsOneOrNull().let {
+                if (it == null) {
+                    device.connectType = ConnectType.New
+                }
+                if (it?.connectionType == DeviceConnectType.AUTO_CONNECT) {
                     device.connectType = ConnectType.Loading
                     connect(device)
                 }

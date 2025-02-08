@@ -83,7 +83,7 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
             if (deviceState.socketDevices.firstOrNull { it.id == device.id } == null) {
                 deviceState.socketDevices.add(
                     device.withCopy(
-                        connectType = ConnectType.UnConnect
+                        connectType = ConnectType.New
                     )
                 )
             }

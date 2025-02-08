@@ -445,7 +445,7 @@ private fun AppDrawerDevice() {
         }
     ) {
         if (!isExpandDevice) return@AppDrawerItem
-        for ((index, device) in deviceState.socketDevices.withIndex()) {
+        for ((index, device) in deviceState.socketDevices.sortedByDescending { it.client != null }.withIndex()) {
             NavigationDrawerItem(
                 icon = {
                     if (device.connectType == Loading) {
@@ -508,7 +508,9 @@ private fun AppDrawerDevice() {
                             }
                         }
 
-                        Loading -> {}
+                        Loading -> {
+                            // TODO 断开连接
+                        }
                     }
                 },
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
