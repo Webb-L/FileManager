@@ -35,6 +35,7 @@ import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
 import app.filemanager.ui.screen.device.DeviceSettingsScreen
 import app.filemanager.ui.screen.file.FavoriteScreen
+import app.filemanager.ui.screen.main.NotificationScreen
 import app.filemanager.ui.screen.task.TaskResultScreen
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.*
@@ -45,6 +46,7 @@ import org.koin.compose.koinInject
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppDrawer() {
+    val mainState = koinInject<MainState>()
     val drawerState = koinInject<DrawerState>()
     val taskState = koinInject<TaskState>()
     val deviceState = koinInject<DeviceState>()
@@ -63,6 +65,13 @@ fun AppDrawer() {
                 }
             },
             actions = {
+                IconButton({
+                    mainState.updateScreen(NotificationScreen())
+                }) {
+                    BadgedBox(badge = { Badge { Text("1") } }) {
+                        Icon(Icons.Default.Notifications, null)
+                    }
+                }
                 IconButton({}) {
                     Icon(Icons.Default.Settings, null)
                 }

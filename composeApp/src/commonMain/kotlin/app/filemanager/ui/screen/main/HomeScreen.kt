@@ -150,7 +150,13 @@ object HomeScreen : Screen {
             title = { AppBarPath() },
             navigationIcon = {
                 IconButton({ mainState.updateExpandDrawer(!expandDrawer) }) {
-                    Icon(if (expandDrawer) Icons.Default.Close else Icons.Default.Menu, null)
+                    BadgedBox(badge = {
+                        if (!expandDrawer) {
+                            Badge { Text("1") }
+                        }
+                    }) {
+                        Icon(if (expandDrawer) Icons.Default.Close else Icons.Default.Menu, null)
+                    }
                 }
             },
             actions = {
