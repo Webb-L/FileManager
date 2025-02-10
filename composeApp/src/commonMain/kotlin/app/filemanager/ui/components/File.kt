@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,9 +26,11 @@ import app.filemanager.db.FileFavorite
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.timestampToSyncDate
+import app.filemanager.ui.screen.file.FileShareScreen
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
+import app.filemanager.ui.state.main.MainState
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -62,7 +65,7 @@ fun FileCard(
                         Icons.Default.FavoriteBorder,
                         null,
                         Modifier.size(12.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = colorScheme.primary
                     )
                     Spacer(Modifier.width(12.dp))
                 }
@@ -125,7 +128,7 @@ fun FileFavoriteCard(
         },
         colors = ListItemDefaults.colors(
             containerColor = if (favorite.isFixed) {
-                MaterialTheme.colorScheme.primaryContainer
+                colorScheme.primaryContainer
             } else ListItemDefaults.containerColor
         ),
         leadingContent = {
@@ -176,6 +179,7 @@ fun FileCardMenu(
     file: FileSimpleInfo,
     onRemove: (String) -> Unit
 ) {
+    val mainState = koinInject<MainState>()
     val fileState = koinInject<FileState>()
     val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
     val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
@@ -318,6 +322,18 @@ fun FileCardMenu(
                             Icons.Outlined.Favorite
                         else
                             Icons.Outlined.FavoriteBorder,
+                        contentDescription = null
+                    )
+                })
+            DropdownMenuItem(
+                text = { Text("分享") },
+                onClick = {
+                    mainState.updateScreen(FileShareScreen())
+                    expanded = false
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Outlined.Share,
                         contentDescription = null
                     )
                 })

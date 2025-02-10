@@ -21,6 +21,7 @@ val commonScreenModule = module {
     single { FileFilterState() }
     single { FileOperationState() }
     single { FileFavoriteState() }
+    single { FileShareState() }
 }
 
 val commonDatabaseModule = module {
