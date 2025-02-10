@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
@@ -31,7 +32,10 @@ import app.filemanager.service.data.ConnectType.*
 import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
 import app.filemanager.ui.components.FileIcon
-import app.filemanager.ui.state.file.*
+import app.filemanager.ui.state.file.FileShareLikeCategory
+import app.filemanager.ui.state.file.FileShareState
+import app.filemanager.ui.state.file.FileShareStatus
+import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.MainState
 import app.filemanager.ui.theme.Typography
@@ -43,8 +47,8 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
-class FileShareScreen : Screen {
-    @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
@@ -52,8 +56,12 @@ class FileShareScreen : Screen {
         val scope = rememberCoroutineScope()
 
         val mainState = koinInject<MainState>()
-        val fileFavoriteState = koinInject<FileFavoriteState>()
-        fileFavoriteState.sync()
+
+        val files = mutableStateListOf<FileSimpleInfo>()
+        files.addAll(_files)
+
+        val checkedFiles = mutableStateListOf<FileSimpleInfo>()
+        checkedFiles.addAll(_files)
 
         val deviceState = koinInject<DeviceState>()
 
@@ -67,6 +75,7 @@ class FileShareScreen : Screen {
 
         var category by remember { mutableStateOf(FileShareLikeCategory.WAITING) }
         var isExpandFileList by remember { mutableStateOf(true) }
+        var selectFileType by remember { mutableStateOf(0) }
 
         Scaffold(
             topBar = {
@@ -83,7 +92,7 @@ class FileShareScreen : Screen {
                     actions = {
                         BadgedBox({
                             if (!drawerState.isClosed) return@BadgedBox
-                            Badge { Text("99+") }
+                            Badge { Text("${if (checkedFiles.size > 100) "99+" else checkedFiles.size}") }
                         }) {
                             IconButton({
                                 scope.launch {
@@ -106,22 +115,41 @@ class FileShareScreen : Screen {
                         LazyColumn {
                             item {
                                 AppDrawerHeader(
-                                    "文件列表(100)",
-                                    actions = {
-                                        Icon(
-                                            if (isExpandFileList) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                            null,
-                                            Modifier.clip(RoundedCornerShape(25.dp))
-                                                .clickable { isExpandFileList = !isExpandFileList }
-                                        )
-                                    }
+                                    "文件列表(${files.size})",
+                                    actions = {}
                                 )
                             }
-                            if (!isExpandFileList) return@LazyColumn
-                            val file = FileSimpleInfo.nullFileSimpleInfo()
-                            items(30) {
+                            item {
+                                SingleChoiceSegmentedButtonRow(
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                ) {
+                                    listOf("全选", "反选").forEachIndexed { index, label ->
+                                        SegmentedButton(
+                                            selected = selectFileType == index,
+                                            onClick = {
+                                                selectFileType = index
+                                                if (index == 0) {
+                                                    checkedFiles.clear()
+                                                    checkedFiles.addAll(_files)
+                                                }
+                                                if (index == 1) {
+                                                    for (file in files) {
+                                                        if (checkedFiles.contains(file)) {
+                                                            checkedFiles.remove(file)
+                                                        } else {
+                                                            checkedFiles.add(file)
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                                        ) { Text(label) }
+                                    }
+                                }
+                            }
+                            items(files) { file ->
                                 ListItem(
-                                    headlineContent = { Text("文件名") },
+                                    headlineContent = { Text(file.name) },
                                     supportingContent = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             file.protocol.toIcon()
@@ -149,14 +177,40 @@ class FileShareScreen : Screen {
                                             modifier = Modifier.padding(16.dp),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            FileIcon(file)
+                                            if (!checkedFiles.contains(file)) {
+                                                FileIcon(file)
+                                            } else {
+                                                Checkbox(checkedFiles.contains(file), onCheckedChange = null)
+                                            }
                                         }
                                     },
                                     trailingContent = {
-                                        IconButton({}) {
+                                        IconButton({
+                                            scope.launch {
+                                                when (snackbarHostState.showSnackbar(
+                                                    message = file.name,
+                                                    actionLabel = "删除",
+                                                    withDismissAction = true,
+                                                    duration = SnackbarDuration.Short
+                                                )) {
+                                                    SnackbarResult.Dismissed -> {}
+                                                    SnackbarResult.ActionPerformed -> {
+                                                        files.remove(file)
+                                                        checkedFiles.remove(file)
+                                                    }
+                                                }
+                                            }
+                                        }) {
                                             Icon(Icons.Default.Close, null)
                                         }
                                     },
+                                    modifier = Modifier.clickable {
+                                        if (checkedFiles.contains(file)) {
+                                            checkedFiles.remove(file)
+                                        } else {
+                                            checkedFiles.add(file)
+                                        }
+                                    }
                                 )
                             }
                         }

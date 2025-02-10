@@ -240,7 +240,7 @@ fun FileCardMenu(
             }
         },
         onShare = {
-            mainState.updateScreen(FileShareScreen())
+            mainState.updateScreen(FileShareScreen(listOf(file)))
         },
         onInfo = {
             fileState.updateFileInfo(file)
@@ -276,7 +276,9 @@ fun FileBottomAppMenu() {
         },
         favorite = false,
         share = true,
-        onShare = { mainState.updateScreen(FileShareScreen()) },
+        onShare = {
+            mainState.updateScreen(FileShareScreen(fileState.checkedFileSimpleInfo.toList()))
+        },
         info = true,
         onInfo = { fileState.updateViewFile(true) },
     )
