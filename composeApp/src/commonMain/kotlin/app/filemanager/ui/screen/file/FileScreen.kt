@@ -69,6 +69,10 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
                     }
                 },
                 onClick = {
+                    if (fileState.checkedFileSimpleInfo.contains(it)) {
+                        fileState.checkedFileSimpleInfo.remove(it)
+                        return@FileCard
+                    }
                     scope.launch {
                         if (it.isDirectory) {
                             fileState.updatePath(it.path)
