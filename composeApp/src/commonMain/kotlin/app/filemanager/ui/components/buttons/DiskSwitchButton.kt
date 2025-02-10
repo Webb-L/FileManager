@@ -1,6 +1,8 @@
 package app.filemanager.ui.components.buttons
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowRight
@@ -9,6 +11,7 @@ import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.main.Device
@@ -105,31 +108,35 @@ private fun <T : DiskBase> DiskSwitchMenuButton(
     onSelect: (T) -> Unit,
     onDismissRequest: (Boolean) -> Unit,
 ) {
-    DropdownMenuItem(
-        text = { Text(title) },
-        onClick = { onDismissRequest(true) },
-        trailingIcon = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(items.size.toString())
-                Icon(
-                    Icons.AutoMirrored.Outlined.ArrowRight,
-                    contentDescription = null
+    Box(Modifier.wrapContentSize(Alignment.TopStart)) {
+        DropdownMenuItem(
+            text = { Text(title) },
+            onClick = { onDismissRequest(true) },
+            trailingIcon = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(items.size.toString())
+                    Icon(
+                        Icons.AutoMirrored.Outlined.ArrowRight,
+                        contentDescription = null
+                    )
+                }
+            }
+        )
+
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { onDismissRequest(false) }
+        ) {
+            for (item in items) {
+                DropdownMenuItem(
+                    text = { Text(item.name) },
+                    onClick = {
+                        onSelect(item)
+                        onDismissRequest(false)
+                    }
                 )
             }
-        }
-    )
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = { onDismissRequest(false) }
-    ) {
-        for (item in items) {
-            DropdownMenuItem(
-                text = { Text(item.name) },
-                onClick = {
-                    onSelect(item)
-                    onDismissRequest(false)
-                }
-            )
         }
     }
 }

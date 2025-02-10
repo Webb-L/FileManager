@@ -82,7 +82,7 @@ fun String.pathLevel(): Int {
  *
  * @return 返回包含子网中所有 IP 地址的列表。如果当前字符串格式不为有效 IP 格式，则返回空列表。
  */
-fun String.getSubnetIps():List<String> {
+fun String.getSubnetIps(): List<String> {
     // 假设使用 /24 网段
     // 1. 将传入的 IP 切分为四段
     val parts = split(".")
