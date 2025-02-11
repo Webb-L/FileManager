@@ -1,0 +1,32 @@
+CREATE TABLE DeviceRole (
+    id         INTEGER  NOT NULL CONSTRAINT DeviceRole_pk PRIMARY KEY AUTOINCREMENT CONSTRAINT DeviceRole_pk_2 UNIQUE,
+    name       TEXT     NOT NULL,
+    comment    TEXT,
+    sortOrder  INTEGER  NOT NULL DEFAULT 0
+);
+
+CREATE UNIQUE INDEX DeviceRole_id_uindex
+    ON DeviceRole (id);
+
+-- Insert a new role
+-- Insert predefined roles
+INSERT INTO DeviceRole (name, comment, sortOrder) VALUES
+    ('SuperAdmin', 'Highest level with unrestricted access', 1),
+    ('Developer', 'Role for developing and maintaining the system', 2),
+    ('Tester', 'Role for testing application functionality and reporting issues', 3),
+    ('Analyst', 'Role for analyzing data and generating reports', 4);
+
+insert:
+INSERT INTO DeviceRole (name, comment, sortOrder) VALUES (?, ?, ?);
+
+-- Read all roles
+select:
+SELECT * FROM DeviceRole;
+
+-- Update a role by id
+updateRoleById:
+UPDATE DeviceRole SET name = ?, comment = ?, sortOrder = ? WHERE id = ?;
+
+-- Delete a role by id
+deleteRoleById:
+DELETE FROM DeviceRole WHERE id = ?;

@@ -1,0 +1,54 @@
+import kotlin.Boolean;
+
+CREATE TABLE DevicePermission (
+    id        INTEGER         NOT NULL 
+                              CONSTRAINT DevicePermission_pk PRIMARY KEY AUTOINCREMENT 
+                              CONSTRAINT DevicePermission_pk_2 UNIQUE,
+    path      TEXT            NOT NULL,
+    useAll    INTEGER AS Boolean NOT NULL DEFAULT 1,
+    read      INTEGER AS Boolean NOT NULL DEFAULT 1,
+    write     INTEGER AS Boolean NOT NULL DEFAULT 1,
+    remove    INTEGER AS Boolean NOT NULL DEFAULT 1,
+    rename    INTEGER AS Boolean NOT NULL DEFAULT 1,
+    sortOrder INTEGER         NOT NULL DEFAULT 0,
+    comment   TEXT
+);
+
+CREATE UNIQUE INDEX DevicePermission_id_uindex
+ON DevicePermission (id);
+
+-- 插入一些假数据到 DevicePermission 表
+INSERT INTO DevicePermission (path, useAll, read, write, remove, rename, sortOrder, comment)
+VALUES 
+    ('/path/to/device1', 1, 1, 1, 0, 0, 1, 'Device 1 permissions'),
+    ('/path/to/device2', 0, 1, 0, 1, 1, 2, 'Device 2 permissions'),
+    ('/path/to/device3', 1, 0, 0, 0, 1, 3, 'Device 3 permissions'),
+    ('/path/to/device4', 0, 1, 1, 1, 0, 4, 'Device 4 permissions'),
+    ('/path/to/device5', 1, 1, 1, 1, 1, 5, 'Device 5 permissions');
+
+lastInsertRowId:
+SELECT last_insert_rowid();
+
+-- 插入新设备权限记录
+insert:
+INSERT INTO DevicePermission (path, comment)
+VALUES (?, ?);
+
+select:
+SELECT * FROM DevicePermission;
+
+-- 根据ID查询设备权限记录
+selectById:
+SELECT * FROM DevicePermission
+WHERE id = ?;
+
+-- 更新指定ID的设备权限记录
+updateById:
+UPDATE DevicePermission
+SET path = ?, useAll = ?, read = ?, write = ?, remove = ?, rename = ?, sortOrder = ?, comment = ?
+WHERE id = ?;
+
+-- 根据ID删除设备权限记录
+deleteById:
+DELETE FROM DevicePermission
+WHERE id = ?;
