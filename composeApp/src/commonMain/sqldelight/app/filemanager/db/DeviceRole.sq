@@ -16,16 +16,27 @@ INSERT INTO DeviceRole (name, comment, sortOrder) VALUES
     ('Tester', 'Role for testing application functionality and reporting issues', 3),
     ('Analyst', 'Role for analyzing data and generating reports', 4);
 
+lastInsertRowId:
+SELECT last_insert_rowid();
+
 insert:
 INSERT INTO DeviceRole (name, comment, sortOrder) VALUES (?, ?, ?);
 
 -- Read all roles
-select:
-SELECT * FROM DeviceRole;
+selectAll:
+SELECT dr.*,
+       COUNT(drdp.deviceRoleId) AS roleCount
+FROM DeviceRole dr
+LEFT JOIN DeviceRoleDevicePermission drdp ON dr.id = drdp.deviceRoleId
+GROUP BY dr.id, dr.name ORDER BY sortOrder DESC;
+
+-- Select By Id
+selectById:
+SELECT * FROM DeviceRole WHERE id = ?;
 
 -- Update a role by id
 updateRoleById:
-UPDATE DeviceRole SET name = ?, comment = ?, sortOrder = ? WHERE id = ?;
+UPDATE DeviceRole SET name = ?, comment = ? WHERE id = ?;
 
 -- Delete a role by id
 deleteRoleById:

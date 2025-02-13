@@ -2,7 +2,10 @@ package app.filemanager.ui.screen.device
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -13,18 +16,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.filemanager.data.device.DeviceRole
 import app.filemanager.db.DevicePermission
-import app.filemanager.db.DeviceRole
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.ui.components.GridList
 import app.filemanager.ui.state.device.DevicePermissionState
+import app.filemanager.ui.state.device.DeviceRoleState
 import app.filemanager.ui.state.main.MainState
 import app.filemanager.utils.WindowSizeClass
 import app.filemanager.utils.calculateWindowSizeClass
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 class DeviceRoleScreen : Screen {
@@ -33,14 +38,10 @@ class DeviceRoleScreen : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val mainState = koinInject<MainState>()
+        val state = koinInject<DeviceRoleState>()
 
-        val database = koinInject<FileManagerDatabase>()
-        val roles = mutableStateListOf<DeviceRole>()
-
-        LaunchedEffect(Unit) {
-            roles.addAll(database.deviceRoleQueries.select().executeAsList())
-        }
-
+        val scope = rememberCoroutineScope()
+        val snackbarHostState = remember { SnackbarHostState() }
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -62,10 +63,11 @@ class DeviceRoleScreen : Screen {
                     }
                 )
             },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             floatingActionButton = {
                 ExtendedFloatingActionButton({
                     navigator.push(EditRoleScreen(onSave = { newRole ->
-                        roles.add(newRole)
+                        state.roles.add(newRole)
                     }))
                 }) {
                     Icon(Icons.Filled.Add, null)
@@ -76,22 +78,37 @@ class DeviceRoleScreen : Screen {
         ) { paddingValues ->
             GridList(
                 modifier = Modifier.padding(paddingValues),
-                exception = if (roles.isEmpty()) EmptyDataException() else null
+                exception = if (state.roles.isEmpty()) EmptyDataException() else null
             ) {
-                items(roles) { role ->
+                itemsIndexed(state.roles) { index, role ->
                     RoleItem(
                         role = role,
                         onEdit = {
-                            navigator.push(EditRoleScreen(role = role, onSave = { updatedRole ->
-                                val index = roles.indexOfFirst { it.id == updatedRole.id }
-                                if (index >= 0) roles[index] = updatedRole
-                            }))
+                            navigator.push(
+                                EditRoleScreen(
+                                    role = role,
+                                    onSave = { updatedRole ->
+                                        state.roles[index] = updatedRole
+                                        println(state.roles[index])
+                                        println(updatedRole)
+                                    }
+                                ))
                         },
                         onDelete = {
-                            roles.remove(role)
-                            // Optionally perform database deletion here
-                        }
-                    )
+                            scope.launch {
+                                when (snackbarHostState.showSnackbar(
+                                    message = role.name,
+                                    actionLabel = "删除",
+                                    withDismissAction = true,
+                                    duration = SnackbarDuration.Short
+                                )) {
+                                    SnackbarResult.Dismissed -> {}
+                                    SnackbarResult.ActionPerformed -> {
+                                        state.delete(role, index)
+                                    }
+                                }
+                            }
+                        })
                 }
             }
         }
@@ -102,11 +119,11 @@ class DeviceRoleScreen : Screen {
         ListItem(
             modifier = Modifier.clickable(onClick = onEdit),
             overlineContent = {
-                Text("已配置33个权限")
+                Text("已配置${role.permissionCount}个权限")
             },
             headlineContent = { Text(role.name) },
             supportingContent =
-                if (role.comment == null)
+                if (role.comment.isNullOrEmpty())
                     null
                 else {
                     {
@@ -124,38 +141,107 @@ class EditRoleScreen(
     private val role: DeviceRole? = null,
     private val onSave: (DeviceRole) -> Unit
 ) : Screen {
+    private val isEdit = role != null
+    private val permissionIds = mutableStateListOf<Long>()
+    private val oldPermissionIds = mutableStateListOf<Long>()
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val database = koinInject<FileManagerDatabase>()
         val mainState = koinInject<MainState>()
         val permissionState = koinInject<DevicePermissionState>()
+        val scope = rememberCoroutineScope()
+        val snackbarHostState = remember { SnackbarHostState() }
 
         val (name, setName) = remember { mutableStateOf(role?.name ?: "") }
         val (comment, setComment) = remember { mutableStateOf(role?.comment ?: "") }
 
-        val permissionIds = mutableStateListOf<Long>()
+        LaunchedEffect(Unit) {
+            if (!isEdit) return@LaunchedEffect
+            database
+                .deviceRoleDevicePermissionQueries
+                .queryDevicePermissionIdByRoleId(role?.id ?: 0L)
+                .executeAsList()
+                .apply {
+                    permissionIds.addAll(this)
+                    oldPermissionIds.addAll(this)
+                }
+        }
 
         Scaffold(
             topBar = {
                 TopAppBar(
                     title = { Text(if (role == null) "新增角色" else "编辑角色") },
                     navigationIcon = {
-                        IconButton(onClick = { navigator.pop() }) {
+                        IconButton(onClick = {
+                            if (isNotSave(name, comment)) {
+                                scope.launch {
+                                    when (snackbarHostState.showSnackbar(
+                                        message = "数据没有保存",
+                                        actionLabel = "舍弃",
+                                        withDismissAction = true,
+                                        duration = SnackbarDuration.Short
+                                    )) {
+                                        SnackbarResult.Dismissed -> {}
+                                        SnackbarResult.ActionPerformed -> {
+                                            navigator.pop()
+                                        }
+                                    }
+                                }
+                                return@IconButton
+                            }
+                            navigator.pop()
+                        }) {
                             Icon(Icons.AutoMirrored.Default.ArrowBack, contentDescription = null)
                         }
                     },
                 )
             },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             floatingActionButton = {
                 FloatingActionButton(onClick = {
-                    val updatedRole = DeviceRole(
-                        id = role?.id ?: 0L,
-                        name = name,
-                        comment = comment,
-                        sortOrder = role?.sortOrder ?: 0L
-                    )
-                    onSave(updatedRole)
+                    var id = role?.id ?: 0L
+                    if (isEdit) {
+                        database.deviceRoleQueries.updateRoleById(
+                            name = name,
+                            comment = comment,
+                            id = role?.id ?: 0L
+                        )
+                    } else {
+                        database.deviceRoleQueries.insert(
+                            name,
+                            comment,
+                            role?.sortOrder ?: 0L
+                        )
+                        id = database.deviceRoleQueries.lastInsertRowId().executeAsOne()
+                    }
+
+                    if (permissionIds != oldPermissionIds) {
+                        val addedPermissions = permissionIds.filterNot { oldPermissionIds.contains(it) }
+                        val removedPermissions = oldPermissionIds.filterNot { permissionIds.contains(it) }
+                        for (permissionId in addedPermissions) {
+                            database.deviceRoleDevicePermissionQueries.insert(id, permissionId)
+                        }
+                        if (removedPermissions.isNotEmpty()) {
+                            database.deviceRoleDevicePermissionQueries.deleteByDevicePermissionIds(removedPermissions)
+                        }
+                    }
+
+                    database.deviceRoleQueries.selectById(id).executeAsOneOrNull()?.let {
+                        onSave(
+                            DeviceRole(
+                                id = it.id,
+                                name = it.name,
+                                comment = it.comment,
+                                sortOrder = it.sortOrder,
+                                permissionCount = database.deviceRoleDevicePermissionQueries.queryCountByDeviceRoleId(id)
+                                    .executeAsOne()
+                            )
+                        )
+                    }
+
                     navigator.pop()
                 }) {
                     Icon(Icons.Default.Done, null)
@@ -176,6 +262,7 @@ class EditRoleScreen(
                                 onValueChange = setName,
                                 label = { Text("角色名") },
                                 modifier = Modifier.fillMaxWidth(),
+                                isError = name.isEmpty(),
                                 trailingIcon = {
                                     if (name.isNotEmpty()) {
                                         IconButton({ setName("") }) {
@@ -183,6 +270,11 @@ class EditRoleScreen(
                                         }
                                     }
                                 },
+                                supportingText = {
+                                    if (name.isEmpty()) {
+                                        Text("角色名不能为空")
+                                    }
+                                }
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             TextField(
@@ -238,7 +330,6 @@ class EditRoleScreen(
         }
     }
 
-
     @OptIn(ExperimentalLayoutApi::class)
     @Composable
     fun PermissionItem(
@@ -261,6 +352,7 @@ class EditRoleScreen(
                 FlowRow {
                     FilterChip(
                         selected = permission.useAll,
+                        enabled = false,
                         onClick = { onToggleStatus(permission.copy(useAll = !permission.useAll)) },
                         shape = RoundedCornerShape(25.dp),
                         modifier = Modifier.padding(horizontal = 4.dp)
@@ -269,6 +361,7 @@ class EditRoleScreen(
                     )
                     FilterChip(
                         selected = permission.read,
+                        enabled = false,
                         onClick = { onToggleStatus(permission.copy(read = !permission.read)) },
                         shape = RoundedCornerShape(25.dp),
                         modifier = Modifier.padding(horizontal = 4.dp)
@@ -277,6 +370,7 @@ class EditRoleScreen(
                     )
                     FilterChip(
                         selected = permission.write,
+                        enabled = false,
                         onClick = { onToggleStatus(permission.copy(write = !permission.write)) },
                         shape = RoundedCornerShape(25.dp),
                         modifier = Modifier.padding(horizontal = 4.dp)
@@ -285,6 +379,7 @@ class EditRoleScreen(
                     )
                     FilterChip(
                         selected = permission.remove,
+                        enabled = false,
                         onClick = { onToggleStatus(permission.copy(remove = !permission.remove)) },
                         shape = RoundedCornerShape(25.dp),
                         modifier = Modifier.padding(horizontal = 4.dp)
@@ -293,6 +388,7 @@ class EditRoleScreen(
                     )
                     FilterChip(
                         selected = permission.rename,
+                        enabled = false,
                         onClick = { onToggleStatus(permission.copy(rename = !permission.rename)) },
                         shape = RoundedCornerShape(25.dp),
                         modifier = Modifier.padding(horizontal = 4.dp)
@@ -303,5 +399,13 @@ class EditRoleScreen(
             },
             modifier = Modifier.clickable(onClick = onClick)
         )
+    }
+
+    private fun isNotSave(name: String, comment: String): Boolean {
+        return if (isEdit) {
+            name != role!!.name || comment != role.comment || permissionIds.toList() != oldPermissionIds.toList()
+        } else {
+            name.isNotEmpty() || comment.isNotEmpty() || permissionIds.isNotEmpty()
+        }
     }
 }

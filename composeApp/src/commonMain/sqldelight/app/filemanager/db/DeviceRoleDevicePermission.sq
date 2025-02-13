@@ -27,6 +27,11 @@ deleteById:
 DELETE FROM DeviceRoleDevicePermission
 WHERE id = :id;
 
+-- 按照多个devicePermissionId批量删除记录
+deleteByDevicePermissionIds:
+DELETE FROM DeviceRoleDevicePermission
+WHERE devicePermissionId IN :devicePermissionIds;
+
 -- 查询所有记录
 queryAll:
 SELECT * FROM DeviceRoleDevicePermission;
@@ -37,11 +42,16 @@ SELECT * FROM DeviceRoleDevicePermission
 WHERE id = :id;
 
 -- 按照deviceRoleId查询记录
-queryByRoleId:
-SELECT * FROM DeviceRoleDevicePermission
+queryDevicePermissionIdByRoleId:
+SELECT devicePermissionId FROM DeviceRoleDevicePermission
 WHERE deviceRoleId = :deviceRoleId;
 
 -- 按照devicePermissionId查询记录
 queryBydevicePermissionId:
 SELECT * FROM DeviceRoleDevicePermission
 WHERE devicePermissionId = :devicePermissionId;
+
+-- 查询指定 deviceRoleId 的记录数量
+queryCountByDeviceRoleId:
+SELECT COUNT(*) FROM DeviceRoleDevicePermission
+WHERE deviceRoleId = :deviceRoleId;
