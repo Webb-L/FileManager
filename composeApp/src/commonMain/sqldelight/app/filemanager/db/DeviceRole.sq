@@ -34,6 +34,10 @@ GROUP BY dr.id, dr.name ORDER BY sortOrder DESC;
 selectById:
 SELECT * FROM DeviceRole WHERE id = ?;
 
+-- Select Name By Id
+selectNameById:
+SELECT name FROM DeviceRole WHERE id = ?;
+
 -- Update a role by id
 updateRoleById:
 UPDATE DeviceRole SET name = ?, comment = ? WHERE id = ?;

@@ -563,7 +563,8 @@ fun DeviceConnectNewDialog(
             name = socketDevice.name,
             type = socketDevice.type,
             connectionType = if (isAuto) DeviceConnectType.AUTO_CONNECT else DeviceConnectType.WAITING,
-            category = DeviceCategory.CLIENT
+            category = DeviceCategory.CLIENT,
+            -1
         )
         val index = deviceState.socketDevices.indexOfFirst { it.id == socketDevice.id }
         if (index >= 0) {

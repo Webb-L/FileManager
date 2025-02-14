@@ -5,6 +5,7 @@ import app.filemanager.service.DriverFactory
 import app.filemanager.service.createDatabase
 import app.filemanager.ui.state.device.DevicePermissionState
 import app.filemanager.ui.state.device.DeviceRoleState
+import app.filemanager.ui.state.device.DeviceSettingsState
 import app.filemanager.ui.state.file.*
 import app.filemanager.ui.state.main.*
 import org.koin.dsl.module
@@ -26,6 +27,7 @@ val commonScreenModule = module {
     single { FileShareState() }
     single { DeviceRoleState(get()) }
     single { DevicePermissionState(get()) }
+    single { DeviceSettingsState(get()) }
 }
 
 val commonDatabaseModule = module {

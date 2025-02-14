@@ -97,7 +97,8 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
                         name = device.name,
                         type = device.type,
                         connectionType = deviceState.connectionRequest[device.id]?.first ?: WAITING,
-                        category = DeviceCategory.SERVER
+                        category = DeviceCategory.SERVER,
+                        -1
                     )
                     when (deviceState.connectionRequest[device.id]!!.first) {
                         AUTO_CONNECT, APPROVED -> {}
