@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import app.filemanager.data.StatusEnum
 import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.*
@@ -19,6 +20,8 @@ import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.MainState
+import app.filemanager.ui.state.main.Task
+import app.filemanager.ui.state.main.TaskType
 import app.filemanager.utils.VerificationUtils
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -56,7 +59,7 @@ object HomeScreen : Screen {
         Scaffold(
             topBar = { HomeTopBar() },
             snackbarHost = { SnackbarHost(snackbarHostState) },
-            bottomBar = { HomeBottomBar() },
+            bottomBar = { HomeBottomBar(snackbarHostState) },
             floatingActionButton = {
                 if (fileState.checkedFileSimpleInfo.isEmpty()) {
                     ExtendedFloatingActionButton({ fileState.updateCreateFolder(true) }) {
@@ -169,9 +172,8 @@ object HomeScreen : Screen {
     }
 
     @Composable
-    fun HomeBottomBar() {
+    fun HomeBottomBar(snackbarHostState: SnackbarHostState) {
         val scope = rememberCoroutineScope()
-
 
         val fileOperationState = koinInject<FileOperationState>()
 
@@ -237,7 +239,36 @@ object HomeScreen : Screen {
 
                     Spacer(Modifier.weight(1f))
 
-                    FileBottomAppMenu()
+                    FileBottomAppMenu(
+                        onRemove = { paths ->
+                            scope.launch {
+                                when (snackbarHostState.showSnackbar(
+                                    message = "确认要删除选择文件或文件夹吗？",
+                                    actionLabel = "删除",
+                                    withDismissAction = true,
+                                    duration = SnackbarDuration.Short
+                                )) {
+                                    SnackbarResult.Dismissed -> {}
+                                    SnackbarResult.ActionPerformed -> {
+                                        scope.launch {
+                                            for (it in paths) {
+                                                fileState.deleteFile(
+                                                    Task(
+                                                        taskType = TaskType.Delete,
+                                                        status = StatusEnum.LOADING,
+                                                        values = mutableMapOf("path" to it)
+                                                    ),
+                                                    it
+                                                )
+                                            }
+                                            fileState.updateFileAndFolder()
+                                            fileFilterState.updateFilerKey()
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    )
 
                     Spacer(Modifier.width(8.dp))
                 },

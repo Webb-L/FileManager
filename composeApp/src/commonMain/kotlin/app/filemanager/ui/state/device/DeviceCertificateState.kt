@@ -26,9 +26,9 @@ class DeviceCertificateState(private val database: FileManagerDatabase) {
                 "rename" to it.rename,
             )[permission] ?: false
 
-            (permissionStatus && (path.contains(it.path ?: "") && it.useAll == true))
+            (permissionStatus && (path == it.path || (path.contains(it.path ?: "") && it.useAll == true)))
         }
 
-        return firstOrNull==null
+        return firstOrNull == null
     }
 }

@@ -250,7 +250,9 @@ fun FileCardMenu(
 }
 
 @Composable
-fun FileBottomAppMenu() {
+fun FileBottomAppMenu(
+    onRemove: (List<String>) -> Unit,
+) {
     val mainState = koinInject<MainState>()
 
     val fileState = koinInject<FileState>()
@@ -265,11 +267,8 @@ fun FileBottomAppMenu() {
         move = !isPasteCopyFile && !isPasteMoveFile,
         onMove = { fileState.moveFile() },
         delete = true,
-        onDelete = {
-            println("需要删除的文件 ${fileState.checkedFileSimpleInfo.toList()}")
-        },
-        rename = true,
-        onRename = { fileState.updateRenameFile(true) },
+        onDelete = { onRemove(fileState.checkedFileSimpleInfo.map { it.path }) },
+        rename = false,
         setting = true,
         onSetting = {
             println("需要设置的文件 ${fileState.checkedFileSimpleInfo.toList()}")

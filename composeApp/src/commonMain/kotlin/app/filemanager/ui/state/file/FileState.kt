@@ -154,7 +154,7 @@ class FileState : KoinComponent {
 
     suspend fun rename(path: String, oldName: String, newName: String): Result<Boolean> {
         if (_deskType.value is Local) {
-            FileUtils.rename(path, oldName, newName)
+            return FileUtils.rename(path, oldName, newName)
         }
 
         var isReturn = false
