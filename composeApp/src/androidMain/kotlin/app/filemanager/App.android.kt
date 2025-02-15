@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.core.content.FileProvider
 import app.filemanager.service.rpc.startRpcServer
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -46,7 +47,7 @@ class AppActivity : ComponentActivity() {
         activity = this@AppActivity
 //        startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
         onBackPressedDispatcher.addCallback(this, backPressedCallback)
-
+        enableEdgeToEdge()
         setContent {
             App()
         }
