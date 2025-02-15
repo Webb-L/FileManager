@@ -64,7 +64,6 @@ kotlin {
             implementation(libs.kotlinx.rpc.core)
             implementation(libs.kotlinx.rpc.krpc.client)
             implementation(libs.kotlinx.rpc.krpc.ktor.client)
-            implementation(libs.kotlinx.rpc.krpc.serialization.json)
             implementation(libs.kotlinx.rpc.krpc.serialization.protobuf)
 
             @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
