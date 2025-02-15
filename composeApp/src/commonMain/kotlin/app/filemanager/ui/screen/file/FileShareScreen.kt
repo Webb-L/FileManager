@@ -1,7 +1,7 @@
 package app.filemanager.ui.screen.file
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,11 +16,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.toIcon
@@ -44,8 +45,12 @@ import app.filemanager.utils.calculateWindowSizeClass
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import com.seiko.imageloader.component.fetcher.ByteArrayFetcher
+import com.seiko.imageloader.model.ImageRequest
+import com.seiko.imageloader.rememberImagePainter
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import qrcode.QRCode
 
 class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
@@ -76,6 +81,8 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
         var category by remember { mutableStateOf(FileShareLikeCategory.WAITING) }
         var isExpandFileList by remember { mutableStateOf(true) }
         var selectFileType by remember { mutableStateOf(0) }
+
+        var openQrCodeDialog by remember { mutableStateOf<Pair<String, ImageRequest>?>(null) }
 
         Scaffold(
             topBar = {
@@ -236,7 +243,9 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                             .clickable { isExpandFileList = !isExpandFileList }
                                     )
                                 })
-                                LinkShareFileCard()
+                                LinkShareFileCard {
+                                    openQrCodeDialog = it
+                                }
                             }
                         }
 
@@ -297,13 +306,13 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                 overlineContent = {
                                     when (device.connectType) {
                                         Connect -> Badge(
-                                            containerColor = MaterialTheme.colorScheme.primary
+                                            containerColor = colorScheme.primary
                                         ) { Text("已链接") }
 
                                         Fail -> Badge { Text("连接失败") }
                                         UnConnect -> Badge { Text("未连接") }
                                         Loading -> Badge(
-                                            containerColor = MaterialTheme.colorScheme.tertiary
+                                            containerColor = colorScheme.tertiary
                                         ) { Text("连接中") }
 
                                         New -> Badge { Text("新-未连接") }
@@ -352,32 +361,30 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                 }
             }
 
-//            return@Scaffold
-//            AlertDialog(
-//                modifier = Modifier.padding(16.dp),
-//                text = {
-//                    Column {
-//                        Box(Modifier.fillMaxSize().weight(1f).background(Color.Red)) {}
-//                        Spacer(Modifier.height(8.dp))
-//                        SelectionContainer {
-//                            Text("http://127.0.0.1:8080/")
-//                        }
-//                    }
-//                },
-//                onDismissRequest = {
-//                    // TODO 关闭弹窗
-//                },
-//                confirmButton = {},
-//                dismissButton = {}
-//            )
+
+            if (openQrCodeDialog != null) {
+                AlertDialog(
+                    modifier = Modifier.padding(16.dp),
+                    text = {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Image(rememberImagePainter(openQrCodeDialog!!.second), null)
+                            Spacer(Modifier.height(8.dp))
+                            SelectionContainer { Text(openQrCodeDialog!!.first) }
+                        }
+                    },
+                    onDismissRequest = { openQrCodeDialog = null },
+                    confirmButton = {},
+                    dismissButton = {}
+                )
+            }
         }
-
-
     }
 
     @OptIn(ExperimentalLayoutApi::class)
     @Composable
-    private fun LinkShareFileCard() {
+    private fun LinkShareFileCard(onClickOpenQRCode: (Pair<String, ImageRequest>) -> Unit) {
         val allIPAddresses = getAllIPAddresses(type = SocketClientIPEnum.IPV4_UP)
         var address by remember { mutableStateOf(allIPAddresses.first()) }
 
@@ -388,10 +395,44 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
         var passwordAccess by remember { mutableStateOf(false) }
         var password by remember { mutableStateOf("") }
 
+        val url by derivedStateOf {
+            "${if (encryption) "https" else "http"}://${address}:8080/${if (passwordAccess) "?pwd=${password}" else ""}"
+        }
+
+
+        val qrCodeColor = colorScheme.primary.toArgb()
+        val qrCodeBackground = colorScheme.background.toArgb()
+
+        var request by remember {
+            mutableStateOf<ImageRequest?>(null)
+        }
+
+        LaunchedEffect(url) {
+            request = ImageRequest(
+                data = QRCode.ofSquares()
+                    .withColor(qrCodeColor)
+                    .withBackgroundColor(qrCodeBackground)
+                    .withSize(10)
+                    .build(url).renderToBytes()
+            ) {
+                components {
+                    add(ByteArrayFetcher.Factory())
+                }
+            }
+        }
+
         Card(Modifier.padding(start = 16.dp, end = 16.dp)) {
             Column {
                 Row {
-                    Box(Modifier.size(128.dp).background(Color.Red)) {}
+                    Box(Modifier.size(128.dp).clickable {
+                        onClickOpenQRCode(Pair(url, request!!))
+                    }, contentAlignment = Alignment.Center) {
+                        if (request == null) {
+                            CircularProgressIndicator()
+                            return@Box
+                        }
+                        Image(rememberImagePainter(request!!), null, Modifier.size(128.dp))
+                    }
                     Column(Modifier.weight(1f).padding(16.dp)) {
                         Text("服务已启动", style = Typography.titleLarge)
                         Spacer(Modifier.height(8.dp))
