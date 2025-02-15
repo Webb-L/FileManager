@@ -13,10 +13,10 @@ actual fun createSettings(): Settings {
     encryptor.setPasswordCharArray("your password".toCharArray())
     val preferences = Preferences.userRoot()
 
-    if (!preferences.nodeExists("deviceName")) {
+    if (preferences.get("deviceName","").isEmpty()) {
         preferences.put("deviceName", "${System.getProperty("user.name")}-${System.getProperty("os.name")}")
     }
-    if (!preferences.nodeExists("deviceId")) {
+    if (preferences.get("deviceId","").isEmpty()) {
         val deviceId = encryptor.encrypt(UUID.randomUUID().toString().replace("-", "O"))
         preferences.put("deviceId", deviceId.replace("+", "Y").replace("/", "L"))
     }
