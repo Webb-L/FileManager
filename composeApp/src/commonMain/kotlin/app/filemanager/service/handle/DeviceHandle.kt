@@ -7,7 +7,6 @@ import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
-import app.filemanager.service.rpc.DeviceService
 import app.filemanager.service.rpc.RpcClientManager
 import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
@@ -15,14 +14,14 @@ import app.filemanager.ui.state.main.DeviceState
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-class DeviceHandle(private val deviceService: DeviceService) : KoinComponent {
+class DeviceHandle(private val rpc: RpcClientManager) : KoinComponent {
     private val deviceState by inject<DeviceState>()
     private val database by inject<FileManagerDatabase>()
     private val settings = createSettings()
 
 
-    suspend fun connect(rpc: RpcClientManager, connectDevice: SocketDevice) {
-        val connectType = deviceService.connect(
+    suspend fun connect(rpc: RpcClientManager, connectDevice: SocketDevice): String {
+        val connectType = rpc.deviceService.connect(
             SocketDevice(
                 id = settings.getString("deviceId", ""),
                 name = settings.getString("deviceName", ""),
@@ -33,10 +32,11 @@ class DeviceHandle(private val deviceService: DeviceService) : KoinComponent {
         )
         deviceState.socketDevices.indexOfFirst { it.id == connectDevice.id }.takeIf { it >= 0 }?.let { index ->
             val socketDevice = connectDevice.withCopy(
-                connectType = if (connectType == DeviceConnectType.APPROVED)
+                connectType = if (connectType.first == DeviceConnectType.APPROVED)
                     ConnectType.Connect
                 else
                     ConnectType.Fail,
+                token = connectType.second,
                 client = rpc
             )
             deviceState.socketDevices[index] = socketDevice
@@ -46,9 +46,11 @@ class DeviceHandle(private val deviceService: DeviceService) : KoinComponent {
                 if (database.deviceQueries.queryById(socketDevice.id, DeviceCategory.CLIENT)
                         .executeAsOneOrNull() != null
                 ) {
-                    return
+                    return connectType.second
                 }
             }
         }
+
+        return ""
     }
 }

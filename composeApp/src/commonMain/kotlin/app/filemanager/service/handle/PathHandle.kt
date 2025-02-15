@@ -30,7 +30,7 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
     suspend fun getList(path: String, remoteId: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
         val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
 
-        val result = rpc.pathService.list(path)
+        val result = rpc.pathService.list(rpc.token, path)
         if (!result.isSuccess) {
             replyCallback(Result.failure(result.deSerializable()))
             return
@@ -49,7 +49,7 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
     }
 
     suspend fun getRootPaths(remoteId: String, replyCallback: (List<PathInfo>) -> Unit) {
-        val result = rpc.pathService.rootPaths()
+        val result = rpc.pathService.rootPaths(rpc.token)
         if (!result.isSuccess) {
             replyCallback(listOf())
         }
@@ -58,7 +58,7 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
 
     suspend fun getTraversePath(path: String, remoteId: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
         streamScoped {
-            rpc.pathService.traversePath(path).collect { result ->
+            rpc.pathService.traversePath(rpc.token, path).collect { result ->
                 if (!result.isSuccess) {
                     replyCallback(Result.failure(result.deSerializable()))
                 } else {
@@ -156,9 +156,9 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
             // 只复制文件或文件夹
             if (srcFileSimpleInfo.size == 0L) {
                 val result = if (srcFileSimpleInfo.isDirectory)
-                    fileService.createFolder(listOf(destFileSimpleInfo.path))
+                    fileService.createFolder(rpc.token,listOf(destFileSimpleInfo.path))
                 else
-                    fileService.createFile(listOf(destFileSimpleInfo.path))
+                    fileService.createFile(rpc.token,listOf(destFileSimpleInfo.path))
 
                 if (result.isSuccess) {
                     replyCallback(Result.success(result.value?.first()?.value == true))
@@ -169,7 +169,7 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
             }
 
             streamScoped {
-                rpc.pathService.traversePath(srcFileSimpleInfo.path).collect { fileAndFolder ->
+                rpc.pathService.traversePath(rpc.token,srcFileSimpleInfo.path).collect { fileAndFolder ->
                     if (fileAndFolder.isSuccess) {
                         fileAndFolder.value?.forEach {
                             list.addAll(it.value)
@@ -199,7 +199,7 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
                     }
                     fileService = socketDevice.client!!.fileService
                 }
-                val createFolder = fileService.createFolder(listOf(destFileSimpleInfo.path))
+                val createFolder = fileService.createFolder(rpc.token,listOf(destFileSimpleInfo.path))
                 if (!createFolder.isSuccess) {
                     replyCallback(Result.failure(createFolder.deSerializable()))
                     return
@@ -238,7 +238,7 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
                         }
 
                         if (destFileSimpleInfo.protocol == FileProtocol.Device) {
-                            val result = fileService.createFolder(paths)
+                            val result = fileService.createFolder(rpc.token,paths)
                             if (result.isSuccess) {
                                 result.value.orEmpty().forEach { item ->
                                     when {

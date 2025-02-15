@@ -26,12 +26,13 @@ data class SocketDevice(
     var port: Int = PORT,
     val type: DeviceType,
     var connectType: ConnectType = ConnectType.New,
+    var token: String = "",
 ) {
     @Transient
     var client: RpcClientManager? = null
 
     fun toDevice(): Device {
-        return Device(id = id, name = name, host = mutableMapOf(host to client!!), type = type)
+        return Device(id = id, name = name, host = mutableMapOf(host to client!!), type = type, token = token)
     }
 
     fun withCopy(
@@ -41,9 +42,10 @@ data class SocketDevice(
         port: Int = this.port,
         type: DeviceType = this.type,
         connectType: ConnectType = this.connectType,
+        token: String = this.token,
         client: RpcClientManager? = this.client
     ): SocketDevice {
-        return SocketDevice(id, name, host, port, type, connectType).apply {
+        return SocketDevice(id, name, host, port, type, connectType, token).apply {
             this.client = client
         }
     }

@@ -4,9 +4,11 @@ import app.filemanager.data.main.DeviceCategory
 import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceConnectType.*
 import app.filemanager.db.FileManagerDatabase
+import app.filemanager.extensions.randomString
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
+import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.ui.state.main.DeviceState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
@@ -19,26 +21,29 @@ import kotlin.coroutines.CoroutineContext
 
 @Rpc
 interface DeviceService : RemoteService {
-    suspend fun connect(device: SocketDevice): DeviceConnectType
+    suspend fun connect(device: SocketDevice): Pair<DeviceConnectType, String>
 }
 
 class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : DeviceService, KoinComponent {
     private val database by inject<FileManagerDatabase>()
     private val deviceState by inject<DeviceState>()
+    private val deviceCertificateState by inject<DeviceCertificateState>()
 
-    override suspend fun connect(device: SocketDevice): DeviceConnectType {
+    override suspend fun connect(device: SocketDevice): Pair<DeviceConnectType, String> {
         val queriedDevice =
             database.deviceQueries.queryById(device.id, DeviceCategory.SERVER).executeAsOneOrNull()
 
+        val randomString = 32.randomString()
         if (queriedDevice != null) {
             when (queriedDevice.connectionType) {
                 PERMANENTLY_BANNED,
                 AUTO_CONNECT -> {
                     if (queriedDevice.connectionType == PERMANENTLY_BANNED) {
-                        return REJECTED
+                        return Pair(REJECTED, "")
                     }
                     if (queriedDevice.connectionType == AUTO_CONNECT) {
-                        return APPROVED
+                        deviceCertificateState.permissions[randomString] = queriedDevice.roleId
+                        return Pair(APPROVED, randomString)
                     }
                     database.deviceQueries.updateConnectionTypeByIdAndCategory(
                         connectionType = queriedDevice.connectionType,
@@ -63,7 +68,8 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
                             }
                             when (deviceState.connectionRequest[device.id]!!.first) {
                                 AUTO_CONNECT, APPROVED -> {
-                                    return@withTimeout APPROVED
+                                    deviceCertificateState.permissions[randomString] = queriedDevice.roleId
+                                    return@withTimeout Pair(APPROVED, randomString)
                                 }
 
                                 else -> throw Exception()
@@ -71,7 +77,7 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
                         }
                     } catch (e: Exception) {
                         deviceState.connectionRequest.remove(device.id)
-                        REJECTED
+                        Pair(REJECTED, "")
                     }
                 }
 
@@ -104,15 +110,15 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
                         AUTO_CONNECT, APPROVED -> {}
                         else -> throw Exception()
                     }
-
-                    return@withTimeout APPROVED
+                    deviceCertificateState.permissions[randomString] = -1
+                    return@withTimeout Pair(APPROVED, randomString)
                 }
             } catch (e: Exception) {
                 deviceState.connectionRequest.remove(device.id)
-                REJECTED
+                Pair(REJECTED, "")
             }
         }
 
-        return REJECTED
+        return Pair(REJECTED, "")
     }
 }

@@ -4,33 +4,40 @@ import app.filemanager.createSettings
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.FileSizeInfo
+import app.filemanager.exception.AuthorityException
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.exception.ParameterErrorException
 import app.filemanager.exception.toSocketResult
 import app.filemanager.service.WebSocketResult
 import app.filemanager.service.data.RenameInfo
 import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
+import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.utils.FileUtils
+import app.filemanager.utils.PathUtils
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.launch
 import kotlinx.rpc.RemoteService
 import kotlinx.rpc.annotations.Rpc
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 import kotlin.coroutines.CoroutineContext
 
 @Rpc
 interface FileService : RemoteService {
     // 重命名文件和文件夹
     // TODO 检查权限
-    suspend fun rename(renameInfos: List<RenameInfo>): WebSocketResult<List<WebSocketResult<Boolean>>>
+    suspend fun rename(token: String, renameInfos: List<RenameInfo>): WebSocketResult<List<WebSocketResult<Boolean>>>
 
     // 创建文件夹
     // TODO 检查权限
-    suspend fun createFolder(names: List<String>): WebSocketResult<List<WebSocketResult<Boolean>>>
+    suspend fun createFolder(token: String, names: List<String>): WebSocketResult<List<WebSocketResult<Boolean>>>
 
     // 获取文件和文件夹大小信息
     // TODO 检查权限
     suspend fun getSizeInfo(
+        token: String,
         totalSpace: Long,
         freeSpace: Long,
         fileSimpleInfo: FileSimpleInfo
@@ -38,12 +45,13 @@ interface FileService : RemoteService {
 
     // 删除文件和文件夹
     // TODO 检查权限
-    suspend fun delete(names: List<String>): WebSocketResult<List<WebSocketResult<Boolean>>>
+    suspend fun delete(token: String, names: List<String>): WebSocketResult<List<WebSocketResult<Boolean>>>
 
     // 写入数据
     // TODO 检查权限
     // TODO 断点继传
     suspend fun writeBytes(
+        token: String,
         fileSize: Long,
         blockIndex: Long,
         blockLength: Long,
@@ -53,31 +61,48 @@ interface FileService : RemoteService {
 
     // 读取文件数据
     // TODO 检查权限
-    suspend fun readFileChunks(path: String, chunkSize: Long): Flow<WebSocketResult<Pair<Long, ByteArray>>>
+    suspend fun readFileChunks(
+        token: String,
+        path: String,
+        chunkSize: Long
+    ): Flow<WebSocketResult<Pair<Long, ByteArray>>>
 
     // 获取文件信息
     // TODO 检查权限
-    suspend fun getFileByPath(path: String): WebSocketResult<FileSimpleInfo>
+    suspend fun getFileByPath(token: String, path: String): WebSocketResult<FileSimpleInfo>
 
     // 获取文件信息
     // TODO 检查权限
-    suspend fun getFileByPathAndName(path: String, name: String): WebSocketResult<FileSimpleInfo>
+    suspend fun getFileByPathAndName(token: String, path: String, name: String): WebSocketResult<FileSimpleInfo>
 
     // 创建文件
     // TODO 检查权限
-    suspend fun createFile(paths: List<String>): WebSocketResult<List<WebSocketResult<Boolean>>>
+    suspend fun createFile(token: String, paths: List<String>): WebSocketResult<List<WebSocketResult<Boolean>>>
 }
 
-class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileService {
+class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileService, KoinComponent {
     private val settings = createSettings()
+    private val deviceCertificateState: DeviceCertificateState by inject()
 
-    override suspend fun rename(renameInfos: List<RenameInfo>): WebSocketResult<List<WebSocketResult<Boolean>>> {
+    override suspend fun rename(
+        token: String,
+        renameInfos: List<RenameInfo>
+    ): WebSocketResult<List<WebSocketResult<Boolean>>> {
         if (renameInfos.isEmpty()) {
             return ParameterErrorException().toSocketResult()
         }
 
         return WebSocketResult(
             value = renameInfos.map {
+                if (deviceCertificateState.checkPermission(
+                        token,
+                        "${it.path}${PathUtils.getPathSeparator()}${it.oldName}",
+                        "rename"
+                    )
+                ) {
+                    return@map AuthorityException("对方没有为你设置权限").toSocketResult()
+                }
+
                 if (it.hasEmptyField()) {
                     return@map ParameterErrorException().toSocketResult()
                 }
@@ -97,7 +122,10 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
         )
     }
 
-    override suspend fun createFolder(names: List<String>): WebSocketResult<List<WebSocketResult<Boolean>>> {
+    override suspend fun createFolder(
+        token: String,
+        names: List<String>
+    ): WebSocketResult<List<WebSocketResult<Boolean>>> {
         if (names.isEmpty()) {
             return ParameterErrorException().toSocketResult()
         }
@@ -105,6 +133,14 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
         return WebSocketResult(
             value = names
                 .map { path ->
+                    if (deviceCertificateState.checkPermission(
+                            token,
+                            path,
+                            "write"
+                        )
+                    ) {
+                        return@map AuthorityException("对方没有为你设置权限").toSocketResult()
+                    }
                     val createFolder = FileUtils.createFolder(path)
                     if (createFolder.isFailure) {
                         val exceptionOrNull = createFolder.exceptionOrNull() ?: EmptyDataException()
@@ -120,11 +156,19 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
     }
 
     override suspend fun getSizeInfo(
+        token: String,
         totalSpace: Long,
         freeSpace: Long,
         fileSimpleInfo: FileSimpleInfo
     ): WebSocketResult<FileSizeInfo> {
-        println(totalSpace)
+        if (deviceCertificateState.checkPermission(
+                token,
+                fileSimpleInfo.path,
+                "read"
+            )
+        ) {
+            return AuthorityException("对方没有为你设置权限").toSocketResult()
+        }
         if (totalSpace <= -1L || freeSpace <= -1) {
             return ParameterErrorException().toSocketResult()
         }
@@ -132,7 +176,7 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
         return WebSocketResult(value = fileSimpleInfo.getSizeInfo(totalSpace, freeSpace))
     }
 
-    override suspend fun delete(names: List<String>): WebSocketResult<List<WebSocketResult<Boolean>>> {
+    override suspend fun delete(token: String, names: List<String>): WebSocketResult<List<WebSocketResult<Boolean>>> {
         if (names.isEmpty()) {
             return ParameterErrorException().toSocketResult()
         }
@@ -155,12 +199,21 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
     }
 
     override suspend fun writeBytes(
+        token: String,
         fileSize: Long,
         blockIndex: Long,
         blockLength: Long,
         path: String,
         byteArray: ByteArray,
     ): WebSocketResult<Boolean> {
+        if (deviceCertificateState.checkPermission(
+                token,
+                path,
+                "write"
+            )
+        ) {
+            return AuthorityException("对方没有为你设置权限").toSocketResult()
+        }
         if (fileSize < 0L || blockIndex < 0L || blockLength < 0L || path.isEmpty()) {
             return ParameterErrorException().toSocketResult()
         }
@@ -178,8 +231,22 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
         return WebSocketResult(value = writeResult.getOrNull() ?: false)
     }
 
-    override suspend fun readFileChunks(path: String, chunkSize: Long): Flow<WebSocketResult<Pair<Long, ByteArray>>> {
+    override suspend fun readFileChunks(
+        token: String,
+        path: String,
+        chunkSize: Long
+    ): Flow<WebSocketResult<Pair<Long, ByteArray>>> {
         return channelFlow {
+            if (deviceCertificateState.checkPermission(
+                    token,
+                    path,
+                    "read"
+                )
+            ) {
+                send(AuthorityException("对方没有为你设置权限").toSocketResult())
+                cancel()
+                return@channelFlow
+            }
             FileUtils.readFileChunks(path, chunkSize) { result ->
                 val sendData = if (result.isSuccess) {
                     WebSocketResult(value = result.getOrDefault(Pair(0L, byteArrayOf())))
@@ -198,7 +265,15 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
         }
     }
 
-    override suspend fun getFileByPath(path: String): WebSocketResult<FileSimpleInfo> {
+    override suspend fun getFileByPath(token: String, path: String): WebSocketResult<FileSimpleInfo> {
+        if (deviceCertificateState.checkPermission(
+                token,
+                path,
+                "read"
+            )
+        ) {
+            return AuthorityException("对方没有为你设置权限").toSocketResult()
+        }
         if (path.isEmpty()) {
             return ParameterErrorException().toSocketResult()
         }
@@ -219,7 +294,19 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
         }!!)
     }
 
-    override suspend fun getFileByPathAndName(path: String, name: String): WebSocketResult<FileSimpleInfo> {
+    override suspend fun getFileByPathAndName(
+        token: String,
+        path: String,
+        name: String
+    ): WebSocketResult<FileSimpleInfo> {
+        if (deviceCertificateState.checkPermission(
+                token,
+                "$path${PathUtils.getPathSeparator()}$name",
+                "read"
+            )
+        ) {
+            return AuthorityException("对方没有为你设置权限").toSocketResult()
+        }
         if (path.isEmpty() || name.isEmpty()) {
             return ParameterErrorException().toSocketResult()
         }
@@ -240,13 +327,24 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
         }!!)
     }
 
-    override suspend fun createFile(paths: List<String>): WebSocketResult<List<WebSocketResult<Boolean>>> {
+    override suspend fun createFile(
+        token: String,
+        paths: List<String>
+    ): WebSocketResult<List<WebSocketResult<Boolean>>> {
         if (paths.isEmpty()) {
             return ParameterErrorException().toSocketResult()
         }
 
         return WebSocketResult(
             value = paths.map {
+                if (deviceCertificateState.checkPermission(
+                        token,
+                        it,
+                        "write"
+                    )
+                ) {
+                    return AuthorityException("对方没有为你设置权限").toSocketResult()
+                }
                 val file = FileUtils.createFile(it)
                 if (file.isFailure) {
                     val exceptionOrNull = file.exceptionOrNull() ?: EmptyDataException()

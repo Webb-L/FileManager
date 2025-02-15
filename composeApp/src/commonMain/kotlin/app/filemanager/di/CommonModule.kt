@@ -3,6 +3,7 @@ package app.filemanager.di
 import app.filemanager.createSettings
 import app.filemanager.service.DriverFactory
 import app.filemanager.service.createDatabase
+import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.ui.state.device.DevicePermissionState
 import app.filemanager.ui.state.device.DeviceRoleState
 import app.filemanager.ui.state.device.DeviceSettingsState
@@ -28,6 +29,7 @@ val commonScreenModule = module {
     single { DeviceRoleState(get()) }
     single { DevicePermissionState(get()) }
     single { DeviceSettingsState(get()) }
+    single { DeviceCertificateState(get()) }
 }
 
 val commonDatabaseModule = module {

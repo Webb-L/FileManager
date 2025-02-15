@@ -114,7 +114,8 @@ data class Device(
     val id: String,
     override val name: String,
     val host: MutableMap<String, RpcClientManager>,
-    val type: DeviceType
+    val type: DeviceType,
+    val token: String
 ) : DiskBase(), KoinComponent {
 
     private val fileState: FileState by inject()

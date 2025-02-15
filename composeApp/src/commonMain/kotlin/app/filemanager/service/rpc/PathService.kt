@@ -4,14 +4,17 @@ import app.filemanager.createSettings
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.PathInfo
+import app.filemanager.exception.AuthorityException
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.exception.ParameterErrorException
 import app.filemanager.exception.toSocketResult
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.service.WebSocketResult
+import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.launch
@@ -25,22 +28,41 @@ import kotlin.coroutines.CoroutineContext
 interface PathService : RemoteService {
     // 远程设备需要我本地文件
     // TODO 检查权限
-    suspend fun list(path: String): WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>
+    suspend fun list(
+        token: String,
+        path: String
+    ): WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>
 
     // 远程设备需要我本地的书签
     // TODO 检查权限
-    suspend fun rootPaths(): WebSocketResult<List<PathInfo>>
+    suspend fun rootPaths(token: String): WebSocketResult<List<PathInfo>>
 
     // 发送遍历的目录
     // TODO 检查权限
-    suspend fun traversePath(path: String): Flow<WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>>
+    suspend fun traversePath(
+        token: String,
+        path: String
+    ): Flow<WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>>
 }
 
 class PathServiceImpl(override val coroutineContext: CoroutineContext) : PathService, KoinComponent {
     private val settings = createSettings()
     private val fileState: FileState by inject()
+    private val deviceCertificateState: DeviceCertificateState by inject()
 
-    override suspend fun list(path: String): WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>> {
+    override suspend fun list(
+        token: String,
+        path: String
+    ): WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>> {
+        if (deviceCertificateState.checkPermission(
+                token,
+                path,
+                "read"
+            )
+        ) {
+            return AuthorityException("对方没有为你设置权限").toSocketResult()
+        }
+
         if (path.isEmpty()) {
             return ParameterErrorException().toSocketResult()
         }
@@ -82,7 +104,15 @@ class PathServiceImpl(override val coroutineContext: CoroutineContext) : PathSer
         )
     }
 
-    override suspend fun rootPaths(): WebSocketResult<List<PathInfo>> {
+    override suspend fun rootPaths(token: String): WebSocketResult<List<PathInfo>> {
+        if (deviceCertificateState.checkPermission(
+                token,
+                "rootPaths",
+                "read"
+            )
+        ) {
+            return AuthorityException("对方没有为你设置权限").toSocketResult()
+        }
         val rootPaths = PathUtils.getRootPaths()
         if (rootPaths.isFailure) {
             val exceptionOrNull = rootPaths.exceptionOrNull() ?: EmptyDataException()
@@ -97,10 +127,21 @@ class PathServiceImpl(override val coroutineContext: CoroutineContext) : PathSer
     }
 
     override suspend fun traversePath(
+        token: String,
         path: String
     ): Flow<WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>> {
         var isFirst = false
         return channelFlow {
+            if (deviceCertificateState.checkPermission(
+                    token,
+                    path,
+                    "read"
+                )
+            ) {
+                send(AuthorityException("对方没有为你设置权限").toSocketResult())
+                cancel()
+                return@channelFlow
+            }
             PathUtils.traverse(path) { fileAndFolder ->
                 val result = if (fileAndFolder.isFailure) {
                     val exceptionOrNull = fileAndFolder.exceptionOrNull() ?: EmptyDataException()

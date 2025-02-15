@@ -6,6 +6,7 @@ import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.service.data.RenameInfo
 import app.filemanager.service.rpc.FileService
+import app.filemanager.service.rpc.RpcClientManager
 import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.FileUtils
@@ -18,7 +19,7 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import kotlin.math.ceil
 
-class FileHandle(private val fileService: FileService) : KoinComponent {
+class FileHandle(private val rpc: RpcClientManager) : KoinComponent {
     private val deviceState: DeviceState by inject()
 
     /**
@@ -36,7 +37,8 @@ class FileHandle(private val fileService: FileService) : KoinComponent {
         newName: String,
         replyCallback: (Result<Boolean>) -> Unit
     ) {
-        val result = fileService.rename(
+        val result = rpc.fileService.rename(
+            rpc.token,
             renameInfos = listOf(RenameInfo(path, oldName, newName))
         )
         if (!result.isSuccess) {
@@ -71,7 +73,10 @@ class FileHandle(private val fileService: FileService) : KoinComponent {
      * @receiver
      */
     suspend fun createFolder(remoteId: String, path: String, name: String, replyCallback: (Result<Boolean>) -> Unit) {
-        val result = fileService.createFolder(listOf("$path${PathUtils.getPathSeparator()}$name"))
+        val result = rpc.fileService.createFolder(
+            rpc.token,
+            listOf("$path${PathUtils.getPathSeparator()}$name")
+        )
         if (!result.isSuccess) {
             replyCallback(Result.failure(result.deSerializable()))
             return
@@ -97,7 +102,12 @@ class FileHandle(private val fileService: FileService) : KoinComponent {
         freeSpace: Long,
         replyCallback: (Result<FileSizeInfo>) -> Unit
     ) {
-        val result = fileService.getSizeInfo(totalSpace, freeSpace, fileSimpleInfo)
+        val result = rpc.fileService.getSizeInfo(
+            rpc.token,
+            totalSpace,
+            freeSpace,
+            fileSimpleInfo
+        )
         if (!result.isSuccess) {
             replyCallback(Result.failure(result.deSerializable()))
             return
@@ -106,7 +116,10 @@ class FileHandle(private val fileService: FileService) : KoinComponent {
     }
 
     suspend fun deleteFile(id: String, paths: List<String>, replyCallback: (Result<List<Boolean>>) -> Unit) {
-        val result = fileService.delete(paths)
+        val result = rpc.fileService.delete(
+            rpc.token,
+            paths
+        )
 
         if (!result.isSuccess) {
             replyCallback(Result.failure(result.deSerializable()))
@@ -141,7 +154,10 @@ class FileHandle(private val fileService: FileService) : KoinComponent {
         // 本地 to 远程
         if (srcFileSimpleInfo.protocol == FileProtocol.Local && destFileSimpleInfo.protocol == FileProtocol.Device) {
             if (fileSimpleInfo.size == 0L) {
-                val createFile = fileService.createFile(listOf(destFileSimpleInfoPath))
+                val createFile = rpc.fileService.createFile(
+                    rpc.token,
+                    listOf(destFileSimpleInfoPath)
+                )
                 if (createFile.isSuccess) {
                     replyCallback(Result.success(createFile.value?.first()?.value == true))
                 } else {
@@ -155,7 +171,8 @@ class FileHandle(private val fileService: FileService) : KoinComponent {
                 if (it.isSuccess) {
                     val result = it.getOrNull() ?: Pair(0L, byteArrayOf())
                     mainScope.launch {
-                        val resultWrite = fileService.writeBytes(
+                        val resultWrite = rpc.fileService.writeBytes(
+                            rpc.token,
                             fileSize = fileSimpleInfo.size,
                             blockIndex = result.first,
                             blockLength = length,
@@ -195,7 +212,11 @@ class FileHandle(private val fileService: FileService) : KoinComponent {
 
             var isSuccess = true
             streamScoped {
-                fileService.readFileChunks(srcFileSimpleInfoPath, MAX_LENGTH.toLong()).collect { result ->
+                rpc.fileService.readFileChunks(
+                    rpc.token,
+                    srcFileSimpleInfoPath,
+                    MAX_LENGTH.toLong()
+                ).collect { result ->
                     if (result.isSuccess && result.value != null) {
                         val writeBytes = FileUtils.writeBytes(
                             path = destFileSimpleInfoPath,
@@ -219,7 +240,7 @@ class FileHandle(private val fileService: FileService) : KoinComponent {
 
         // 远程 to 远程
         if (srcFileSimpleInfo.protocol == FileProtocol.Device && destFileSimpleInfo.protocol == FileProtocol.Device) {
-            var destFileService: FileService = fileService
+            var destFileService: FileService = rpc.fileService
             if (srcFileSimpleInfo.protocol == FileProtocol.Device && destFileSimpleInfo.protocol == FileProtocol.Device) {
                 val socketDevice =
                     deviceState.socketDevices.firstOrNull { it.id == destFileSimpleInfo.protocolId && it.client != null }
@@ -230,7 +251,10 @@ class FileHandle(private val fileService: FileService) : KoinComponent {
                 destFileService = socketDevice.client!!.fileService
             }
             if (fileSimpleInfo.size == 0L) {
-                val createFile = destFileService.createFile(listOf(destFileSimpleInfoPath))
+                val createFile = destFileService.createFile(
+                    rpc.token,
+                    listOf(destFileSimpleInfoPath)
+                )
                 if (!createFile.isSuccess) {
                     if (createFile.value?.first()?.isSuccess == false) {
                         replyCallback(Result.failure(createFile.deSerializable()))
@@ -244,9 +268,14 @@ class FileHandle(private val fileService: FileService) : KoinComponent {
 
             var isSuccess = true
             streamScoped {
-                fileService.readFileChunks(srcFileSimpleInfoPath, MAX_LENGTH.toLong()).collect { result ->
+                rpc.fileService.readFileChunks(
+                    rpc.token,
+                    srcFileSimpleInfoPath,
+                    MAX_LENGTH.toLong()
+                ).collect { result ->
                     if (result.isSuccess && result.value != null) {
                         val writeBytes = destFileService.writeBytes(
+                            token = rpc.token,
                             fileSize = fileSimpleInfo.size,
                             blockIndex = result.value.first,
                             blockLength = length,
@@ -271,7 +300,7 @@ class FileHandle(private val fileService: FileService) : KoinComponent {
     }
 
     suspend fun getFile(id: String, path: String, replyCallback: (Result<FileSimpleInfo>) -> Unit) {
-        val result = fileService.getFileByPath(path)
+        val result = rpc.fileService.getFileByPath(rpc.token, path)
         if (!result.isSuccess) {
             replyCallback(Result.failure(result.deSerializable()))
             return
@@ -286,7 +315,7 @@ class FileHandle(private val fileService: FileService) : KoinComponent {
     }
 
     suspend fun getFile(id: String, path: String, name: String, replyCallback: (Result<FileSimpleInfo>) -> Unit) {
-        val result = fileService.getFileByPathAndName(path, name)
+        val result = rpc.fileService.getFileByPathAndName(rpc.token, path, name)
         if (!result.isSuccess) {
             replyCallback(Result.failure(result.deSerializable()))
             return

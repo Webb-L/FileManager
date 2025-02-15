@@ -10,11 +10,9 @@ CREATE UNIQUE INDEX DeviceRole_id_uindex
 
 -- Insert a new role
 -- Insert predefined roles
-INSERT INTO DeviceRole (name, comment, sortOrder) VALUES
-    ('SuperAdmin', 'Highest level with unrestricted access', 1),
-    ('Developer', 'Role for developing and maintaining the system', 2),
-    ('Tester', 'Role for testing application functionality and reporting issues', 3),
-    ('Analyst', 'Role for analyzing data and generating reports', 4);
+INSERT INTO DeviceRole (id, name, comment, sortOrder) VALUES
+    (1, '超级管理员', '设置后设备将有所有权限，不建议使用到陌生设备', 999),
+    (2, '游客', '该角色可以设置任意的设备', 1);
 
 lastInsertRowId:
 SELECT last_insert_rowid();

@@ -6,7 +6,6 @@ import app.filemanager.service.handle.DeviceHandle
 import app.filemanager.service.handle.FileHandle
 import app.filemanager.service.handle.PathHandle
 import io.ktor.client.*
-import io.ktor.utils.io.core.*
 import kotlinx.coroutines.cancel
 import kotlinx.rpc.krpc.ktor.client.installKrpc
 import kotlinx.rpc.krpc.ktor.client.rpc
@@ -25,6 +24,7 @@ class RpcClientManager {
     internal lateinit var bookmarkService: BookmarkService
     internal lateinit var fileService: FileService
     internal lateinit var pathService: PathService
+    internal var token: String = ""
 
     private val rpcClient by lazy { HttpClient { installKrpc() } }
 
@@ -42,11 +42,12 @@ class RpcClientManager {
             }
         }
         deviceService = ktorRpcClient.withService<DeviceService>()
+
+        token = deviceHandle.connect(this, connectDevice)
+
         bookmarkService = ktorRpcClient.withService<BookmarkService>()
         fileService = ktorRpcClient.withService<FileService>()
         pathService = ktorRpcClient.withService<PathService>()
-
-        deviceHandle.connect(this, connectDevice)
     }
 
     fun disconnect(): Boolean {
@@ -55,10 +56,10 @@ class RpcClientManager {
         return true
     }
 
-    val deviceHandle by lazy { DeviceHandle(deviceService) }
-    val bookmarkHandle by lazy { BookmarkHandle(bookmarkService) }
+    val deviceHandle by lazy { DeviceHandle(this) }
+    val bookmarkHandle by lazy { BookmarkHandle(this) }
     val pathHandle by lazy { PathHandle(this) }
-    val fileHandle by lazy { FileHandle(fileService) }
+    val fileHandle by lazy { FileHandle(this) }
 
 
     companion object {
@@ -67,29 +68,11 @@ class RpcClientManager {
 
         const val PORT = 1204
 
-        val SEND_IDENTIFIER = "--FileManager--bytearray".toByteArray()
-
-        const val SEND_LENGTH = 1024 * 8
-
         /**
          * 表示最大分片长度的常量，用于定义在数据传输过程中每个分片的最大长度。
          * 此值用于确保分片在网络传输时的稳定性和效率，避免超出可接受的大小限制。
          * 常量默认为 1024 * 6。
          */
         const val MAX_LENGTH = 1024 * 10 // 最大分片长度
-
-        /**
-         * 定义用于管理请求超时的常量。
-         *
-         * 该常量表示超时时间，单位为毫秒，典型场景是用于方法中循环等待某些条件完成的时间限制。
-         * 利用此超时时间，避免因条件未满足而导致程序无法继续执行的问题。
-         *
-         * 使用范围：
-         * - 在等待异步操作结果时，用于计算当前时间与超时时间之间的差值。
-         * - 配合检查机制，例如 `waitFinish` 方法，处理客户端或服务端的响应超时问题。
-         *
-         * 常量值定义为 10,000 毫秒（即 10 秒），具体数值可根据实际需求调整。
-         */
-        const val TIMEOUT = 10_000L // 超时时间
     }
 }

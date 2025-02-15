@@ -128,9 +128,9 @@ class DeviceSettingsScreen() : Screen {
                     }
                 }
             ) {
-                Column {
+                Column(Modifier.fillMaxWidth()) {
                     SingleChoiceSegmentedButtonRow(
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     ) {
                         listOf(
                             DeviceCategory.SERVER to "其他设备访问我的设备",
