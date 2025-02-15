@@ -45,10 +45,7 @@ class DevicePermissionScreen : Screen {
                     title = { Text("权限") },
                     navigationIcon = {
                         IconButton(
-                            onClick = {
-                                mainState.updateScreen(null)
-                                navigator.pop()
-                            }
+                            onClick = { navigator.pop() }
                         ) {
                             Icon(Icons.AutoMirrored.Default.ArrowBack, contentDescription = null)
                         }

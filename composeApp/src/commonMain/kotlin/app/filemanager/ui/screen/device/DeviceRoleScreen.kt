@@ -185,9 +185,7 @@ class EditRoleScreen(
                                         duration = SnackbarDuration.Short
                                     )) {
                                         SnackbarResult.Dismissed -> {}
-                                        SnackbarResult.ActionPerformed -> {
-                                            navigator.pop()
-                                        }
+                                        SnackbarResult.ActionPerformed -> { navigator.pop() }
                                     }
                                 }
                                 return@IconButton
@@ -301,9 +299,7 @@ class EditRoleScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text("权限")
-                            IconButton({
-                                mainState.updateScreen(DevicePermissionScreen())
-                            }) {
+                            IconButton({ navigator.push(DevicePermissionScreen()) }) {
                                 Icon(Icons.Default.Add, null)
                             }
                         }

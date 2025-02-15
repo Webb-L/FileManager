@@ -46,8 +46,6 @@ object HomeScreen : Screen {
         val fileState = koinInject<FileState>()
         val path by fileState.path.collectAsState()
         val isCreateFolder by fileState.isCreateFolder.collectAsState()
-        val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
-        val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
 
         val fileOperationState = koinInject<FileOperationState>()
         val isWarningOperationDialog by fileOperationState.isWarningOperationDialog.collectAsState()

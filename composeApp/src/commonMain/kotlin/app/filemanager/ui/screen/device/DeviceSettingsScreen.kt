@@ -93,7 +93,7 @@ class DeviceSettingsScreen() : Screen {
             },
             floatingActionButton = {
                 if (category == DeviceCategory.SERVER) {
-                    ExtendedFloatingActionButton({ mainState.updateScreen(DeviceRoleScreen()) }) {
+                    ExtendedFloatingActionButton({ navigator.push(DeviceRoleScreen()) }) {
                         Icon(Icons.Filled.Person, null)
                         Spacer(Modifier.width(8.dp))
                         Text("角色")
