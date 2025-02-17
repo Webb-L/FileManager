@@ -33,6 +33,9 @@ internal actual object PathUtils {
     // 获取用户目录
     actual fun getHomePath(): String = System.getProperty("user.home")
 
+    // 获取缓存目录
+    actual fun getCachePath(): String = System.getProperty("java.io.tmpdir")
+
     // 获取路径分隔符
     actual fun getPathSeparator(): String = separator
 

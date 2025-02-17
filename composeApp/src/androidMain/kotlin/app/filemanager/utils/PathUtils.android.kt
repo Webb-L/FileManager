@@ -1,6 +1,7 @@
 package app.filemanager.utils
 
 import android.os.Environment
+import app.filemanager.AndroidApp
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.PathInfo
 import app.filemanager.data.main.DrawerBookmark
@@ -33,6 +34,9 @@ internal actual object PathUtils {
 
     // 获取用户目录
     actual fun getHomePath(): String = Environment.getExternalStorageDirectory().absolutePath;
+
+    // 获取应用缓存目录
+    actual fun getCachePath(): String = AndroidApp.INSTANCE.cacheDir.absolutePath
 
     // 获取路径分隔符
     actual fun getPathSeparator(): String = separator

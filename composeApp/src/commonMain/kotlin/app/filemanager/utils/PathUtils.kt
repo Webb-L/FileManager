@@ -8,6 +8,7 @@ internal expect object PathUtils {
     fun getFileAndFolder(path: String): Result<List<FileSimpleInfo>>
     fun getAppPath(): String
     fun getHomePath(): String
+    fun getCachePath(): String
     fun getPathSeparator(): String
     fun getRootPaths(): Result<List<PathInfo>>
     fun traverse(path: String, callback: (Result<List<FileSimpleInfo>>) -> Unit)

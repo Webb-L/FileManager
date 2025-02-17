@@ -11,11 +11,14 @@ import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager
 import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
+import app.filemanager.utils.FileUtils
+import app.filemanager.utils.PathUtils
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.utils.io.core.*
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,8 +63,15 @@ class DeviceState : KoinComponent {
     val connectionRequest = mutableStateMapOf<String, Pair<DeviceConnectType, Long>>()
 
     suspend fun scanner(address: List<String>, port: Int = PORT) {
+        val path = "${PathUtils.getCachePath()}${PathUtils.getPathSeparator()}scanner_server_cache"
+        val readFile = FileUtils.readFile(path)
+        val scannerIps = mutableSetOf<String>()
         updateLoadingDevices(true)
         val ipAddresses = mutableSetOf<String>().apply {
+            if (readFile.isSuccess) {
+                val fileContent = readFile.getOrDefault(byteArrayOf())
+                addAll(readFile.getOrDefault(byteArrayOf()).decodeToString(0, fileContent.size).split(","))
+            }
             for (host in address) {
                 addAll(host.getSubnetIps()/*.filter { it != host }*/)
             }
@@ -74,6 +84,7 @@ class DeviceState : KoinComponent {
                 chunk.forEach { ip ->
                     try {
                         pingDevice(ip, port)
+                        scannerIps.add(ip)
                     } catch (e: Exception) {
                         socketDevices.removeAll { it.host == ip }
                     } finally {
@@ -86,6 +97,13 @@ class DeviceState : KoinComponent {
         while (remainingAddresses > 0) {
             delay(300L)
         }
+        val toByteArray = scannerIps.joinToString(",").toByteArray()
+        FileUtils.writeBytes(
+            path,
+            fileSize = toByteArray.size.toLong(),
+            data = toByteArray,
+            offset = 0
+        )
 
         updateLoadingDevices(false)
     }
