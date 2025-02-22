@@ -4,6 +4,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import app.filemanager.App
+import app.filemanager.service.rpc.startHttpShareFileServer
 import app.filemanager.service.rpc.startRpcServer
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -24,5 +25,8 @@ fun main() = application {
 
     GlobalScope.launch(Dispatchers.IO) {
         startRpcServer()
+    }
+    GlobalScope.launch(Dispatchers.IO) {
+        startHttpShareFileServer()
     }
 }

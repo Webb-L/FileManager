@@ -68,6 +68,8 @@ kotlin {
 
             implementation(libs.qrcoder)
 
+            implementation(libs.uap.java)
+
             @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
             implementation(compose.components.resources)
         }
@@ -110,6 +112,9 @@ kotlin {
             implementation(libs.ktor.server.cors)
             implementation(libs.ktor.server.websockets)
             implementation(libs.ktor.server.host.common)
+            implementation(libs.ktor.server.freemarker)
+            implementation(libs.ktor.server.compression)
+            implementation(libs.ktor.server.partial.content)
 
             implementation(libs.kotlinx.rpc.krpc.server)
             implementation(libs.kotlinx.rpc.krpc.ktor.server)
