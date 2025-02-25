@@ -36,3 +36,5 @@ internal fun App() = KoinApplication(application = {
 internal expect fun openUrl(url: String?)
 
 expect fun readResourceFile(path: String): ByteArray
+
+expect fun readResourceFile(path: String): ByteArray

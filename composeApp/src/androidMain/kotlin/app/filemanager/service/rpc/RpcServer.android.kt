@@ -85,3 +85,6 @@ actual fun getAllIPAddresses(type: SocketClientIPEnum): List<String> {
 
 actual suspend fun startHttpShareFileServer() {
 }
+
+actual suspend fun startHttpShareFileServer() {
+}

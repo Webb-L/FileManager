@@ -6,3 +6,5 @@ expect suspend fun startRpcServer()
 expect fun getAllIPAddresses(type: SocketClientIPEnum): List<String>
 
 expect suspend fun startHttpShareFileServer()
+
+expect suspend fun startHttpShareFileServer()
