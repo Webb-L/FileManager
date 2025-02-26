@@ -1,12 +1,15 @@
 package app.filemanager.ui.screen.main
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import app.filemanager.ui.components.AppDrawer
 import app.filemanager.ui.navigator.HomeNavigator
 import app.filemanager.ui.state.main.MainState
@@ -35,7 +38,7 @@ fun MainScreen(screenType: WindowSizeClass) {
             HomeNavigator()
         }
     } else {
-        Row {
+        Row(Modifier.background(colorScheme.background)) {
             if (listOf(WindowSizeClass.Medium, WindowSizeClass.Expanded).contains(screenType) && expandDrawer) {
                 AppDrawer()
             }
