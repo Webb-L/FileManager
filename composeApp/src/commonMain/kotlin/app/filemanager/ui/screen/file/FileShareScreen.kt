@@ -36,7 +36,6 @@ import app.filemanager.ui.components.FileIcon
 import app.filemanager.ui.state.file.FileShareLikeCategory
 import app.filemanager.ui.state.file.FileShareState
 import app.filemanager.ui.state.file.FileShareStatus
-import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.MainState
 import app.filemanager.ui.theme.Typography
@@ -62,16 +61,20 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
 
         val mainState = koinInject<MainState>()
 
-        val files = mutableStateListOf<FileSimpleInfo>()
-        files.addAll(_files)
-
-        val checkedFiles = mutableStateListOf<FileSimpleInfo>()
-        checkedFiles.addAll(_files)
-
         val deviceState = koinInject<DeviceState>()
 
-        val fileState = koinInject<FileState>()
         val fileShareState = koinInject<FileShareState>()
+        fileShareState.files.apply {
+            clear()
+            addAll(_files)
+        }
+        fileShareState.checkedFiles.apply {
+            clear()
+            addAll(_files)
+        }
+
+        val files = fileShareState.files
+        val checkedFiles = fileShareState.checkedFiles
 
         val snackbarHostState = remember { SnackbarHostState() }
 
@@ -136,15 +139,17 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                             onClick = {
                                                 selectFileType = index
                                                 if (index == 0) {
-                                                    checkedFiles.clear()
-                                                    checkedFiles.addAll(_files)
+                                                    fileShareState.checkedFiles.apply {
+                                                        clear()
+                                                        addAll(files)
+                                                    }
                                                 }
                                                 if (index == 1) {
                                                     for (file in files) {
                                                         if (checkedFiles.contains(file)) {
-                                                            checkedFiles.remove(file)
+                                                            fileShareState.checkedFiles.remove(file)
                                                         } else {
-                                                            checkedFiles.add(file)
+                                                            fileShareState.checkedFiles.add(file)
                                                         }
                                                     }
                                                 }
@@ -202,8 +207,8 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                                 )) {
                                                     SnackbarResult.Dismissed -> {}
                                                     SnackbarResult.ActionPerformed -> {
-                                                        files.remove(file)
-                                                        checkedFiles.remove(file)
+                                                        fileShareState.files.remove(file)
+                                                        fileShareState.checkedFiles.remove(file)
                                                     }
                                                 }
                                             }
@@ -213,9 +218,9 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                     },
                                     modifier = Modifier.clickable {
                                         if (checkedFiles.contains(file)) {
-                                            checkedFiles.remove(file)
+                                            fileShareState.checkedFiles.remove(file)
                                         } else {
-                                            checkedFiles.add(file)
+                                            fileShareState.checkedFiles.add(file)
                                         }
                                     }
                                 )

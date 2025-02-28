@@ -1,8 +1,14 @@
 package app.filemanager.ui.state.file
 
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
+import app.filemanager.data.file.FileSimpleInfo
 
 class FileShareState {
+    val files = mutableStateListOf<FileSimpleInfo>()
+
+    val checkedFiles = mutableStateListOf<FileSimpleInfo>()
+
     val sendFile = mutableStateMapOf<String,FileShareStatus>()
 }
 

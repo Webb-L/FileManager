@@ -6,11 +6,11 @@ import app.filemanager.readResourceFile
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
+import app.filemanager.ui.state.file.FileShareState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import freemarker.cache.ClassTemplateLoader
 import io.ktor.http.*
-import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.freemarker.*
@@ -21,21 +21,18 @@ import io.ktor.server.plugins.partialcontent.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.util.cio.*
-import io.ktor.utils.io.*
 import kotlinx.rpc.krpc.ktor.server.Krpc
 import kotlinx.rpc.krpc.ktor.server.rpc
 import kotlinx.rpc.krpc.serialization.protobuf.protobuf
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
+import org.koin.java.KoinJavaComponent.inject
 import ua_parser.Client
 import ua_parser.Parser
 import java.io.File
-import java.net.Inet4Address
-import java.net.Inet6Address
-import java.net.InetAddress
-import java.net.NetworkInterface
+import java.io.RandomAccessFile
+import java.net.*
 
 @OptIn(ExperimentalSerializationApi::class)
 actual suspend fun startRpcServer() {
@@ -104,6 +101,8 @@ actual fun getAllIPAddresses(type: SocketClientIPEnum): List<String> {
 }
 
 actual suspend fun startHttpShareFileServer() {
+    val fileShareState = inject<FileShareState>(FileShareState::class.java)
+
     embeddedServer(Netty, 12040) {
         install(FreeMarker) {
             templateLoader = ClassTemplateLoader(this::class.java.classLoader, "share-file")
@@ -138,43 +137,73 @@ actual suspend fun startHttpShareFileServer() {
                 call.respondBytes { readResourceFile("share-file/static/webfonts/fa-solid-900.woff2") }
             }
 
-            get("/{...}") {
-                val path = PathUtils.getHomePath() + java.net.URLDecoder.decode(call.request.path(), "UTF-8")
+            get("/") {
+                if (fileShareState.value.files.isEmpty()) {
+                    return@get call.respond(FreeMarkerContent("waiting.ftl", emptyMap<String, Any>()))
+                }
+                call.respond(
+                    FreeMarkerContent(
+                        "index.ftl",
+                        mapOf("files" to fileShareState.value.files.toList())
+                    )
+                )
+            }
 
-                val fileSimpleInfoResult = FileUtils.getFile(path)
-                println(fileSimpleInfoResult.getOrNull())
-                if (fileSimpleInfoResult.isSuccess && fileSimpleInfoResult.getOrNull() != null && !fileSimpleInfoResult.getOrNull()!!.isDirectory) {
+            get("/{...}") {
+                val path = URLDecoder.decode(call.request.path(), "UTF-8")
+                val fileSimpleInfoResult = FileUtils.getFile(path).getOrNull()
+
+                if (fileSimpleInfoResult == null || fileShareState.value.files.find { it.path == path|| path.contains(it.path) } == null) {
+                    call.respond(HttpStatusCode.NotFound)
+                    return@get
+                }
+
+                // 下载文件
+                if (!fileSimpleInfoResult.isDirectory) {
                     val file = File(path)
                     if (!file.exists()) {
                         println("File not found: ${file.absolutePath}")
-                        call.respond(HttpStatusCode.NotFound, "File not found")
+                        call.respond(HttpStatusCode.NotFound)
                         return@get
                     }
 
-                    val rangeHeader = call.request.headers["Range"]
-                    println(rangeHeader)
-                    if (rangeHeader != null) {
-                        // 解析 Range 请求头
-                        val ranges = rangeHeader.replace("bytes=", "").split("-")
-                        val rangeStart = ranges[0].toLong()
-                        val rangeEnd = ranges[1].toLongOrNull() ?: (file.length() - 1)
-                        println("Parsed range: $rangeStart-$rangeEnd")
-
-                        // 读取指定范围的数据
-                        val contentLength = rangeEnd - rangeStart + 1
-                        val fileChannel = file.readChannel(rangeStart, rangeEnd + 1)
-
-                        // 设置 Content-Range 响应头
-                        call.response.headers.append(HttpHeaders.ContentRange, "bytes $rangeStart-$rangeEnd/${file.length()}")
-                        call.respond(object : OutgoingContent.ReadChannelContent() {
-                            override val contentLength: Long = contentLength
-                            override val contentType: ContentType = ContentType.Application.OctetStream
-                            override val status: HttpStatusCode = HttpStatusCode.PartialContent
-                            override fun readFrom(): ByteReadChannel = fileChannel
-                        })
-                    } else {
-                        // 处理普通下载请求
+                    call.response.header(HttpHeaders.ContentLength, file.length().toString())
+                    val rangeHeader = call.request.header(HttpHeaders.Range)
+                    if (rangeHeader == null) {
                         call.respondFile(file)
+                        return@get
+                    }
+                    // 解析 Range 请求头
+                    val range = rangeHeader.removePrefix("bytes=").split("-")
+                    val start = range[0].toLongOrNull() ?: 0
+                    val end = range[1].toLongOrNull() ?: (file.length() - 1)
+
+                    // 读取指定范围的数据
+                    val length = end - start + 1
+
+                    call.response.header(HttpHeaders.AcceptRanges, "bytes")
+                    call.response.header(
+                        HttpHeaders.ContentRange,
+                        "bytes $start-$end/${file.length()}"
+                    )
+                    call.response.header(HttpHeaders.ContentLength, length.toString())
+
+                    call.response.status(HttpStatusCode.PartialContent)
+
+                    // 使用 RandomAccessFile 读取指定范围的数据
+                    RandomAccessFile(file, "r").use { randomAccessFile ->
+                        call.respondOutputStream(contentType = ContentType.Application.OctetStream) {
+                            randomAccessFile.seek(start)
+                            val buffer = ByteArray(8192)
+                            var bytesRemaining = length
+                            while (bytesRemaining > 0) {
+                                val bytesToRead = minOf(buffer.size.toLong(), bytesRemaining).toInt()
+                                val bytesRead = randomAccessFile.read(buffer, 0, bytesToRead)
+                                if (bytesRead == -1) break
+                                write(buffer, 0, bytesRead)
+                                bytesRemaining -= bytesRead
+                            }
+                        }
                     }
                     return@get
                 }
@@ -206,12 +235,7 @@ actual suspend fun startHttpShareFileServer() {
                     call.respond(
                         FreeMarkerContent(
                             "index.ftl",
-                            mapOf(
-                                "files" to PathUtils.getFileAndFolder(path).getOrDefault(listOf())
-                                    .map {
-                                        it.path = it.path.replace(PathUtils.getHomePath(), "")
-                                        it
-                                    })
+                            mapOf("files" to PathUtils.getFileAndFolder(path).getOrDefault(listOf()))
                         )
                     )
                 } else {

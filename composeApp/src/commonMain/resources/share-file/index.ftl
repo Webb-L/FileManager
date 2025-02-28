@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文件管理系统</title>
+    <title>文件管理</title>
     <link href="/static/all.min.css" rel="stylesheet">
     <script src="/static/tailwindcss.js"></script>
     <script>
@@ -52,7 +52,7 @@
 </head>
 <body class="text-gray-800">
 <div class="min-h-screen mx-auto max-w-[1440px]">
-    <div class="bg-white rounded-lg shadow-sm p-6">
+    <div class="bg-white rounded-lg p-6">
         <div class="flex justify-between items-center mb-8">
             <h1 class="text-2xl font-medium">文件管理</h1>
         </div>
