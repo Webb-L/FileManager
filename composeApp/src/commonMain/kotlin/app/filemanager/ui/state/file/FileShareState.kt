@@ -4,6 +4,8 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.main.Device
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 class FileShareState {
     val files = mutableStateListOf<FileSimpleInfo>()
@@ -11,6 +13,15 @@ class FileShareState {
     val checkedFiles = mutableStateListOf<FileSimpleInfo>()
 
     val sendFile = mutableStateMapOf<String, FileShareStatus>()
+
+    // 是否展开抽屉的状态流
+    private val _connectPassword: MutableStateFlow<String> = MutableStateFlow("")
+    val connectPassword: StateFlow<String> = _connectPassword
+
+    // 更新是否展开抽屉的方法
+    fun updateConnectPassword(value: String) {
+        _connectPassword.value = value
+    }
 
     // 已授权通过链接访问文件的设备
     val authorizedLinkShareDevices = mutableStateMapOf<Device, Pair<Boolean, List<FileSimpleInfo>>>()

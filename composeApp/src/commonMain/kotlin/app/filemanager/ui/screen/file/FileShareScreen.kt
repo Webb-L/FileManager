@@ -29,6 +29,7 @@ import app.filemanager.data.main.DeviceType.*
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.randomString
 import app.filemanager.extensions.timestampToSyncDate
+import app.filemanager.service.HttpShareFileServer
 import app.filemanager.service.data.ConnectType.*
 import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
@@ -86,8 +87,11 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
         var isHideFile by remember { mutableStateOf(true) }
         var isExpandFileList by remember { mutableStateOf(true) }
         var selectFileType by remember { mutableStateOf(0) }
+        val password by fileShareState.connectPassword.collectAsState()
 
         var openQrCodeDialog by remember { mutableStateOf<Pair<String, ImageRequest>?>(null) }
+
+        val httpShareFileServer = HttpShareFileServer.getInstance(fileShareState)
 
         Scaffold(
             topBar = {
@@ -95,6 +99,21 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                     title = { Text("分享文件") },
                     navigationIcon = {
                         IconButton({
+                            if (httpShareFileServer.isRunning()) {
+                                scope.launch {
+                                    when (snackbarHostState.showSnackbar(
+                                        message = "链接方式分享文件服务仍在运行，是否继续？",
+                                        actionLabel = "确认",
+                                    )) {
+                                        SnackbarResult.Dismissed -> {}
+                                        SnackbarResult.ActionPerformed -> {
+                                            mainState.updateScreen(null)
+                                            navigator.pop()
+                                        }
+                                    }
+                                }
+                                return@IconButton
+                            }
                             mainState.updateScreen(null)
                             navigator.pop()
                         }) {
@@ -262,9 +281,11 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                     )
                                 })
                                 AnimatedVisibility(isExpandLinkShare) {
-                                    LinkShareFileCard {
-                                        openQrCodeDialog = it
-                                    }
+                                    LinkShareFileCard(
+                                        fileShareState = fileShareState,
+                                        httpShareFileServer = httpShareFileServer,
+                                        onClickOpenQRCode = { openQrCodeDialog = it }
+                                    )
                                 }
                             }
                         }
@@ -323,7 +344,12 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                                     fileShareState.rejectedLinkShareDevices.add(device)
                                                 }
 
-                                                RUNNING -> fileShareState.authorizedLinkShareDevices.remove(device)
+                                                RUNNING -> {
+                                                    fileShareState.authorizedLinkShareDevices.remove(device)
+                                                    if (password.isNotEmpty()) {
+                                                        fileShareState.rejectedLinkShareDevices.add(device)
+                                                    }
+                                                }
 
                                                 REJECTED -> fileShareState.rejectedLinkShareDevices.remove(device)
                                             }
@@ -438,7 +464,11 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
 
     @OptIn(ExperimentalLayoutApi::class)
     @Composable
-    private fun LinkShareFileCard(onClickOpenQRCode: (Pair<String, ImageRequest>) -> Unit) {
+    private fun LinkShareFileCard(
+        fileShareState: FileShareState,
+        httpShareFileServer: HttpShareFileServer,
+        onClickOpenQRCode: (Pair<String, ImageRequest>) -> Unit
+    ) {
         val allIPAddresses = getAllIPAddresses(type = SocketClientIPEnum.IPV4_UP)
         var address by remember { mutableStateOf(allIPAddresses.first()) }
 
@@ -447,22 +477,21 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
         var showSettings by remember { mutableStateOf(false) }
         var encryption by remember { mutableStateOf(false) }
         var passwordAccess by remember { mutableStateOf(false) }
-        var password by remember { mutableStateOf("") }
+        val password by fileShareState.connectPassword.collectAsState()
 
         val url by derivedStateOf {
             "${if (encryption) "https" else "http"}://${address}:8080/${if (passwordAccess) "?pwd=${password}" else ""}"
         }
 
+        var isRunning by remember { mutableStateOf(httpShareFileServer.isRunning()) }
 
         val qrCodeColor = colorScheme.primary.toArgb()
         val qrCodeBackground = colorScheme.background.toArgb()
 
-        var request by remember {
-            mutableStateOf<ImageRequest?>(null)
-        }
+        var imageRequest by remember { mutableStateOf<ImageRequest?>(null) }
 
         LaunchedEffect(url) {
-            request = ImageRequest(
+            imageRequest = ImageRequest(
                 data = QRCode.ofSquares()
                     .withColor(qrCodeColor)
                     .withBackgroundColor(qrCodeBackground)
@@ -479,16 +508,19 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
             Column {
                 Row {
                     Box(Modifier.size(128.dp).clickable {
-                        onClickOpenQRCode(Pair(url, request!!))
+                        onClickOpenQRCode(Pair(url, imageRequest!!))
                     }, contentAlignment = Alignment.Center) {
-                        if (request == null) {
+                        if (imageRequest == null) {
                             CircularProgressIndicator()
                             return@Box
                         }
-                        Image(rememberImagePainter(request!!), null, Modifier.size(128.dp))
+                        Image(rememberImagePainter(imageRequest!!), null, Modifier.size(128.dp))
                     }
                     Column(Modifier.weight(1f).padding(16.dp)) {
-                        Text("服务已启动", style = Typography.titleLarge)
+                        Text(
+                            if (isRunning) "服务已启动" else "服务为启动",
+                            style = Typography.titleLarge
+                        )
                         Spacer(Modifier.height(8.dp))
                         SelectionContainer {
                             Text("${if (encryption) "https" else "http"}://${address}:8080/${if (passwordAccess) "?pwd=${password}" else ""}")
@@ -556,7 +588,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                             onClick = {
                                 passwordAccess = !passwordAccess
                                 if (passwordAccess) {
-                                    password = 6.randomString(includeSpecial = false)
+                                    fileShareState.updateConnectPassword(6.randomString(includeSpecial = false))
                                 }
                             },
                             modifier = Modifier.padding(horizontal = 4.dp)
@@ -573,8 +605,19 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                     }
                 }
                 Row(Modifier.padding(8.dp)) {
-                    OutlinedButton({}) {
-                        Text("启动")
+                    OutlinedButton({
+                        if (isRunning) {
+                            httpShareFileServer.stop()
+                        } else {
+                            httpShareFileServer.start()
+                        }
+                        isRunning = httpShareFileServer.isRunning()
+                    }) {
+                        if (isRunning) {
+                            Text("关闭")
+                        } else {
+                            Text("启动")
+                        }
                     }
                     Spacer(Modifier.width(8.dp))
                     Button({}) {
