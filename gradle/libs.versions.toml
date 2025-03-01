@@ -4,7 +4,7 @@ kotlin = "2.1.0"
 agp = "8.7.3"
 compose = "1.7.0"
 androidx-appcompat = "1.7.0"
-androidx-activityCompose = "1.10.0"
+androidx-activityCompose = "1.10.1"
 compose-uitooling = "1.7.8"
 libres = "1.2.2"
 securityCrypto = "1.1.0-alpha06"
@@ -15,6 +15,7 @@ napier = "2.7.1"
 buildConfig = "4.1.1"
 kotlinx-coroutines = "1.10.1"
 ktor = "3.0.3"
+logback-classic = "1.4.11"
 kotlinx-serialization = "1.8.0"
 kotlinx-datetime = "0.6.1"
 multiplatformSettings = "1.1.1"
@@ -55,7 +56,8 @@ ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }
 uap-java = { module = "com.github.ua-parser:uap-java", version.ref = "uapJava" }
 ktor-server-freemarker = { module = "io.ktor:ktor-server-freemarker", version.ref = "ktor" }
 ktor-server-compression = { module = "io.ktor:ktor-server-compression", version.ref = "ktor" }
-ktor-server-partial-content = { module = "io.ktor:ktor-server-partial-content", version.ref = "ktor" }
+ktor-server-call-logging = { module = "io.ktor:ktor-server-call-logging", version.ref = "ktor" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback-classic" }
 
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
 ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }

@@ -5,93 +5,75 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>文件管理</title>
     <link href="/static/all.min.css" rel="stylesheet">
+    <link href="/static/shared-styles.css" rel="stylesheet">
     <script src="/static/tailwindcss.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#6750A4',
-                        secondary: '#958DA5'
-                    },
-                    borderRadius: {
-                        'none': '0px',
-                        'sm': '2px',
-                        DEFAULT: '4px',
-                        'md': '8px',
-                        'lg': '12px',
-                        'xl': '16px',
-                        '2xl': '20px',
-                        '3xl': '24px',
-                        'full': '9999px',
-                        'button': '4px'
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-        }
-
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-
-        .table-header {
-            background-color: #F4F0F9;
-        }
-
-        .file-row:hover {
-            background-color: #F8F5FF;
-        }
-    </style>
+    <script src="/static/theme-config.js"></script>
 </head>
-<body class="text-gray-800">
-<div class="min-h-screen mx-auto max-w-[1440px]">
-    <div class="bg-white rounded-lg p-6">
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-2xl font-medium">文件管理</h1>
-        </div>
-        <div class="flex flex-wrap gap-4 mb-6">
-            <div class="flex-1 min-w-[240px]">
-                <div class="relative">
-                    <input type="text" placeholder="搜索文件名称"
-                           class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:border-primary text-sm">
-                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 flex justify-center items-center"></i>
+<body class="bg-surface dark:bg-dark-surface text-background-on dark:text-dark-background-on">
+    <div class="min-h-screen mx-auto max-w-[1440px] p-4 md:p-6">
+        <div class="bg-surface-container-lowest dark:bg-dark-surface-container-low rounded-xl p-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                <div>
+                    <h1 class="text-2xl font-medium text-primary dark:text-dark-primary">文件管理</h1>
+                    <p class="text-sm text-background-on/60 dark:text-dark-background-on/60 mt-1">管理您的所有文件和文件夹</p>
+                </div>
+                <a href="/" class="inline-flex items-center px-4 py-2 bg-primary dark:bg-dark-primary text-primary-on dark:text-dark-primary-on rounded-full text-sm font-medium hover:bg-primary-dark dark:hover:bg-dark-primary-light transition-colors ripple">
+                    <i class="fas fa-home mr-2"></i>
+                    返回首页
+                </a>
+            </div>
+            <div class="flex flex-wrap gap-4 mb-6">
+                <div class="flex-1 min-w-[240px]">
+                    <form action="" method="get" class="relative">
+                        <input type="text" name="search" id="searchInput" placeholder="搜索文件名称" value="${search!''}"
+                               class="w-full pl-12 pr-14 py-3 border border-outline/30 dark:border-dark-outline/30 rounded-full focus:outline-none focus:border-primary dark:focus:border-dark-primary text-sm bg-white dark:bg-dark-surface-container">
+                        <i class="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-outline dark:text-dark-outline w-4 h-4 flex justify-center items-center"></i>
+                        <button type="submit" class="absolute right-4 top-1/2 -translate-y-1/2 text-primary dark:text-dark-primary">
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </form>
                 </div>
             </div>
-        </div>
-        <div class="space-y-2">
-            <#list files as file>
-                <#if file.directory>
-                    <a href="${file.path}" class="flex justify-between items-center p-4 bg-white border border-gray-100 rounded-lg hover:bg-gray-50">
-                        <div class="flex items-center">
-                            <i class="fas fa-folder text-gray-400 mr-3 w-5 h-5 flex justify-center items-center"></i>
-                            <span class="text-sm">${file.name}</span>
-                        </div>
-                        <button class="text-gray-500 hover:text-opacity-80 p-2 !rounded-button whitespace-nowrap">
-                            <i class="fas fa-arrow-right w-4 h-4 flex justify-center items-center"></i>
-                        </button>
-                    </a>
+            
+            <div id="fileGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+                <#if files?size == 0>
+                    <div class="col-span-full text-center py-8">
+                        <i class="fas fa-search text-4xl text-outline/50 dark:text-dark-outline/50 mb-3"></i>
+                        <p class="text-background-on/60 dark:text-dark-background-on/60">未找到匹配的文件或文件夹</p>
+                    </div>
                 <#else>
-                    <a href="${file.path}" class="flex justify-between items-center p-4 bg-white border border-gray-100 rounded-lg hover:bg-gray-50">
-                        <div class="flex items-center">
-                            <i class="far fa-solid fa-file text-gray-400 mr-3 w-5 h-5 flex justify-center items-center"></i>
-                            <span class="text-sm">${file.name}</span>
-                        </div>
-                        <button class="text-primary hover:text-opacity-80 p-2 !rounded-button whitespace-nowrap">
-                            <i class="fas fa-download w-4 h-4 flex justify-center items-center"></i>
-                        </button>
-                    </a>
+                    <#list files as file>
+                        <#if file.directory>
+                            <a href="${file.path}" class="file-card flex justify-between items-center p-4 bg-white dark:bg-dark-surface-container border border-outline/10 dark:border-dark-outline/10 rounded-lg hover-state-layer active-state-layer ripple">
+                                <div class="flex items-center overflow-hidden">
+                                    <div class="w-10 h-10 rounded-full bg-primary-light/30 dark:bg-dark-primary-light/30 flex items-center justify-center mr-4 flex-shrink-0">
+                                        <i class="fas fa-folder text-primary dark:text-dark-primary"></i>
+                                    </div>
+                                    <span class="text-sm font-medium truncate">${file.name}</span>
+                                </div>
+                                <button class="text-primary dark:text-dark-primary p-2 rounded-full hover:bg-primary-light/20 dark:hover:bg-dark-primary-light/20 transition-colors flex-shrink-0">
+                                    <i class="fas fa-arrow-right w-5 h-5 flex justify-center items-center"></i>
+                                </button>
+                            </a>
+                        <#else>
+                            <a href="${file.path}" class="file-card flex justify-between items-center p-4 bg-white dark:bg-dark-surface-container border border-outline/10 dark:border-dark-outline/10 rounded-lg hover-state-layer active-state-layer ripple">
+                                <div class="flex items-center overflow-hidden">
+                                    <div class="w-10 h-10 rounded-full bg-secondary-light/30 dark:bg-dark-secondary/30 flex items-center justify-center mr-4 flex-shrink-0">
+                                        <i class="far fa-file text-secondary dark:text-dark-secondary"></i>
+                                    </div>
+                                    <span class="text-sm font-medium truncate">${file.name}</span>
+                                </div>
+                                <button class="text-primary dark:text-dark-primary p-2 rounded-full hover:bg-primary-light/20 dark:hover:bg-dark-primary-light/20 transition-colors flex-shrink-0">
+                                    <i class="fas fa-download w-5 h-5 flex justify-center items-center"></i>
+                                </button>
+                            </a>
+                        </#if>
+                    </#list>
                 </#if>
-            </#list>
+            </div>
         </div>
     </div>
-</div>
-<script src="/static/index.js"></script>
+    
+    <script src="/static/index.js"></script>
 </body>
 </html>

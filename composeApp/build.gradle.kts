@@ -114,7 +114,8 @@ kotlin {
             implementation(libs.ktor.server.host.common)
             implementation(libs.ktor.server.freemarker)
             implementation(libs.ktor.server.compression)
-            implementation(libs.ktor.server.partial.content)
+            implementation(libs.ktor.server.call.logging)
+            implementation(libs.logback.classic)
 
             implementation(libs.kotlinx.rpc.krpc.server)
             implementation(libs.kotlinx.rpc.krpc.ktor.server)

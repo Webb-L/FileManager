@@ -33,7 +33,7 @@ import app.filemanager.service.data.ConnectType.*
 import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
 import app.filemanager.ui.components.FileIcon
-import app.filemanager.ui.state.file.FileShareLikeCategory
+import app.filemanager.ui.state.file.FileShareLikeCategory.*
 import app.filemanager.ui.state.file.FileShareState
 import app.filemanager.ui.state.file.FileShareStatus
 import app.filemanager.ui.state.main.DeviceState
@@ -81,7 +81,9 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
         val drawerState = rememberDrawerState(DrawerValue.Closed)
         val socketDevices = deviceState.socketDevices.sortedBy { it.client != null }
 
-        var category by remember { mutableStateOf(FileShareLikeCategory.WAITING) }
+        var category by remember { mutableStateOf(WAITING) }
+        var isExpandLinkShare by remember { mutableStateOf(true) }
+        var isHideFile by remember { mutableStateOf(true) }
         var isExpandFileList by remember { mutableStateOf(true) }
         var selectFileType by remember { mutableStateOf(0) }
 
@@ -130,33 +132,44 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                 )
                             }
                             item {
-                                SingleChoiceSegmentedButtonRow(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    listOf("全选", "反选").forEachIndexed { index, label ->
-                                        SegmentedButton(
-                                            selected = selectFileType == index,
-                                            onClick = {
-                                                selectFileType = index
-                                                if (index == 0) {
-                                                    fileShareState.checkedFiles.apply {
-                                                        clear()
-                                                        addAll(files)
-                                                    }
-                                                }
-                                                if (index == 1) {
-                                                    for (file in files) {
-                                                        if (checkedFiles.contains(file)) {
-                                                            fileShareState.checkedFiles.remove(file)
-                                                        } else {
-                                                            fileShareState.checkedFiles.add(file)
+                                    SingleChoiceSegmentedButtonRow(
+                                        modifier = Modifier.padding(horizontal = 16.dp),
+                                    ) {
+                                        listOf("全选", "反选").forEachIndexed { index, label ->
+                                            SegmentedButton(
+                                                selected = selectFileType == index,
+                                                onClick = {
+                                                    selectFileType = index
+                                                    if (index == 0) {
+                                                        fileShareState.checkedFiles.apply {
+                                                            clear()
+                                                            addAll(files)
                                                         }
                                                     }
-                                                }
-                                            },
-                                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
-                                        ) { Text(label) }
+                                                    if (index == 1) {
+                                                        for (file in files) {
+                                                            if (checkedFiles.contains(file)) {
+                                                                fileShareState.checkedFiles.remove(file)
+                                                            } else {
+                                                                fileShareState.checkedFiles.add(file)
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                                            ) { Text(label) }
+                                        }
                                     }
+
+                                    FilterChip(
+                                        selected = isHideFile,
+                                        label = { Text("隐藏文件") },
+                                        shape = RoundedCornerShape(25.dp),
+                                        onClick = { isHideFile = !isHideFile })
                                 }
                             }
                             items(files) { file ->
@@ -242,14 +255,16 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                             Column {
                                 AppDrawerHeader(title = "链接方式分享", actions = {
                                     Icon(
-                                        if (isExpandFileList) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                        if (isExpandLinkShare) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                                         null,
                                         Modifier.clip(RoundedCornerShape(25.dp))
-                                            .clickable { isExpandFileList = !isExpandFileList }
+                                            .clickable { isExpandLinkShare = !isExpandLinkShare }
                                     )
                                 })
-                                LinkShareFileCard {
-                                    openQrCodeDialog = it
+                                AnimatedVisibility(isExpandLinkShare) {
+                                    LinkShareFileCard {
+                                        openQrCodeDialog = it
+                                    }
                                 }
                             }
                         }
@@ -259,9 +274,9 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                 modifier = Modifier.padding(horizontal = 16.dp),
                             ) {
                                 listOf(
-                                    FileShareLikeCategory.WAITING to "等待",
-                                    FileShareLikeCategory.RUNNING to "允许",
-                                    FileShareLikeCategory.REJECTED to "拒绝",
+                                    WAITING to "等待",
+                                    RUNNING to "允许",
+                                    REJECTED to "拒绝",
                                 ).forEachIndexed { index, (cat, label) ->
                                     SegmentedButton(
                                         selected = category == cat,
@@ -272,16 +287,47 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                             }
                         }
 
-                        items(socketDevices) { device ->
+                        val deviceStatusList = when (category) {
+                            WAITING -> fileShareState.pendingLinkShareDevices
+                            RUNNING -> fileShareState.authorizedLinkShareDevices.keys
+                            REJECTED -> fileShareState.rejectedLinkShareDevices
+                        }.toList()
+                        items(deviceStatusList) { device ->
                             ListItem(
-                                overlineContent = { Text("是否允许访问") },
+                                overlineContent = {
+                                    if (category == WAITING) {
+                                        Text("是否允许访问")
+                                    }
+                                },
                                 headlineContent = { Text(device.name) },
+                                supportingContent = { Text(device.id) },
                                 trailingContent = {
                                     Row {
-                                        IconButton({}) {
-                                            Icon(Icons.Default.Done, null)
+                                        if (category == WAITING) {
+                                            IconButton({
+                                                fileShareState.pendingLinkShareDevices.remove(device)
+                                                fileShareState.authorizedLinkShareDevices[device] =
+                                                    Pair(isHideFile, fileShareState.files.toList())
+                                            }) {
+                                                Icon(Icons.Default.Done, null)
+                                            }
                                         }
-                                        IconButton({}) {
+                                        IconButton({
+                                            when (category) {
+                                                WAITING -> {
+                                                    fileShareState.authorizedLinkShareDevices.remove(device)
+                                                    fileShareState.pendingLinkShareDevices.remove(device)
+                                                    if (fileShareState.rejectedLinkShareDevices.contains(device)) {
+                                                        return@IconButton
+                                                    }
+                                                    fileShareState.rejectedLinkShareDevices.add(device)
+                                                }
+
+                                                RUNNING -> fileShareState.authorizedLinkShareDevices.remove(device)
+
+                                                REJECTED -> fileShareState.rejectedLinkShareDevices.remove(device)
+                                            }
+                                        }) {
                                             Icon(Icons.Default.Close, null)
                                         }
                                     }
@@ -291,6 +337,9 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
 
                         item(span = { GridItemSpan(columnCount) }) {
                             Column {
+                                if (deviceStatusList.isEmpty()) {
+                                    Spacer(Modifier.height(16.dp))
+                                }
                                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                                 Spacer(Modifier.height(16.dp))
                                 AppDrawerHeader(title = "分享到其他设备", actions = {
