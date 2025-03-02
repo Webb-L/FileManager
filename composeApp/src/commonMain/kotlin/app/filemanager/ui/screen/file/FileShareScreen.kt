@@ -490,6 +490,11 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
 
         var imageRequest by remember { mutableStateOf<ImageRequest?>(null) }
 
+        val scope = rememberCoroutineScope()
+
+        // 添加一个状态来跟踪是否正在关闭中
+        var isClosing by remember { mutableStateOf(false) }
+
         LaunchedEffect(url) {
             imageRequest = ImageRequest(
                 data = QRCode.ofSquares()
@@ -605,18 +610,26 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                     }
                 }
                 Row(Modifier.padding(8.dp)) {
-                    OutlinedButton({
-                        if (isRunning) {
-                            httpShareFileServer.stop()
-                        } else {
-                            httpShareFileServer.start()
-                        }
-                        isRunning = httpShareFileServer.isRunning()
-                    }) {
-                        if (isRunning) {
-                            Text("关闭")
-                        } else {
-                            Text("启动")
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                if (isRunning) {
+                                    isClosing = true // 设置关闭中状态
+                                    httpShareFileServer.stop()
+                                    isClosing = false // 关闭完成
+                                } else {
+                                    httpShareFileServer.start()
+                                }
+                                isRunning = httpShareFileServer.isRunning()
+                            }
+                        },
+                        // 当正在关闭时禁用按钮
+                        enabled = !isClosing
+                    ) {
+                        when {
+                            isClosing -> Text("关闭中...")
+                            isRunning -> Text("关闭")
+                            else -> Text("启动")
                         }
                     }
                     Spacer(Modifier.width(8.dp))

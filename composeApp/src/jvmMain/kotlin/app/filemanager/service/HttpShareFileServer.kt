@@ -20,6 +20,8 @@ import io.ktor.server.plugins.compression.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.slf4j.event.Level
 import ua_parser.Parser
 import java.io.File
@@ -226,9 +228,16 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
         }.start(wait = false)
     }
 
-    actual override fun stop() {
-        server?.stop(1000, 2000)
-        server = null
+    actual override suspend fun stop() {
+        withContext(Dispatchers.IO) {
+            try {
+                server?.stop(500, 1000)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                server = null
+            }
+        }
     }
 
     actual override fun isRunning(): Boolean {
