@@ -139,8 +139,9 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
                         val clientRequest = call.getClientDeviceInfo()!!
 
                         val files =
-                            fileShareState.authorizedLinkShareDevices[clientRequest] ?: return@get call.respond(
-                                HttpStatusCode.Forbidden
+                            fileShareState.authorizedLinkShareDevices[clientRequest] ?: return@get call.respondRedirect(
+                                "/",
+                                permanent = false
                             )
 
                         val path = URLDecoder.decode(call.request.path(), "UTF-8")
@@ -149,14 +150,14 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
                         if (fileSimpleInfoResult == null || files.second.find {
                                 it.path == path || path.contains(it.path)
                             } == null) {
-                            return@get call.respond(HttpStatusCode.NotFound)
+                            return@get call.respondRedirect("/", permanent = false)
                         }
 
                         // 下载文件
                         if (!fileSimpleInfoResult.isDirectory) {
                             val file = File(path)
                             if (!file.exists()) {
-                                return@get call.respond(HttpStatusCode.NotFound)
+                                return@get call.respondRedirect("/", permanent = false)
                             }
 
                             call.response.header(HttpHeaders.ContentLength, file.length().toString())
@@ -209,6 +210,7 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
                                 compareByDescending<FileSimpleInfo> { it.isDirectory }
                                     .then(NaturalOrderComparator())
                             )
+
                         call.respond(
                             FreeMarkerContent(
                                 "index.ftl",

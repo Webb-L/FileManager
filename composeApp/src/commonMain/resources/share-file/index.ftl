@@ -38,7 +38,7 @@
             <div id="fileGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                 <#if files?size == 0>
                     <div class="col-span-full text-center py-8">
-                        <i class="fas fa-search text-4xl text-outline/50 dark:text-dark-outline/50 mb-3"></i>
+                        <i class="fas fa-info-circle text-4xl text-outline/50 dark:text-dark-outline/50 mb-3"></i>
                         <p class="text-background-on/60 dark:text-dark-background-on/60">未找到匹配的文件或文件夹</p>
                     </div>
                 <#else>
