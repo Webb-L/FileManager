@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.toIcon
+import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceType.*
 import app.filemanager.extensions.formatFileSize
 import app.filemanager.extensions.randomString
@@ -93,6 +94,11 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
 
         val httpShareFileServer = HttpShareFileServer.getInstance(fileShareState)
 
+        var curLinkDevice by remember {
+            mutableStateOf<Device?>(null)
+        }
+
+        val tooltipState = rememberTooltipState(isPersistent = true)
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -123,7 +129,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                     actions = {
                         BadgedBox({
                             if (!drawerState.isClosed) return@BadgedBox
-                            Badge { Text("${if (checkedFiles.size > 100) "99+" else checkedFiles.size}") }
+                            Badge { Text("${if (files.size > 100) "99+" else files.size}") }
                         }) {
                             IconButton({
                                 scope.launch {
@@ -147,9 +153,18 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                             item {
                                 AppDrawerHeader(
                                     "文件列表(${files.size})",
-                                    actions = {}
+                                    actions = {
+                                        TooltipBox(
+                                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                            tooltip = { Text("可以通过选择设备，修改已选择的文件") },
+                                            state = tooltipState
+                                        ) {
+                                            Icon(Icons.Default.Info, null)
+                                        }
+                                    }
                                 )
                             }
+
                             item {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -178,6 +193,15 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                                             }
                                                         }
                                                     }
+
+
+                                                    if (curLinkDevice != null) {
+                                                        fileShareState.authorizedLinkShareDevices[curLinkDevice!!] =
+                                                            Pair(
+                                                                isHideFile,
+                                                                fileShareState.checkedFiles.toList()
+                                                            )
+                                                    }
                                                 },
                                                 shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
                                             ) { Text(label) }
@@ -188,9 +212,18 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                         selected = isHideFile,
                                         label = { Text("隐藏文件") },
                                         shape = RoundedCornerShape(25.dp),
-                                        onClick = { isHideFile = !isHideFile })
+                                        onClick = {
+                                            isHideFile = !isHideFile
+                                            if (curLinkDevice != null) {
+                                                fileShareState.authorizedLinkShareDevices[curLinkDevice!!] = Pair(
+                                                    isHideFile,
+                                                    fileShareState.checkedFiles.toList()
+                                                )
+                                            }
+                                        })
                                 }
                             }
+
                             items(files) { file ->
                                 ListItem(
                                     headlineContent = { Text(file.name) },
@@ -241,6 +274,13 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                                     SnackbarResult.ActionPerformed -> {
                                                         fileShareState.files.remove(file)
                                                         fileShareState.checkedFiles.remove(file)
+                                                        if (curLinkDevice != null) {
+                                                            fileShareState.authorizedLinkShareDevices[curLinkDevice!!] =
+                                                                Pair(
+                                                                    isHideFile,
+                                                                    fileShareState.checkedFiles.toList()
+                                                                )
+                                                        }
                                                     }
                                                 }
                                             }
@@ -253,6 +293,12 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                             fileShareState.checkedFiles.remove(file)
                                         } else {
                                             fileShareState.checkedFiles.add(file)
+                                        }
+                                        if (curLinkDevice != null) {
+                                            fileShareState.authorizedLinkShareDevices[curLinkDevice!!] = Pair(
+                                                isHideFile,
+                                                fileShareState.checkedFiles.toList()
+                                            )
                                         }
                                     }
                                 )
@@ -284,6 +330,12 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                     LinkShareFileCard(
                                         fileShareState = fileShareState,
                                         httpShareFileServer = httpShareFileServer,
+                                        onStartServer = {
+                                            scope.launch {
+                                                drawerState.open()
+                                                snackbarHostState.showSnackbar("请先选择需要共享的文件")
+                                            }
+                                        },
                                         onClickOpenQRCode = { openQrCodeDialog = it }
                                     )
                                 }
@@ -292,7 +344,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
 
                         item(span = { GridItemSpan(columnCount) }) {
                             SingleChoiceSegmentedButtonRow(
-                                modifier = Modifier.padding(horizontal = 16.dp),
+                                modifier = Modifier.padding(16.dp),
                             ) {
                                 listOf(
                                     WAITING to "等待",
@@ -303,7 +355,14 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                         selected = category == cat,
                                         onClick = { category = cat },
                                         shape = SegmentedButtonDefaults.itemShape(index = index, count = 3),
-                                    ) { Text(label) }
+                                    ) {
+                                        val deviceCount = when (cat) {
+                                            WAITING -> fileShareState.pendingLinkShareDevices.size
+                                            RUNNING -> fileShareState.authorizedLinkShareDevices.size
+                                            REJECTED -> fileShareState.rejectedLinkShareDevices.size
+                                        }
+                                        Text("$label($deviceCount)")
+                                    }
                                 }
                             }
                         }
@@ -314,6 +373,17 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                             REJECTED -> fileShareState.rejectedLinkShareDevices
                         }.toList()
                         items(deviceStatusList) { device ->
+                            val isSelected = device == curLinkDevice
+                            val primaryContainerColor = if (isSelected) {
+                                colorScheme.primaryContainer
+                            } else {
+                                colorScheme.surface
+                            }
+                            val surfaceColor = if (isSelected) {
+                                colorScheme.onPrimaryContainer
+                            } else {
+                                colorScheme.onSurface
+                            }
                             ListItem(
                                 overlineContent = {
                                     if (category == WAITING) {
@@ -328,9 +398,13 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                             IconButton({
                                                 fileShareState.pendingLinkShareDevices.remove(device)
                                                 fileShareState.authorizedLinkShareDevices[device] =
-                                                    Pair(isHideFile, fileShareState.files.toList())
+                                                    Pair(isHideFile, fileShareState.checkedFiles.toList())
                                             }) {
-                                                Icon(Icons.Default.Done, null)
+                                                Icon(
+                                                    Icons.Default.Done,
+                                                    null,
+                                                    tint = surfaceColor
+                                                )
                                             }
                                         }
                                         IconButton({
@@ -354,10 +428,37 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                                 REJECTED -> fileShareState.rejectedLinkShareDevices.remove(device)
                                             }
                                         }) {
-                                            Icon(Icons.Default.Close, null)
+                                            Icon(
+                                                Icons.Default.Close,
+                                                null,
+                                                tint = surfaceColor
+                                            )
                                         }
                                     }
                                 },
+                                colors = ListItemDefaults.colors(
+                                    containerColor = primaryContainerColor,
+                                    headlineColor = surfaceColor,
+                                    supportingColor = surfaceColor,
+                                    overlineColor = surfaceColor
+                                ),
+                                modifier = Modifier.clickable(onClick = {
+                                    if (category != RUNNING) {
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar("已允许的设备才可修改共享文件")
+                                        }
+                                        return@clickable
+                                    }
+                                    curLinkDevice = device
+
+                                    val deviceFileShareInfo =
+                                        fileShareState.authorizedLinkShareDevices[device] ?: return@clickable
+                                    isHideFile = deviceFileShareInfo.first
+                                    fileShareState.checkedFiles.apply {
+                                        clear()
+                                        addAll(deviceFileShareInfo.second)
+                                    }
+                                })
                             )
                         }
 
@@ -467,6 +568,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
     private fun LinkShareFileCard(
         fileShareState: FileShareState,
         httpShareFileServer: HttpShareFileServer,
+        onStartServer: () -> Unit,
         onClickOpenQRCode: (Pair<String, ImageRequest>) -> Unit
     ) {
         val allIPAddresses = getAllIPAddresses(type = SocketClientIPEnum.IPV4_UP)
@@ -528,7 +630,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                         )
                         Spacer(Modifier.height(8.dp))
                         SelectionContainer {
-                            Text("${if (encryption) "https" else "http"}://${address}:8080/${if (passwordAccess) "?pwd=${password}" else ""}")
+                            Text("${if (encryption) "https" else "http"}://${address}:12040/${if (passwordAccess) "?pwd=${password}" else ""}")
                         }
                     }
                 }
@@ -619,6 +721,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                     isClosing = false // 关闭完成
                                 } else {
                                     httpShareFileServer.start()
+                                    onStartServer()
                                 }
                                 isRunning = httpShareFileServer.isRunning()
                             }
