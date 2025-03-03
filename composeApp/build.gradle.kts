@@ -72,6 +72,13 @@ kotlin {
 
             @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
             implementation(compose.components.resources)
+
+            // UI
+            implementation(libs.composeSettings.ui)
+            implementation(libs.composeSettings.ui.extended)
+
+            // Utils
+            implementation(libs.kotlin.logging)
         }
 
         commonTest.dependencies {
