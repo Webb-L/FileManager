@@ -24,7 +24,9 @@ internal fun App() = KoinApplication(application = {
 
     FileManagerTheme {
         BoxWithConstraints(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-            MainScreen(calculateWindowSizeClass(maxWidth, maxHeight))
+            val windowSizeClass = calculateWindowSizeClass(maxWidth, maxHeight)
+            mainState.windowSize = windowSizeClass
+            MainScreen(windowSizeClass)
         }
     }
 

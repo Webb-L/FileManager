@@ -1,5 +1,6 @@
 package app.filemanager.ui.state.main
 
+import app.filemanager.utils.WindowSizeClass
 import cafe.adriel.voyager.core.screen.Screen
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,4 +39,6 @@ class MainState {
     fun updateScreen(value: Screen?) {
         _screen.value = value
     }
+
+    var windowSize: WindowSizeClass = WindowSizeClass.Expanded
 }

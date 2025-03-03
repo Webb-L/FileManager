@@ -40,6 +40,7 @@ import app.filemanager.ui.screen.task.TaskResultScreen
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.*
 import app.filemanager.ui.state.main.DrawerState
+import app.filemanager.utils.WindowSizeClass
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -66,6 +67,9 @@ fun AppDrawer() {
             },
             actions = {
                 IconButton({
+                    if (mainState.windowSize == WindowSizeClass.Compact) {
+                        mainState.updateExpandDrawer(false)
+                    }
                     mainState.updateScreen(NotificationScreen())
                 }) {
                     BadgedBox(badge = { Badge { Text("1") } }) {
@@ -287,6 +291,9 @@ private fun AppDrawerTask() {
                 checkedTask = null
             },
             onToResult = {
+                if (mainState.windowSize == WindowSizeClass.Compact) {
+                    mainState.updateExpandDrawer(false)
+                }
                 mainState.updateScreen(TaskResultScreen(checkedTask!!))
                 checkedTask = null
             }
@@ -329,6 +336,9 @@ private fun AppDrawerBookmark() {
             label = { Text("收藏") },
             selected = isFavorite,
             onClick = {
+                if (mainState.windowSize == WindowSizeClass.Compact) {
+                    mainState.updateExpandDrawer(false)
+                }
                 mainState.updateFavorite(true)
                 mainState.updateScreen(FavoriteScreen())
             },
@@ -353,6 +363,9 @@ private fun AppDrawerBookmark() {
                 onClick = {
                     scope.launch {
                         fileState.updatePath(bookmark.path)
+                    }
+                    if (mainState.windowSize == WindowSizeClass.Compact) {
+                        mainState.updateExpandDrawer(false)
                     }
                     mainState.updateScreen(null)
                     mainState.updateFavorite(false)
@@ -440,6 +453,9 @@ private fun AppDrawerDevice() {
                     null,
                     Modifier.clip(RoundedCornerShape(25.dp))
                         .clickable {
+                            if (mainState.windowSize == WindowSizeClass.Compact) {
+                                mainState.updateExpandDrawer(false)
+                            }
                             mainState.updateScreen(DeviceSettingsScreen())
                         }
                 )
