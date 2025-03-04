@@ -149,9 +149,10 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
                         val path = URLDecoder.decode(call.request.path(), "UTF-8")
                         val fileSimpleInfoResult = FileUtils.getFile(path).getOrNull()
 
+                        // 如果文件信息结果为空，或文件未在授权的文件列表中找到，或文件的隐藏状态与文件权限不匹配，则重定向到根目录
                         if (fileSimpleInfoResult == null || files.second.find {
                                 it.path == path || path.contains(it.path)
-                            } == null) {
+                            } == null || fileSimpleInfoResult.isHidden == files.first) {
                             return@get call.respondRedirect("/", permanent = false)
                         }
 
