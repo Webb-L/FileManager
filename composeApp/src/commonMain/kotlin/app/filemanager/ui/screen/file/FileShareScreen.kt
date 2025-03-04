@@ -650,20 +650,6 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                     .padding(horizontal = 4.dp)
                                     .align(Alignment.CenterVertically),
                                 label = { Text(ipAddress) },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.QrCode,
-                                        contentDescription = null,
-                                        modifier = Modifier.clickable { }
-                                    )
-                                },
-                                trailingIcon = {
-                                    Icon(
-                                        Icons.Default.CopyAll,
-                                        contentDescription = null,
-                                        modifier = Modifier.clickable { }
-                                    )
-                                }
                             )
                         }
                     }
@@ -676,20 +662,20 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                             .padding(start = 8.dp, end = 8.dp, top = 8.dp),
                         horizontalArrangement = Arrangement.Start
                     ) {
-                        FilterChip(
-                            selected = encryption,
-                            onClick = { encryption = !encryption },
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                                .align(Alignment.CenterVertically),
-                            label = { Text("加密") },
-                            leadingIcon = {
-                                if (!encryption) return@FilterChip
-                                Icon(
-                                    Icons.Default.Done,
-                                    contentDescription = null
-                                )
-                            }
-                        )
+//                        FilterChip(
+//                            selected = encryption,
+//                            onClick = { encryption = !encryption },
+//                            modifier = Modifier.padding(horizontal = 4.dp)
+//                                .align(Alignment.CenterVertically),
+//                            label = { Text("加密") },
+//                            leadingIcon = {
+//                                if (!encryption) return@FilterChip
+//                                Icon(
+//                                    Icons.Default.Done,
+//                                    contentDescription = null
+//                                )
+//                            }
+//                        )
                         FilterChip(
                             selected = passwordAccess,
                             onClick = {
@@ -719,6 +705,9 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                     isClosing = true // 设置关闭中状态
                                     httpShareFileServer.stop()
                                     isClosing = false // 关闭完成
+                                    fileShareState.authorizedLinkShareDevices.clear()
+                                    fileShareState.pendingLinkShareDevices.clear()
+                                    fileShareState.rejectedLinkShareDevices.clear()
                                 } else {
                                     httpShareFileServer.start()
                                     onStartServer()

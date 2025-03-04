@@ -64,11 +64,17 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
                 format { call ->
                     val status = call.response.status()
                     val httpMethod = call.request.httpMethod.value
-                    val path = URLDecoder.decode(call.request.path(), "UTF-8")
                     val params = call.request.queryParameters.entries()
                         .joinToString("&") { "${it.key}=${it.value.joinToString(",")}" }
+                    val path = "${
+                        URLDecoder.decode(
+                            call.request.path(),
+                            "UTF-8"
+                        )
+                    }${if (params.isNotEmpty()) "?$params" else ""}"
                     val device = call.getClientDeviceInfo()
-                    "${device?.name} - ${device?.id} [$status] $httpMethod $path${if (params.isNotEmpty()) "?$params" else ""}"
+                    val message = "${device?.name} - ${device?.id} [$status] $httpMethod $path"
+                    message
                 }
             }
 
