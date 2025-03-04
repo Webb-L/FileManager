@@ -625,7 +625,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                     }
                     Column(Modifier.weight(1f).padding(16.dp)) {
                         Text(
-                            if (isRunning) "服务已启动" else "服务为启动",
+                            if (isRunning) "服务已启动" else "服务未启动",
                             style = Typography.titleLarge
                         )
                         Spacer(Modifier.height(8.dp))
