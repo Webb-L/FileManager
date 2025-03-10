@@ -101,6 +101,10 @@ kotlin {
             implementation(libs.ktor.server.cors)
             implementation(libs.ktor.server.websockets)
             implementation(libs.ktor.server.host.common)
+            implementation(libs.ktor.server.freemarker)
+            implementation(libs.ktor.server.compression)
+            implementation(libs.ktor.server.call.logging)
+//            implementation(libs.logback.classic)
 
             implementation(libs.kotlinx.rpc.krpc.server)
             implementation(libs.kotlinx.rpc.krpc.ktor.server)

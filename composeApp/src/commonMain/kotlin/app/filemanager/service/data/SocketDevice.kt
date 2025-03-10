@@ -2,8 +2,10 @@ package app.filemanager.service.data
 
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceType
+import app.filemanager.data.main.Share
 import app.filemanager.service.rpc.RpcClientManager
 import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
+import app.filemanager.service.rpc.RpcShareClientManager
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -33,6 +35,16 @@ data class SocketDevice(
 
     fun toDevice(): Device {
         return Device(id = id, name = name, host = mutableMapOf(host to client!!), type = type, token = token)
+    }
+
+    fun toShare(client: RpcShareClientManager): Share {
+        return Share(
+            id = id,
+            name = name,
+            type = type,
+            rpcClientManager = client,
+            token = "TODO()"
+        )
     }
 
     fun withCopy(

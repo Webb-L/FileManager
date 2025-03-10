@@ -6,10 +6,7 @@ import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.data.file.PathInfo
-import app.filemanager.data.main.Device
-import app.filemanager.data.main.DiskBase
-import app.filemanager.data.main.DrawerBookmarkType
-import app.filemanager.data.main.Local
+import app.filemanager.data.main.*
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.pathLevel
@@ -72,12 +69,17 @@ class FileState : KoinComponent {
                 _rootPath.value = rootPaths.first()
             }
 
+            if (type is Share) {
+                updatePath("/")
+                return@launch
+            }
+
             val homeBookmark = drawerState.bookmarks.firstOrNull { it.iconType == DrawerBookmarkType.Home }
             if (homeBookmark != null) {
                 updatePath(homeBookmark.path)
+            } else {
+                updateFileAndFolder()
             }
-
-            updateFileAndFolder()
         }
     }
 
@@ -99,6 +101,20 @@ class FileState : KoinComponent {
             val device = _deskType.value as Device
             var result: Result<List<FileSimpleInfo>> = Result.success(emptyList())
             device.getFileList(path) {
+                result = it
+                isReturn = true
+            }
+
+            while (!isReturn) {
+                delay(100L)
+            }
+            return result
+        }
+
+        if (_deskType.value is Share) {
+            val share = _deskType.value as Share
+            var result: Result<List<FileSimpleInfo>> = Result.success(emptyList())
+            share.getFileList(path) {
                 result = it
                 isReturn = true
             }

@@ -14,10 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileProtocol
-import app.filemanager.data.main.Device
-import app.filemanager.data.main.DiskBase
-import app.filemanager.data.main.Local
-import app.filemanager.data.main.Network
+import app.filemanager.data.main.*
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.NetworkState
 import org.koin.compose.koinInject
@@ -30,21 +27,30 @@ fun DiskSwitchButton(
 ) {
     var expanded by remember { mutableStateOf(false) }
     var expandedDevice by remember { mutableStateOf(false) }
+    var expandedShare by remember { mutableStateOf(false) }
     var expandedNetwork by remember { mutableStateOf(false) }
 
     val deviceState = koinInject<DeviceState>()
     val networkState = koinInject<NetworkState>()
 
     val devices = deviceState.devices
+    val shares = deviceState.shares
 
     if (
         devices.isEmpty() &&
+        shares.isEmpty() &&
         networkState.networks.isEmpty()
     ) return
 
     FilterChip(
         selected = true,
-        label = { Text(deskType.name) },
+        label = {
+            if (deskType is Share) {
+                Text("来自${deskType.name}的分享")
+                return@FilterChip
+            }
+            Text(deskType.name)
+        },
         border = null,
         shape = RoundedCornerShape(25.dp),
         trailingIcon = {
@@ -84,6 +90,17 @@ fun DiskSwitchButton(
                     expanded = false
                 },
                 onDismissRequest = { expandedDevice = it }
+            )
+        }
+        if (shares.isNotEmpty()) {
+            DeskShareMenuButton(
+                expandedShare,
+                shares,
+                onSelect = {
+                    onSelectDesk(FileProtocol.Share, it)
+                    expanded = false
+                },
+                onDismissRequest = { expandedShare = it }
             )
         }
         if (networkState.networks.isNotEmpty()) {
@@ -152,6 +169,22 @@ fun DeskDeviceMenuButton(
         title = "设备",
         expanded = expanded,
         items = devices,
+        onSelect = onSelect,
+        onDismissRequest = onDismissRequest
+    )
+}
+
+@Composable
+fun DeskShareMenuButton(
+    expanded: Boolean,
+    shares: List<Share>,
+    onSelect: (Share) -> Unit,
+    onDismissRequest: (Boolean) -> Unit,
+) {
+    DiskSwitchMenuButton(
+        title = "分享",
+        expanded = expanded,
+        items = shares,
         onSelect = onSelect,
         onDismissRequest = onDismissRequest
     )

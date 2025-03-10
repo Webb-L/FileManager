@@ -78,6 +78,13 @@ object HomeScreen : Screen {
                             MaterialBannerDeviceConnect(device)
                         }
                     }
+                deviceState.shareRequest.entries
+                    .firstOrNull { it.value.first == DeviceConnectType.WAITING }
+                    ?.let { entry ->
+                        deviceState.socketDevices.firstOrNull { it.id == entry.key }?.let { device ->
+                            MaterialBannerDeviceShare(device)
+                        }
+                    }
                 if (isSearchText) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(end = 16.dp),

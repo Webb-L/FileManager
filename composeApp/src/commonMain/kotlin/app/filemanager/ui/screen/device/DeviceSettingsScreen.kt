@@ -1,5 +1,6 @@
 package app.filemanager.ui.screen.device
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -55,7 +56,7 @@ class DeviceSettingsScreen() : Screen {
         val deviceSettingsState = koinInject<DeviceSettingsState>()
         val scope = rememberCoroutineScope()
 
-        val drawerState = rememberDrawerState(DrawerValue.Closed)
+        var isShowSearch by remember { mutableStateOf(false) }
         val category by deviceSettingsState.category.collectAsState()
         val deviceName by deviceSettingsState.deviceName.collectAsState()
         var updateDevice by remember { mutableStateOf<Pair<Int, DeviceJoinDeviceRole>?>(null) }
@@ -83,10 +84,10 @@ class DeviceSettingsScreen() : Screen {
                     actions = {
                         IconButton({
                             scope.launch {
-                                if (drawerState.isClosed) drawerState.open() else drawerState.close()
+                                isShowSearch = !isShowSearch
                             }
                         }) {
-                            Icon(if (drawerState.isClosed) Icons.Default.Search else Icons.Default.Close, null)
+                            Icon(if (!isShowSearch) Icons.Default.Search else Icons.Default.Close, null)
                         }
                     }
                 )
@@ -101,89 +102,77 @@ class DeviceSettingsScreen() : Screen {
                 }
             }
         ) { paddingValues ->
-            DismissibleNavigationDrawer(
-                modifier = Modifier.padding(paddingValues).fillMaxWidth(),
-                drawerState = drawerState,
-                drawerContent = {
-                    DismissibleDrawerSheet {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .padding(horizontal = 16.dp)
-                        ) {
-                            TextField(
-                                value = deviceName,
-                                onValueChange = { deviceSettingsState.updatedDeviceName(it) },
-                                label = { Text("设备名") },
-                                leadingIcon = { Icon(Icons.Default.Search, null) },
-                                trailingIcon = {
-                                    if (deviceName.isNotEmpty()) {
-                                        IconButton(onClick = { deviceSettingsState.updatedDeviceName("") }) {
-                                            Icon(Icons.Default.Close, "清除")
-                                        }
-                                    }
+            Column(Modifier.fillMaxWidth().padding(paddingValues)) {
+                AnimatedVisibility(isShowSearch) {
+                    TextField(
+                        value = deviceName,
+                        onValueChange = { deviceSettingsState.updatedDeviceName(it) },
+                        label = { Text("设备名") },
+                        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
+                        leadingIcon = { Icon(Icons.Default.Search, null) },
+                        trailingIcon = {
+                            if (deviceName.isNotEmpty()) {
+                                IconButton(onClick = { deviceSettingsState.updatedDeviceName("") }) {
+                                    Icon(Icons.Default.Close, "清除")
                                 }
-                            )
+                            }
                         }
+                    )
+                }
+
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                ) {
+                    listOf(
+                        DeviceCategory.SERVER to "其他设备访问我的设备",
+                        DeviceCategory.CLIENT to "我的设备访问其他设备"
+                    ).forEachIndexed { index, (cat, label) ->
+                        SegmentedButton(
+                            selected = category == cat,
+                            onClick = { deviceSettingsState.updateCategory(cat) },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                        ) { Text(label) }
                     }
                 }
-            ) {
-                Column(Modifier.fillMaxWidth()) {
-                    SingleChoiceSegmentedButtonRow(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    ) {
-                        listOf(
-                            DeviceCategory.SERVER to "其他设备访问我的设备",
-                            DeviceCategory.CLIENT to "我的设备访问其他设备"
-                        ).forEachIndexed { index, (cat, label) ->
-                            SegmentedButton(
-                                selected = category == cat,
-                                onClick = { deviceSettingsState.updateCategory(cat) },
-                                shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
-                            ) { Text(label) }
-                        }
-                    }
 
-                    PullToRefreshBox(
-                        state = state,
-                        isRefreshing = isRefreshing.value,
-                        onRefresh = deviceSettingsState.onRefresh
+                PullToRefreshBox(
+                    state = state,
+                    isRefreshing = isRefreshing.value,
+                    onRefresh = deviceSettingsState.onRefresh
+                ) {
+                    GridList(
+                        exception = if (deviceSettingsState.devices.isEmpty()) EmptyDataException() else null
                     ) {
-                        GridList(
-                            exception = if (deviceSettingsState.devices.isEmpty()) EmptyDataException() else null
-                        ) {
-                            itemsIndexed(deviceSettingsState.devices) { index, device ->
-                                if (device.category == DeviceCategory.SERVER) {
-                                    DeviceListServerItem(
-                                        device = device,
-                                        updateConnectionType = { connectionType, deviceId ->
-                                            deviceSettingsState.updateDeviceCategory(
-                                                connectionType,
-                                                deviceId,
-                                                category
-                                            )
-                                        }
-                                    ) { updateDevice = Pair(index, device) }
-                                } else {
-                                    DeviceListClientItem(
-                                        device = device,
-                                        updateConnectionType = { connectionType, deviceId ->
-                                            deviceSettingsState.updateDeviceCategory(
-                                                connectionType,
-                                                deviceId,
-                                                category
-                                            )
-                                        }
-                                    ) {
-                                        updateDevice = Pair(index, device)
+                        itemsIndexed(deviceSettingsState.devices) { index, device ->
+                            if (device.category == DeviceCategory.SERVER) {
+                                DeviceListServerItem(
+                                    device = device,
+                                    updateConnectionType = { connectionType, deviceId ->
+                                        deviceSettingsState.updateDeviceCategory(
+                                            connectionType,
+                                            deviceId,
+                                            category
+                                        )
                                     }
+                                ) { updateDevice = Pair(index, device) }
+                            } else {
+                                DeviceListClientItem(
+                                    device = device,
+                                    updateConnectionType = { connectionType, deviceId ->
+                                        deviceSettingsState.updateDeviceCategory(
+                                            connectionType,
+                                            deviceId,
+                                            category
+                                        )
+                                    }
+                                ) {
+                                    updateDevice = Pair(index, device)
                                 }
                             }
                         }
                     }
                 }
             }
-
 
             if (updateDevice != null) {
                 EditDeviceDialog(

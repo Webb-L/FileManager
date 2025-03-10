@@ -5,12 +5,14 @@ import androidx.compose.runtime.mutableStateMapOf
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceCategory
 import app.filemanager.data.main.DeviceConnectType
+import app.filemanager.data.main.Share
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.extensions.getSubnetIps
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager
 import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
+import app.filemanager.service.rpc.RpcShareClientManager
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import io.ktor.client.*
@@ -59,7 +61,7 @@ class DeviceState : KoinComponent {
         _loadingDevices.value = value
     }
 
-
+    // Map<设备id, Pair<设备链接类型, 结束倒计时>>
     val connectionRequest = mutableStateMapOf<String, Pair<DeviceConnectType, Long>>()
 
     suspend fun scanner(address: List<String>, port: Int = PORT) {
@@ -147,6 +149,22 @@ class DeviceState : KoinComponent {
             try {
                 val rpcClientManager = RpcClientManager()
                 rpcClientManager.connect(connectDevice)
+            } catch (e: Exception) {
+                println(e)
+            }
+        }
+    }
+
+
+    val shares = mutableStateListOf<Share>()
+
+    // Map<设备id, Pair<设备链接类型, 结束倒计时>>
+    val shareRequest = mutableStateMapOf<String, Pair<DeviceConnectType, Long>>()
+    fun share(device: SocketDevice) {
+        mainScope.launch {
+            try {
+                val rpcClientManager = RpcShareClientManager()
+                rpcClientManager.share(device)
             } catch (e: Exception) {
                 println(e)
             }

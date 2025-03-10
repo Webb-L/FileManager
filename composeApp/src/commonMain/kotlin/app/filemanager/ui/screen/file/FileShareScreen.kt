@@ -32,6 +32,7 @@ import app.filemanager.extensions.randomString
 import app.filemanager.extensions.timestampToSyncDate
 import app.filemanager.service.HttpShareFileServer
 import app.filemanager.service.data.ConnectType.*
+import app.filemanager.service.rpc.RpcClientManager
 import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
 import app.filemanager.ui.components.FileIcon
@@ -98,6 +99,9 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
             mutableStateOf<Device?>(null)
         }
 
+        val sheetState = rememberModalBottomSheetState()
+        var showBottomSheet by remember { mutableStateOf(false) }
+
         val tooltipState = rememberTooltipState(isPersistent = true)
         Scaffold(
             topBar = {
@@ -132,11 +136,9 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                             Badge { Text("${if (files.size > 100) "99+" else files.size}") }
                         }) {
                             IconButton({
-                                scope.launch {
-                                    if (drawerState.isClosed) drawerState.open() else drawerState.close()
-                                }
+                                showBottomSheet = !showBottomSheet
                             }) {
-                                Icon(if (drawerState.isClosed) Icons.Default.Description else Icons.Default.Close, null)
+                                Icon(if (!showBottomSheet) Icons.Default.Description else Icons.Default.Close, null)
                             }
                         }
                     }
@@ -144,57 +146,373 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { paddingValues ->
-            DismissibleNavigationDrawer(
-                modifier = Modifier.padding(paddingValues).fillMaxSize(),
-                drawerState = drawerState,
-                drawerContent = {
-                    DismissibleDrawerSheet {
-                        LazyColumn {
-                            item {
-                                AppDrawerHeader(
-                                    "文件列表(${files.size})",
-                                    actions = {
-                                        TooltipBox(
-                                            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                                            tooltip = { Text("可以通过选择设备，修改已选择的文件") },
-                                            state = tooltipState
-                                        ) {
-                                            Icon(Icons.Default.Info, null)
+            BoxWithConstraints(Modifier.fillMaxWidth().padding(paddingValues)) {
+                val columnCount = when (calculateWindowSizeClass(maxWidth, maxHeight)) {
+                    WindowSizeClass.Compact -> 1
+                    WindowSizeClass.Medium -> 2
+                    WindowSizeClass.Expanded -> 3
+                }
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(columnCount)
+                ) {
+                    item(span = { GridItemSpan(columnCount) }) {
+                        Column {
+                            AppDrawerHeader(title = "链接方式分享", actions = {
+                                Icon(
+                                    if (isExpandLinkShare) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    null,
+                                    Modifier.clip(RoundedCornerShape(25.dp))
+                                        .clickable { isExpandLinkShare = !isExpandLinkShare }
+                                )
+                            })
+                            AnimatedVisibility(isExpandLinkShare) {
+                                LinkShareFileCard(
+                                    fileShareState = fileShareState,
+                                    httpShareFileServer = httpShareFileServer,
+                                    onStartServer = {
+                                        scope.launch {
+                                            drawerState.open()
+                                            snackbarHostState.showSnackbar("请先选择需要共享的文件")
                                         }
-                                    }
+                                    },
+                                    onClickOpenQRCode = { openQrCodeDialog = it }
                                 )
                             }
+                        }
+                    }
 
-                            item {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                    item(span = { GridItemSpan(columnCount) }) {
+                        SingleChoiceSegmentedButtonRow(
+                            modifier = Modifier.padding(16.dp),
+                        ) {
+                            listOf(
+                                WAITING to "等待",
+                                RUNNING to "允许",
+                                REJECTED to "拒绝",
+                            ).forEachIndexed { index, (cat, label) ->
+                                SegmentedButton(
+                                    selected = category == cat,
+                                    onClick = { category = cat },
+                                    shape = SegmentedButtonDefaults.itemShape(index = index, count = 3),
                                 ) {
-                                    SingleChoiceSegmentedButtonRow(
-                                        modifier = Modifier.padding(horizontal = 16.dp),
+                                    val deviceCount = when (cat) {
+                                        WAITING -> fileShareState.pendingLinkShareDevices.size
+                                        RUNNING -> fileShareState.authorizedLinkShareDevices.size
+                                        REJECTED -> fileShareState.rejectedLinkShareDevices.size
+                                    }
+                                    Text("$label($deviceCount)")
+                                }
+                            }
+                        }
+                    }
+
+                    val deviceStatusList = when (category) {
+                        WAITING -> fileShareState.pendingLinkShareDevices
+                        RUNNING -> fileShareState.authorizedLinkShareDevices.keys
+                        REJECTED -> fileShareState.rejectedLinkShareDevices
+                    }.toList()
+                    items(deviceStatusList) { device ->
+                        val isSelected = device == curLinkDevice
+                        val primaryContainerColor = if (isSelected) {
+                            colorScheme.primaryContainer
+                        } else {
+                            colorScheme.surface
+                        }
+                        val surfaceColor = if (isSelected) {
+                            colorScheme.onPrimaryContainer
+                        } else {
+                            colorScheme.onSurface
+                        }
+                        ListItem(
+                            overlineContent = {
+                                if (category == WAITING) {
+                                    Text("是否允许访问")
+                                }
+                            },
+                            headlineContent = { Text(device.name) },
+                            supportingContent = { Text(device.id) },
+                            trailingContent = {
+                                Row {
+                                    if (category == WAITING) {
+                                        IconButton({
+                                            fileShareState.pendingLinkShareDevices.remove(device)
+                                            fileShareState.authorizedLinkShareDevices[device] =
+                                                Pair(isHideFile, fileShareState.checkedFiles.toList())
+                                        }) {
+                                            Icon(
+                                                Icons.Default.Done,
+                                                null,
+                                                tint = surfaceColor
+                                            )
+                                        }
+                                    }
+                                    IconButton({
+                                        when (category) {
+                                            WAITING -> {
+                                                fileShareState.authorizedLinkShareDevices.remove(device)
+                                                fileShareState.pendingLinkShareDevices.remove(device)
+                                                if (fileShareState.rejectedLinkShareDevices.contains(device)) {
+                                                    return@IconButton
+                                                }
+                                                fileShareState.rejectedLinkShareDevices.add(device)
+                                            }
+
+                                            RUNNING -> {
+                                                fileShareState.authorizedLinkShareDevices.remove(device)
+                                                if (password.isNotEmpty()) {
+                                                    fileShareState.rejectedLinkShareDevices.add(device)
+                                                }
+                                            }
+
+                                            REJECTED -> fileShareState.rejectedLinkShareDevices.remove(device)
+                                        }
+                                    }) {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            null,
+                                            tint = surfaceColor
+                                        )
+                                    }
+                                }
+                            },
+                            colors = ListItemDefaults.colors(
+                                containerColor = primaryContainerColor,
+                                headlineColor = surfaceColor,
+                                supportingColor = surfaceColor,
+                                overlineColor = surfaceColor
+                            ),
+                            modifier = Modifier.clickable(onClick = {
+                                if (category != RUNNING) {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("已允许的设备才可修改共享文件")
+                                    }
+                                    return@clickable
+                                }
+                                curLinkDevice = device
+
+                                val deviceFileShareInfo =
+                                    fileShareState.authorizedLinkShareDevices[device] ?: return@clickable
+                                isHideFile = deviceFileShareInfo.first
+                                fileShareState.checkedFiles.apply {
+                                    clear()
+                                    addAll(deviceFileShareInfo.second)
+                                }
+                            })
+                        )
+                    }
+
+                    item(span = { GridItemSpan(columnCount) }) {
+                        Column {
+                            if (deviceStatusList.isEmpty()) {
+                                Spacer(Modifier.height(16.dp))
+                            }
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                            Spacer(Modifier.height(16.dp))
+                            AppDrawerHeader(title = "分享到其他设备", actions = {
+                                Icon(
+                                    if (isExpandFileList) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    null,
+                                    Modifier.clip(RoundedCornerShape(25.dp))
+                                        .clickable { isExpandFileList = !isExpandFileList }
+                                )
+                            })
+                        }
+                    }
+                    items(socketDevices) { device ->
+                        ListItem(
+                            modifier = Modifier.clickable {
+                                fileShareState.sendFile[device.id] = FileShareStatus.WAITING
+                                deviceState.share(device)
+                                fileShareState.shareToDevices["AAAAA"] =
+                                    Pair(
+                                        isHideFile,
+                                        fileShareState.checkedFiles.toList()
+                                    )
+                            },
+                            overlineContent = {
+                                when (device.connectType) {
+                                    Connect -> Badge(
+                                        containerColor = colorScheme.primary
+                                    ) { Text("已链接") }
+
+                                    Fail -> Badge { Text("连接失败") }
+                                    UnConnect -> Badge { Text("未连接") }
+                                    Loading -> Badge(
+                                        containerColor = colorScheme.tertiary
+                                    ) { Text("连接中") }
+
+                                    New -> Badge { Text("新-未连接") }
+                                    Rejected -> Badge { Text("拒绝连接") }
+                                }
+                            },
+                            headlineContent = {
+                                Text(device.name)
+                            },
+                            supportingContent = {
+                                when (fileShareState.sendFile[device.id]) {
+                                    FileShareStatus.SENDING -> {
+                                        Text("发送中...")
+                                    }
+
+                                    FileShareStatus.REJECTED -> {
+                                        Text("对方拒绝了")
+                                    }
+
+                                    FileShareStatus.ERROR -> {
+                                        Text("发送失败")
+                                    }
+
+                                    FileShareStatus.COMPLETED -> {
+                                        Text("已完成")
+                                    }
+
+                                    FileShareStatus.WAITING -> {
+                                        Text("等待对方确认")
+                                    }
+
+                                    null -> Text("点击发送文件")
+                                }
+                            },
+                            leadingContent = {
+                                when (device.type) {
+                                    Android -> Icon(Icons.Default.PhoneAndroid, null)
+                                    IOS -> Icon(Icons.Default.PhoneIphone, null)
+                                    JVM -> Icon(Icons.Default.Devices, null)
+                                    JS -> Icon(Icons.Default.Javascript, null)
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+
+            if (showBottomSheet) {
+                ModalBottomSheet(
+                    onDismissRequest = {
+                        showBottomSheet = false
+                    },
+                    sheetState = sheetState
+                ) {
+                    Column(Modifier.padding(horizontal = 16.dp)) {
+                        Row(Modifier.padding(bottom = 8.dp)) {
+                            Text("文件列表(${files.size})")
+                            Spacer(Modifier.weight(1f))
+                            TooltipBox(
+                                positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+                                tooltip = { Text("可以通过选择设备，修改已选择的文件") },
+                                state = tooltipState
+                            ) {
+                                Icon(Icons.Default.Info, null)
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            SingleChoiceSegmentedButtonRow {
+                                listOf("全选", "反选").forEachIndexed { index, label ->
+                                    SegmentedButton(
+                                        selected = selectFileType == index,
+                                        onClick = {
+                                            selectFileType = index
+                                            if (index == 0) {
+                                                fileShareState.checkedFiles.apply {
+                                                    clear()
+                                                    addAll(files)
+                                                }
+                                            }
+                                            if (index == 1) {
+                                                for (file in files) {
+                                                    if (checkedFiles.contains(file)) {
+                                                        fileShareState.checkedFiles.remove(file)
+                                                    } else {
+                                                        fileShareState.checkedFiles.add(file)
+                                                    }
+                                                }
+                                            }
+
+
+                                            if (curLinkDevice != null) {
+                                                fileShareState.authorizedLinkShareDevices[curLinkDevice!!] =
+                                                    Pair(
+                                                        isHideFile,
+                                                        fileShareState.checkedFiles.toList()
+                                                    )
+                                            }
+                                        },
+                                        shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                                    ) { Text(label) }
+                                }
+                            }
+
+                            FilterChip(
+                                selected = isHideFile,
+                                label = { Text("隐藏文件") },
+                                shape = RoundedCornerShape(25.dp),
+                                onClick = {
+                                    isHideFile = !isHideFile
+                                    if (curLinkDevice != null) {
+                                        fileShareState.authorizedLinkShareDevices[curLinkDevice!!] = Pair(
+                                            isHideFile,
+                                            fileShareState.checkedFiles.toList()
+                                        )
+                                    }
+                                })
+                        }
+                    }
+
+                    LazyColumn {
+                        items(files) { file ->
+                            ListItem(
+                                headlineContent = { Text(file.name) },
+                                supportingContent = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        file.protocol.toIcon()
+
+                                        if (file.isDirectory) {
+                                            Text(
+                                                "${file.size}项",
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        } else {
+                                            Text(
+                                                file.size.formatFileSize(),
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            file.createdDate.timestampToSyncDate(),
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                },
+                                leadingContent = {
+                                    Box(
+                                        modifier = Modifier.padding(16.dp),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        listOf("全选", "反选").forEachIndexed { index, label ->
-                                            SegmentedButton(
-                                                selected = selectFileType == index,
-                                                onClick = {
-                                                    selectFileType = index
-                                                    if (index == 0) {
-                                                        fileShareState.checkedFiles.apply {
-                                                            clear()
-                                                            addAll(files)
-                                                        }
-                                                    }
-                                                    if (index == 1) {
-                                                        for (file in files) {
-                                                            if (checkedFiles.contains(file)) {
-                                                                fileShareState.checkedFiles.remove(file)
-                                                            } else {
-                                                                fileShareState.checkedFiles.add(file)
-                                                            }
-                                                        }
-                                                    }
-
-
+                                        if (!checkedFiles.contains(file)) {
+                                            FileIcon(file)
+                                        } else {
+                                            Checkbox(checkedFiles.contains(file), onCheckedChange = null)
+                                        }
+                                    }
+                                },
+                                trailingContent = {
+                                    IconButton({
+                                        scope.launch {
+                                            when (snackbarHostState.showSnackbar(
+                                                message = file.name,
+                                                actionLabel = "删除",
+                                                withDismissAction = true,
+                                                duration = SnackbarDuration.Short
+                                            )) {
+                                                SnackbarResult.Dismissed -> {}
+                                                SnackbarResult.ActionPerformed -> {
+                                                    fileShareState.files.remove(file)
+                                                    fileShareState.checkedFiles.remove(file)
                                                     if (curLinkDevice != null) {
                                                         fileShareState.authorizedLinkShareDevices[curLinkDevice!!] =
                                                             Pair(
@@ -202,340 +520,26 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                                                 fileShareState.checkedFiles.toList()
                                                             )
                                                     }
-                                                },
-                                                shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
-                                            ) { Text(label) }
-                                        }
-                                    }
-
-                                    FilterChip(
-                                        selected = isHideFile,
-                                        label = { Text("隐藏文件") },
-                                        shape = RoundedCornerShape(25.dp),
-                                        onClick = {
-                                            isHideFile = !isHideFile
-                                            if (curLinkDevice != null) {
-                                                fileShareState.authorizedLinkShareDevices[curLinkDevice!!] = Pair(
-                                                    isHideFile,
-                                                    fileShareState.checkedFiles.toList()
-                                                )
-                                            }
-                                        })
-                                }
-                            }
-
-                            items(files) { file ->
-                                ListItem(
-                                    headlineContent = { Text(file.name) },
-                                    supportingContent = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            file.protocol.toIcon()
-
-                                            if (file.isDirectory) {
-                                                Text(
-                                                    "${file.size}项",
-                                                    style = MaterialTheme.typography.bodySmall
-                                                )
-                                            } else {
-                                                Text(
-                                                    file.size.formatFileSize(),
-                                                    style = MaterialTheme.typography.bodySmall
-                                                )
-                                            }
-                                            Spacer(Modifier.width(8.dp))
-                                            Text(
-                                                file.createdDate.timestampToSyncDate(),
-                                                style = MaterialTheme.typography.bodySmall
-                                            )
-                                        }
-                                    },
-                                    leadingContent = {
-                                        Box(
-                                            modifier = Modifier.padding(16.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            if (!checkedFiles.contains(file)) {
-                                                FileIcon(file)
-                                            } else {
-                                                Checkbox(checkedFiles.contains(file), onCheckedChange = null)
-                                            }
-                                        }
-                                    },
-                                    trailingContent = {
-                                        IconButton({
-                                            scope.launch {
-                                                when (snackbarHostState.showSnackbar(
-                                                    message = file.name,
-                                                    actionLabel = "删除",
-                                                    withDismissAction = true,
-                                                    duration = SnackbarDuration.Short
-                                                )) {
-                                                    SnackbarResult.Dismissed -> {}
-                                                    SnackbarResult.ActionPerformed -> {
-                                                        fileShareState.files.remove(file)
-                                                        fileShareState.checkedFiles.remove(file)
-                                                        if (curLinkDevice != null) {
-                                                            fileShareState.authorizedLinkShareDevices[curLinkDevice!!] =
-                                                                Pair(
-                                                                    isHideFile,
-                                                                    fileShareState.checkedFiles.toList()
-                                                                )
-                                                        }
-                                                    }
                                                 }
                                             }
-                                        }) {
-                                            Icon(Icons.Default.Close, null)
                                         }
-                                    },
-                                    modifier = Modifier.clickable {
-                                        if (checkedFiles.contains(file)) {
-                                            fileShareState.checkedFiles.remove(file)
-                                        } else {
-                                            fileShareState.checkedFiles.add(file)
-                                        }
-                                        if (curLinkDevice != null) {
-                                            fileShareState.authorizedLinkShareDevices[curLinkDevice!!] = Pair(
-                                                isHideFile,
-                                                fileShareState.checkedFiles.toList()
-                                            )
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            ) {
-                BoxWithConstraints {
-                    val columnCount = when (calculateWindowSizeClass(maxWidth, maxHeight)) {
-                        WindowSizeClass.Compact -> 1
-                        WindowSizeClass.Medium -> 2
-                        WindowSizeClass.Expanded -> 3
-                    }
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(columnCount)
-                    ) {
-                        item(span = { GridItemSpan(columnCount) }) {
-                            Column {
-                                AppDrawerHeader(title = "链接方式分享", actions = {
-                                    Icon(
-                                        if (isExpandLinkShare) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                        null,
-                                        Modifier.clip(RoundedCornerShape(25.dp))
-                                            .clickable { isExpandLinkShare = !isExpandLinkShare }
-                                    )
-                                })
-                                AnimatedVisibility(isExpandLinkShare) {
-                                    LinkShareFileCard(
-                                        fileShareState = fileShareState,
-                                        httpShareFileServer = httpShareFileServer,
-                                        onStartServer = {
-                                            scope.launch {
-                                                drawerState.open()
-                                                snackbarHostState.showSnackbar("请先选择需要共享的文件")
-                                            }
-                                        },
-                                        onClickOpenQRCode = { openQrCodeDialog = it }
-                                    )
-                                }
-                            }
-                        }
-
-                        item(span = { GridItemSpan(columnCount) }) {
-                            SingleChoiceSegmentedButtonRow(
-                                modifier = Modifier.padding(16.dp),
-                            ) {
-                                listOf(
-                                    WAITING to "等待",
-                                    RUNNING to "允许",
-                                    REJECTED to "拒绝",
-                                ).forEachIndexed { index, (cat, label) ->
-                                    SegmentedButton(
-                                        selected = category == cat,
-                                        onClick = { category = cat },
-                                        shape = SegmentedButtonDefaults.itemShape(index = index, count = 3),
-                                    ) {
-                                        val deviceCount = when (cat) {
-                                            WAITING -> fileShareState.pendingLinkShareDevices.size
-                                            RUNNING -> fileShareState.authorizedLinkShareDevices.size
-                                            REJECTED -> fileShareState.rejectedLinkShareDevices.size
-                                        }
-                                        Text("$label($deviceCount)")
-                                    }
-                                }
-                            }
-                        }
-
-                        val deviceStatusList = when (category) {
-                            WAITING -> fileShareState.pendingLinkShareDevices
-                            RUNNING -> fileShareState.authorizedLinkShareDevices.keys
-                            REJECTED -> fileShareState.rejectedLinkShareDevices
-                        }.toList()
-                        items(deviceStatusList) { device ->
-                            val isSelected = device == curLinkDevice
-                            val primaryContainerColor = if (isSelected) {
-                                colorScheme.primaryContainer
-                            } else {
-                                colorScheme.surface
-                            }
-                            val surfaceColor = if (isSelected) {
-                                colorScheme.onPrimaryContainer
-                            } else {
-                                colorScheme.onSurface
-                            }
-                            ListItem(
-                                overlineContent = {
-                                    if (category == WAITING) {
-                                        Text("是否允许访问")
+                                    }) {
+                                        Icon(Icons.Default.Close, null)
                                     }
                                 },
-                                headlineContent = { Text(device.name) },
-                                supportingContent = { Text(device.id) },
-                                trailingContent = {
-                                    Row {
-                                        if (category == WAITING) {
-                                            IconButton({
-                                                fileShareState.pendingLinkShareDevices.remove(device)
-                                                fileShareState.authorizedLinkShareDevices[device] =
-                                                    Pair(isHideFile, fileShareState.checkedFiles.toList())
-                                            }) {
-                                                Icon(
-                                                    Icons.Default.Done,
-                                                    null,
-                                                    tint = surfaceColor
-                                                )
-                                            }
-                                        }
-                                        IconButton({
-                                            when (category) {
-                                                WAITING -> {
-                                                    fileShareState.authorizedLinkShareDevices.remove(device)
-                                                    fileShareState.pendingLinkShareDevices.remove(device)
-                                                    if (fileShareState.rejectedLinkShareDevices.contains(device)) {
-                                                        return@IconButton
-                                                    }
-                                                    fileShareState.rejectedLinkShareDevices.add(device)
-                                                }
-
-                                                RUNNING -> {
-                                                    fileShareState.authorizedLinkShareDevices.remove(device)
-                                                    if (password.isNotEmpty()) {
-                                                        fileShareState.rejectedLinkShareDevices.add(device)
-                                                    }
-                                                }
-
-                                                REJECTED -> fileShareState.rejectedLinkShareDevices.remove(device)
-                                            }
-                                        }) {
-                                            Icon(
-                                                Icons.Default.Close,
-                                                null,
-                                                tint = surfaceColor
-                                            )
-                                        }
-                                    }
-                                },
-                                colors = ListItemDefaults.colors(
-                                    containerColor = primaryContainerColor,
-                                    headlineColor = surfaceColor,
-                                    supportingColor = surfaceColor,
-                                    overlineColor = surfaceColor
-                                ),
-                                modifier = Modifier.clickable(onClick = {
-                                    if (category != RUNNING) {
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar("已允许的设备才可修改共享文件")
-                                        }
-                                        return@clickable
-                                    }
-                                    curLinkDevice = device
-
-                                    val deviceFileShareInfo =
-                                        fileShareState.authorizedLinkShareDevices[device] ?: return@clickable
-                                    isHideFile = deviceFileShareInfo.first
-                                    fileShareState.checkedFiles.apply {
-                                        clear()
-                                        addAll(deviceFileShareInfo.second)
-                                    }
-                                })
-                            )
-                        }
-
-                        item(span = { GridItemSpan(columnCount) }) {
-                            Column {
-                                if (deviceStatusList.isEmpty()) {
-                                    Spacer(Modifier.height(16.dp))
-                                }
-                                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                                Spacer(Modifier.height(16.dp))
-                                AppDrawerHeader(title = "分享到其他设备", actions = {
-                                    Icon(
-                                        if (isExpandFileList) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                        null,
-                                        Modifier.clip(RoundedCornerShape(25.dp))
-                                            .clickable { isExpandFileList = !isExpandFileList }
-                                    )
-                                })
-                            }
-                        }
-                        items(socketDevices) { device ->
-                            ListItem(
                                 modifier = Modifier.clickable {
-                                    fileShareState.sendFile[device.id] = FileShareStatus.WAITING
-                                },
-                                overlineContent = {
-                                    when (device.connectType) {
-                                        Connect -> Badge(
-                                            containerColor = colorScheme.primary
-                                        ) { Text("已链接") }
-
-                                        Fail -> Badge { Text("连接失败") }
-                                        UnConnect -> Badge { Text("未连接") }
-                                        Loading -> Badge(
-                                            containerColor = colorScheme.tertiary
-                                        ) { Text("连接中") }
-
-                                        New -> Badge { Text("新-未连接") }
-                                        Rejected -> Badge { Text("拒绝连接") }
+                                    if (checkedFiles.contains(file)) {
+                                        fileShareState.checkedFiles.remove(file)
+                                    } else {
+                                        fileShareState.checkedFiles.add(file)
                                     }
-                                },
-                                headlineContent = {
-                                    Text(device.name)
-                                },
-                                supportingContent = {
-                                    when (fileShareState.sendFile[device.id]) {
-                                        FileShareStatus.SENDING -> {
-                                            Text("发送中...")
-                                        }
-
-                                        FileShareStatus.REJECTED -> {
-                                            Text("对方拒绝了")
-                                        }
-
-                                        FileShareStatus.ERROR -> {
-                                            Text("发送失败")
-                                        }
-
-                                        FileShareStatus.COMPLETED -> {
-                                            Text("已完成")
-                                        }
-
-                                        FileShareStatus.WAITING -> {
-                                            Text("等待对方确认")
-                                        }
-
-                                        null -> Text("点击发送文件")
+                                    if (curLinkDevice != null) {
+                                        fileShareState.authorizedLinkShareDevices[curLinkDevice!!] = Pair(
+                                            isHideFile,
+                                            fileShareState.checkedFiles.toList()
+                                        )
                                     }
-                                },
-                                leadingContent = {
-                                    when (device.type) {
-                                        Android -> Icon(Icons.Default.PhoneAndroid, null)
-                                        IOS -> Icon(Icons.Default.PhoneIphone, null)
-                                        JVM -> Icon(Icons.Default.Devices, null)
-                                        JS -> Icon(Icons.Default.Javascript, null)
-                                    }
-                                },
+                                }
                             )
                         }
                     }

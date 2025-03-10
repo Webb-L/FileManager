@@ -31,6 +31,8 @@ class FileShareState {
 
     // 被拒绝通过链接访问文件的设备
     val rejectedLinkShareDevices = mutableStateListOf<Device>()
+
+    val shareToDevices = mutableStateMapOf<String, Pair<Boolean, List<FileSimpleInfo>>>()
 }
 
 

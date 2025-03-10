@@ -18,22 +18,119 @@ import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 import org.koin.compose.koinInject
 
+
 @Composable
-fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
+fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
     val deviceState = koinInject<DeviceState>()
 
     var expanded by remember { mutableStateOf(false) }
 
-    val remainingConnectionTime = (CONNECT_TIMEOUT + ((deviceState.connectionRequest[socketDevice.id]!!.second - Clock.System.now()
-        .toEpochMilliseconds()) / 1000L)).toInt()
+    val remainingConnectionTime =
+        (CONNECT_TIMEOUT + ((deviceState.shareRequest[socketDevice.id]!!.second - Clock.System.now()
+            .toEpochMilliseconds()) / 1000L)).toInt()
     var timeRemaining by remember { mutableStateOf(remainingConnectionTime) } // 10 minutes in seconds
 
 
     LaunchedEffect(Unit) {
         while (timeRemaining > 0) {
             delay(1000)
-            timeRemaining = (CONNECT_TIMEOUT + ((deviceState.connectionRequest[socketDevice.id]!!.second - Clock.System.now()
-                .toEpochMilliseconds()) / 1000L)).toInt()
+            timeRemaining =
+                (CONNECT_TIMEOUT + ((deviceState.shareRequest[socketDevice.id]!!.second - Clock.System.now()
+                    .toEpochMilliseconds()) / 1000L)).toInt()
+        }
+        // Automatically reject after the countdown ends
+        if (timeRemaining <= 0) {
+            deviceState.shareRequest[socketDevice.id] =
+                Pair(DeviceConnectType.REJECTED, Clock.System.now().toEpochMilliseconds())
+        }
+    }
+
+    val timeText = remember(timeRemaining) {
+        val minutes = timeRemaining / 60
+        val seconds = timeRemaining % 60
+        if (minutes == 0) "${seconds}秒" else "${minutes}分${seconds}秒"
+    }
+
+    MaterialBanner(
+        message = "${socketDevice.name} 请求向您发送文件或文件夹\n${timeText} 后将会自动拒绝。",
+        actionLabel = "同意",
+        onActionClick = {
+            deviceState.shareRequest[socketDevice.id] =
+                Pair(DeviceConnectType.APPROVED, deviceState.shareRequest[socketDevice.id]!!.second)
+        },
+        menu = {
+            Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
+                IconButton({ expanded = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "菜单",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("自动同意") },
+                        onClick = {
+                            deviceState.connectionRequest[socketDevice.id] = Pair(
+                                DeviceConnectType.AUTO_CONNECT,
+                                deviceState.connectionRequest[socketDevice.id]!!.second
+                            )
+                            expanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("自动拒绝") },
+                        onClick = {
+                            deviceState.connectionRequest[socketDevice.id] = Pair(
+                                DeviceConnectType.PERMANENTLY_BANNED,
+                                deviceState.connectionRequest[socketDevice.id]!!.second
+                            )
+                            expanded = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("拒绝") },
+                        onClick = {
+                            deviceState.connectionRequest[socketDevice.id] = Pair(
+                                DeviceConnectType.REJECTED,
+                                deviceState.connectionRequest[socketDevice.id]!!.second
+                            )
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    )
+}
+
+/**
+ * 显示一个 Material 设计风格的横幅，用于处理设备的连接请求。
+ *
+ * @param socketDevice 表示请求连接的设备实例，包含设备的详细信息。
+ */
+@Composable
+fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
+    val deviceState = koinInject<DeviceState>()
+
+    var expanded by remember { mutableStateOf(false) }
+
+    val remainingConnectionTime =
+        (CONNECT_TIMEOUT + ((deviceState.connectionRequest[socketDevice.id]!!.second - Clock.System.now()
+            .toEpochMilliseconds()) / 1000L)).toInt()
+    var timeRemaining by remember { mutableStateOf(remainingConnectionTime) } // 10 minutes in seconds
+
+
+    LaunchedEffect(Unit) {
+        while (timeRemaining > 0) {
+            delay(1000)
+            timeRemaining =
+                (CONNECT_TIMEOUT + ((deviceState.connectionRequest[socketDevice.id]!!.second - Clock.System.now()
+                    .toEpochMilliseconds()) / 1000L)).toInt()
         }
         // Automatically reject after the countdown ends
         if (timeRemaining <= 0) {

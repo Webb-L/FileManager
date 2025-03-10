@@ -6,6 +6,7 @@ import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.data.file.PathInfo
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.rpc.RpcClientManager
+import app.filemanager.service.rpc.RpcShareClientManager
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DeviceState
 import kotlinx.serialization.Serializable
@@ -236,6 +237,34 @@ data class Device(
         try {
             getConnect().fileHandle.getFile(id, path, replyCallback)
         } catch (e: Exception) {
+            handleError()
+        }
+    }
+}
+
+data class Share(
+    val id: String,
+    override val name: String,
+    val rpcClientManager: RpcShareClientManager,
+    val type: DeviceType,
+    val token: String
+) : DiskBase() {
+    private fun handleError() {
+//        deviceState.devices.remove(this)
+//        deviceState.socketDevices.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let { index ->
+//            deviceState.socketDevices[index] = deviceState.socketDevices[index].withCopy(
+//                connectType = ConnectType.Fail
+//            )
+//        }
+//        fileState.updateDesk(FileProtocol.Local, Local())
+        println("Error in sharing")
+    }
+
+    suspend fun getFileList(path: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
+        try {
+            rpcClientManager.shareHandle.getList(path, id, replyCallback)
+        } catch (e: Exception) {
+            println("Error in sharing $e")
             handleError()
         }
     }
