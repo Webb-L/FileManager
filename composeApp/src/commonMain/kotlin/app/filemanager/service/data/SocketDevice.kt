@@ -28,6 +28,7 @@ data class SocketDevice(
     var port: Int = PORT,
     val type: DeviceType,
     var connectType: ConnectType = ConnectType.New,
+    // TODO 禁止系列化
     var token: String = "",
 ) {
     @Transient

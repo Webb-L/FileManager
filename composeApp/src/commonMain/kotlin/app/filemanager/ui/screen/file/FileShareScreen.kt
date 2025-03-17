@@ -32,7 +32,6 @@ import app.filemanager.extensions.randomString
 import app.filemanager.extensions.timestampToSyncDate
 import app.filemanager.service.HttpShareFileServer
 import app.filemanager.service.data.ConnectType.*
-import app.filemanager.service.rpc.RpcClientManager
 import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
 import app.filemanager.ui.components.FileIcon
@@ -81,7 +80,6 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
 
         val snackbarHostState = remember { SnackbarHostState() }
 
-        val drawerState = rememberDrawerState(DrawerValue.Closed)
         val socketDevices = deviceState.socketDevices.sortedBy { it.client != null }
 
         var category by remember { mutableStateOf(WAITING) }
@@ -132,7 +130,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                     },
                     actions = {
                         BadgedBox({
-                            if (!drawerState.isClosed) return@BadgedBox
+                            if (showBottomSheet) return@BadgedBox
                             Badge { Text("${if (files.size > 100) "99+" else files.size}") }
                         }) {
                             IconButton({
@@ -169,12 +167,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                 LinkShareFileCard(
                                     fileShareState = fileShareState,
                                     httpShareFileServer = httpShareFileServer,
-                                    onStartServer = {
-                                        scope.launch {
-                                            drawerState.open()
-                                            snackbarHostState.showSnackbar("请先选择需要共享的文件")
-                                        }
-                                    },
+                                    onStartServer = { showBottomSheet = true },
                                     onClickOpenQRCode = { openQrCodeDialog = it }
                                 )
                             }
@@ -308,14 +301,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                             }
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                             Spacer(Modifier.height(16.dp))
-                            AppDrawerHeader(title = "分享到其他设备", actions = {
-                                Icon(
-                                    if (isExpandFileList) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                    null,
-                                    Modifier.clip(RoundedCornerShape(25.dp))
-                                        .clickable { isExpandFileList = !isExpandFileList }
-                                )
-                            })
+                            AppDrawerHeader(title = "分享到其他设备", actions = {})
                         }
                     }
                     items(socketDevices) { device ->
@@ -323,7 +309,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                             modifier = Modifier.clickable {
                                 fileShareState.sendFile[device.id] = FileShareStatus.WAITING
                                 deviceState.share(device)
-                                fileShareState.shareToDevices["AAAAA"] =
+                                fileShareState.shareToDevices[device.id] =
                                     Pair(
                                         isHideFile,
                                         fileShareState.checkedFiles.toList()

@@ -52,6 +52,8 @@ actual suspend fun startRpcServer() {
                 registerService<BookmarkService> { ctx -> BookmarkServiceImpl(ctx) }
                 registerService<FileService> { ctx -> FileServiceImpl(ctx) }
                 registerService<PathService> { ctx -> PathServiceImpl(ctx) }
+
+                registerService<ShareService> { ctx -> ShareServiceImpl(ctx) }
             }
         }
     }.start(wait = true)

@@ -4,7 +4,8 @@ import app.filemanager.createSettings
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.main.DeviceConnectType
-import app.filemanager.data.main.DeviceConnectType.*
+import app.filemanager.data.main.DeviceConnectType.APPROVED
+import app.filemanager.data.main.DeviceConnectType.REJECTED
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.exception.ParameterErrorException
 import app.filemanager.exception.toSocketResult
@@ -12,15 +13,10 @@ import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.replaceLast
 import app.filemanager.service.WebSocketResult
 import app.filemanager.service.data.SocketDevice
-import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
 import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.ui.state.file.FileShareState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DeviceState
-import io.ktor.util.logging.KtorSimpleLogger
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withTimeout
-import kotlinx.datetime.Clock
 import kotlinx.rpc.RemoteService
 import kotlinx.rpc.annotations.Rpc
 import org.koin.core.component.KoinComponent
@@ -47,6 +43,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
     private val fileShareState: FileShareState by inject()
     private val deviceCertificateState: DeviceCertificateState by inject()
 
+    // TODO 检查是否有权限
     override suspend fun list(
         token: String,
         path: String
@@ -69,7 +66,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
                 value = mutableMapOf<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>().apply {
                     fileShareState.checkedFiles.forEach { fileSimpleInfo ->
                         val key = if (fileSimpleInfo.protocol == FileProtocol.Local)
-                            Pair(FileProtocol.Device, settings.getString("deviceId", ""))
+                            Pair(FileProtocol.Share, settings.getString("deviceId", ""))
                         else
                             Pair(fileSimpleInfo.protocol, fileSimpleInfo.protocolId)
 
@@ -110,7 +107,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
             value = mutableMapOf<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>().apply {
                 fileAndFolder.getOrNull()?.forEach { fileSimpleInfo ->
                     val key = if (fileSimpleInfo.protocol == FileProtocol.Local)
-                        Pair(FileProtocol.Device, settings.getString("deviceId", ""))
+                        Pair(FileProtocol.Share, settings.getString("deviceId", ""))
                     else
                         Pair(fileSimpleInfo.protocol, fileSimpleInfo.protocolId)
 
@@ -131,22 +128,10 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
     }
 
     override suspend fun connect(device: SocketDevice): Pair<DeviceConnectType, String> {
-        deviceState.shareRequest[device.id] = Pair(WAITING, Clock.System.now().toEpochMilliseconds())
-        return try {
-            withTimeout(CONNECT_TIMEOUT * 1000L) {
-                while (deviceState.shareRequest[device.id]!!.first == WAITING) {
-                    delay(300L)
-                }
-                when (deviceState.shareRequest[device.id]!!.first) {
-                    AUTO_CONNECT, APPROVED -> {}
-                    else -> throw Exception()
-                }
-                return@withTimeout Pair(APPROVED, "randomString")
-            }
-        } catch (e: Exception) {
-            println("Exception while connecting device: ${device.id}")
-            KtorSimpleLogger(ShareService::class.simpleName!!).error(e.toString())
-            deviceState.shareRequest.remove(device.id)
+        // 检查是否有权限。
+        return if (deviceState.allowDeviceShareConnection.contains(device.id)) {
+            Pair(APPROVED, "")
+        }else {
             Pair(REJECTED, "")
         }
     }

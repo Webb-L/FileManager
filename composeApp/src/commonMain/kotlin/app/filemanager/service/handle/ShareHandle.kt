@@ -2,10 +2,13 @@ package app.filemanager.service.handle
 
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.main.DeviceConnectType
+import app.filemanager.getSocketDevice
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcShareClientManager
+import app.filemanager.service.rpc.ShareService
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DeviceState
+import io.ktor.util.logging.*
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -41,13 +44,18 @@ class ShareHandle(private val rpc: RpcShareClientManager) : KoinComponent {
     }
 
     suspend fun connect(manager: RpcShareClientManager, device: SocketDevice) {
-        val share = rpc.shareService.connect(device)
-        when (share.first) {
-            DeviceConnectType.AUTO_CONNECT, DeviceConnectType.APPROVED -> {
-                deviceState.shares.add(device.toShare(rpc))
+        try {
+            val share = rpc.shareService.connect(getSocketDevice())
+            when (share.first) {
+                DeviceConnectType.AUTO_CONNECT, DeviceConnectType.APPROVED -> {
+                    deviceState.shares.add(device.toShare(rpc))
+                }
+                DeviceConnectType.PERMANENTLY_BANNED, DeviceConnectType.REJECTED -> {}
+                DeviceConnectType.WAITING -> {}
             }
-            DeviceConnectType.PERMANENTLY_BANNED, DeviceConnectType.REJECTED -> {}
-            DeviceConnectType.WAITING -> {}
+        } catch (e: Exception) {
+            println("Exception while connecting device: ${device.id}")
+            KtorSimpleLogger(ShareService::class.simpleName!!).error(e.toString())
         }
 
     }

@@ -4,8 +4,11 @@ import android.os.Build
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import app.filemanager.data.main.DeviceType
+import app.filemanager.service.data.ConnectType
+import app.filemanager.service.data.SocketDevice
 import com.russhwolf.settings.Settings
 import com.russhwolf.settings.SharedPreferencesSettings
+import java.net.InetAddress
 import java.security.Key
 import java.util.*
 import javax.crypto.Cipher
@@ -49,3 +52,14 @@ actual fun createSettings(): Settings {
 }
 
 actual val PlatformType: DeviceType = DeviceType.Android
+
+actual fun getSocketDevice(): SocketDevice {
+    val settings = createSettings()
+    return SocketDevice(
+        id = settings.getString("deviceId", ""),
+        name = settings.getString("deviceName", ""),
+        host = InetAddress.getLocalHost().hostAddress,
+        type = PlatformType,
+        connectType = ConnectType.UnConnect
+    )
+}

@@ -97,7 +97,13 @@ fun FileCard(
                 }
             }
         },
-        trailingContent = { FileCardMenu(file, onRemove) },
+        trailingContent = {
+            if (file.protocol == FileProtocol.Share) {
+                FileShareMenu(file)
+                return@ListItem
+            }
+            FileCardMenu(file, onRemove)
+        },
         modifier = Modifier.clickable(onClick = onClick)
     )
 }
@@ -247,6 +253,19 @@ fun FileCardMenu(
             fileState.updateViewFile(true)
         },
     )
+}
+
+@Composable
+fun FileShareMenu(
+    file: FileSimpleInfo,
+) {
+    val fileState = koinInject<FileState>()
+    IconButton({
+        fileState.checkedFileSimpleInfo.add(file)
+        fileState.copyFile()
+    }) {
+        Icon(Icons.Outlined.FileCopy, null)
+    }
 }
 
 @Composable

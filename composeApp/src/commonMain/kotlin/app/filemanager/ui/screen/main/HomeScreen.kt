@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.StatusEnum
+import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.*
@@ -49,6 +50,7 @@ object HomeScreen : Screen {
         val fileState = koinInject<FileState>()
         val path by fileState.path.collectAsState()
         val isCreateFolder by fileState.isCreateFolder.collectAsState()
+        val deskType by fileState.deskType.collectAsState()
 
         val fileOperationState = koinInject<FileOperationState>()
         val isWarningOperationDialog by fileOperationState.isWarningOperationDialog.collectAsState()
@@ -61,7 +63,7 @@ object HomeScreen : Screen {
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = { HomeBottomBar(snackbarHostState) },
             floatingActionButton = {
-                if (fileState.checkedFileSimpleInfo.isEmpty()) {
+                if (fileState.checkedFileSimpleInfo.isEmpty() && deskType is Device) {
                     ExtendedFloatingActionButton({ fileState.updateCreateFolder(true) }) {
                         Icon(Icons.Filled.Add, null)
                         Spacer(Modifier.width(8.dp))
@@ -188,7 +190,7 @@ object HomeScreen : Screen {
         val path by fileState.path.collectAsState()
         val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
         val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
-
+        val deskType by fileState.deskType.collectAsState()
 
         val fileFilterState = koinInject<FileFilterState>()
         val updateKey by fileFilterState.updateKey.collectAsState()
@@ -246,46 +248,50 @@ object HomeScreen : Screen {
 
                     Spacer(Modifier.weight(1f))
 
-                    FileBottomAppMenu(
-                        onRemove = { paths ->
-                            scope.launch {
-                                when (snackbarHostState.showSnackbar(
-                                    message = "确认要删除选择文件或文件夹吗？",
-                                    actionLabel = "删除",
-                                    withDismissAction = true,
-                                    duration = SnackbarDuration.Short
-                                )) {
-                                    SnackbarResult.Dismissed -> {}
-                                    SnackbarResult.ActionPerformed -> {
-                                        scope.launch {
-                                            for (it in paths) {
-                                                fileState.deleteFile(
-                                                    Task(
-                                                        taskType = TaskType.Delete,
-                                                        status = StatusEnum.LOADING,
-                                                        values = mutableMapOf("path" to it)
-                                                    ),
-                                                    it
-                                                )
+                    if (deskType is Device) {
+                        FileBottomAppMenu(
+                            onRemove = { paths ->
+                                scope.launch {
+                                    when (snackbarHostState.showSnackbar(
+                                        message = "确认要删除选择文件或文件夹吗？",
+                                        actionLabel = "删除",
+                                        withDismissAction = true,
+                                        duration = SnackbarDuration.Short
+                                    )) {
+                                        SnackbarResult.Dismissed -> {}
+                                        SnackbarResult.ActionPerformed -> {
+                                            scope.launch {
+                                                for (it in paths) {
+                                                    fileState.deleteFile(
+                                                        Task(
+                                                            taskType = TaskType.Delete,
+                                                            status = StatusEnum.LOADING,
+                                                            values = mutableMapOf("path" to it)
+                                                        ),
+                                                        it
+                                                    )
+                                                }
+                                                fileState.updateFileAndFolder()
+                                                fileFilterState.updateFilerKey()
                                             }
-                                            fileState.updateFileAndFolder()
-                                            fileFilterState.updateFilerKey()
                                         }
                                     }
                                 }
                             }
-                        }
-                    )
+                        )
+                    }
 
                     Spacer(Modifier.width(8.dp))
                 },
                 floatingActionButton = {
-                    FloatingActionButton(
-                        onClick = { fileState.updateCreateFolder(true) },
-                        containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
-                        elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
-                    ) {
-                        Icon(Icons.Filled.Add, null)
+                    if (deskType is Device) {
+                        FloatingActionButton(
+                            onClick = { fileState.updateCreateFolder(true) },
+                            containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
+                            elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
+                        ) {
+                            Icon(Icons.Filled.Add, null)
+                        }
                     }
                 }
             )

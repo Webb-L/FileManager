@@ -8,6 +8,7 @@ import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.Share
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.extensions.getSubnetIps
+import app.filemanager.getSocketDevice
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager
@@ -20,14 +21,14 @@ import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
+import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -160,7 +161,38 @@ class DeviceState : KoinComponent {
 
     // Map<设备id, Pair<设备链接类型, 结束倒计时>>
     val shareRequest = mutableStateMapOf<String, Pair<DeviceConnectType, Long>>()
+
+    // 允许远程设备连接分享服务
+    val allowDeviceShareConnection = mutableSetOf<String>()
+    @OptIn(InternalAPI::class, ExperimentalSerializationApi::class)
     fun share(device: SocketDevice) {
+        mainScope.launch {
+            try {
+                // 发起 POST 请求
+                val response: HttpResponse = withContext(Dispatchers.Default) {
+                    HttpClient().post("http://${device.host}:${device.port}/share") {
+                        contentType(ContentType.Application.OctetStream)
+                        this.body = ProtoBuf.encodeToByteArray(getSocketDevice())
+                    }
+                }
+
+                // TODO 请求成功
+                if (response.status == HttpStatusCode.OK) {
+                    allowDeviceShareConnection.add(device.id)
+                }
+                println("Response status: ${response.status}")
+                println("Response body: ${response.bodyAsText()}")
+            } catch (e: Exception) {
+                println("Request failed: ${e.message}")
+            } finally {
+                // 关闭 HttpClient
+                client.close()
+            }
+        }
+    }
+
+
+    fun connectShare(device: SocketDevice) {
         mainScope.launch {
             try {
                 val rpcClientManager = RpcShareClientManager()

@@ -11,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.main.DeviceConnectType
+import app.filemanager.data.main.DeviceConnectType.APPROVED
+import app.filemanager.data.main.DeviceConnectType.AUTO_CONNECT
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
 import app.filemanager.ui.state.main.DeviceState
@@ -51,12 +53,24 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
         if (minutes == 0) "${seconds}秒" else "${minutes}分${seconds}秒"
     }
 
+    fun updateShareRequest(deviceType: DeviceConnectType) {
+        println(socketDevice)
+        // TODO 保存到数据库
+        when (deviceType) {
+            AUTO_CONNECT, APPROVED -> {
+                deviceState.connectShare(socketDevice)
+            }
+            else -> {}
+        }
+        deviceState.shareRequest.remove(socketDevice.id)
+        expanded = false
+    }
+
     MaterialBanner(
         message = "${socketDevice.name} 请求向您发送文件或文件夹\n${timeText} 后将会自动拒绝。",
         actionLabel = "同意",
         onActionClick = {
-            deviceState.shareRequest[socketDevice.id] =
-                Pair(DeviceConnectType.APPROVED, deviceState.shareRequest[socketDevice.id]!!.second)
+            updateShareRequest(APPROVED)
         },
         menu = {
             Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
@@ -75,31 +89,19 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
                     DropdownMenuItem(
                         text = { Text("自动同意") },
                         onClick = {
-                            deviceState.connectionRequest[socketDevice.id] = Pair(
-                                DeviceConnectType.AUTO_CONNECT,
-                                deviceState.connectionRequest[socketDevice.id]!!.second
-                            )
-                            expanded = false
+                            updateShareRequest(AUTO_CONNECT)
                         }
                     )
                     DropdownMenuItem(
                         text = { Text("自动拒绝") },
                         onClick = {
-                            deviceState.connectionRequest[socketDevice.id] = Pair(
-                                DeviceConnectType.PERMANENTLY_BANNED,
-                                deviceState.connectionRequest[socketDevice.id]!!.second
-                            )
-                            expanded = false
+                            updateShareRequest(DeviceConnectType.PERMANENTLY_BANNED)
                         }
                     )
                     DropdownMenuItem(
                         text = { Text("拒绝") },
                         onClick = {
-                            deviceState.connectionRequest[socketDevice.id] = Pair(
-                                DeviceConnectType.REJECTED,
-                                deviceState.connectionRequest[socketDevice.id]!!.second
-                            )
-                            expanded = false
+                            updateShareRequest(DeviceConnectType.REJECTED)
                         }
                     )
                 }
@@ -150,7 +152,7 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
         actionLabel = "同意",
         onActionClick = {
             deviceState.connectionRequest[socketDevice.id] =
-                Pair(DeviceConnectType.APPROVED, deviceState.connectionRequest[socketDevice.id]!!.second)
+                Pair(APPROVED, deviceState.connectionRequest[socketDevice.id]!!.second)
         },
         menu = {
             Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
@@ -170,7 +172,7 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
                         text = { Text("自动同意") },
                         onClick = {
                             deviceState.connectionRequest[socketDevice.id] = Pair(
-                                DeviceConnectType.AUTO_CONNECT,
+                                AUTO_CONNECT,
                                 deviceState.connectionRequest[socketDevice.id]!!.second
                             )
                             expanded = false

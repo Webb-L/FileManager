@@ -2,41 +2,32 @@ package app.filemanager.service.rpc
 
 import app.filemanager.PlatformType
 import app.filemanager.createSettings
-import app.filemanager.data.file.FileSimpleInfo
-import app.filemanager.data.main.Device
-import app.filemanager.data.main.DeviceType
+import app.filemanager.data.main.DeviceConnectType.WAITING
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
-import app.filemanager.ui.state.file.FileShareState
-import app.filemanager.utils.FileUtils
-import app.filemanager.utils.NaturalOrderComparator
+import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.PathUtils
-import freemarker.cache.ClassTemplateLoader
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
-import io.ktor.server.freemarker.*
-import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.*
-import io.ktor.server.plugins.calllogging.*
-import io.ktor.server.plugins.compression.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.datetime.Clock
 import kotlinx.rpc.krpc.ktor.server.Krpc
 import kotlinx.rpc.krpc.ktor.server.rpc
 import kotlinx.rpc.krpc.serialization.protobuf.protobuf
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
 import org.koin.java.KoinJavaComponent.inject
-import org.slf4j.event.Level
-import ua_parser.Parser
-import java.io.File
-import java.io.RandomAccessFile
-import java.net.*
+import java.net.Inet4Address
+import java.net.Inet6Address
+import java.net.InetAddress
+import java.net.NetworkInterface
 
 @OptIn(ExperimentalSerializationApi::class)
 actual suspend fun startRpcServer() {
@@ -60,6 +51,30 @@ actual suspend fun startRpcServer() {
                 )
 
                 call.respondBytes { ProtoBuf.encodeToByteArray(socketDevice) }
+            }
+
+            // 对方想发送文件给你
+            post("/share") {
+                try {
+                    // 接收请求体并反序列化为 SocketDevice 对象
+                    val socketDevice = ProtoBuf.decodeFromByteArray<SocketDevice>(call.receive<ByteArray>())
+
+                    // TODO 检查设备是否存在列表没有就添加
+                    // 打印接收到的数据
+                    println("Received SocketDevice: $socketDevice")
+
+                    val deviceState: DeviceState by inject(DeviceState::class.java)
+
+                    deviceState.shareRequest[socketDevice.id] = Pair(WAITING, Clock.System.now().toEpochMilliseconds())
+                    // 返回成功响应
+                    call.respond(HttpStatusCode.OK)
+                } catch (e: ContentTransformationException) {
+                    // 捕获反序列化失败异常（例如请求体格式错误）
+                    call.respond(HttpStatusCode.BadRequest, "Invalid request body: ${e.message}")
+                } catch (e: Exception) {
+                    // 捕获其他异常
+                    call.respond(HttpStatusCode.InternalServerError, "An error occurred: ${e.message}")
+                }
             }
 
             rpc {
