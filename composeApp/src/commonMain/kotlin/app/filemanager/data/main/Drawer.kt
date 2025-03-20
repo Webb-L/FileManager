@@ -262,9 +262,21 @@ data class Share(
 
     suspend fun getFileList(path: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
         try {
-            rpcClientManager.shareHandle.getList(path, id, replyCallback)
+            rpcClientManager.getList(path, id, replyCallback)
         } catch (e: Exception) {
             println("Error in sharing $e")
+            handleError()
+        }
+    }
+
+    suspend fun copyFile(
+        srcFileSimpleInfo: FileSimpleInfo,
+        destFileSimpleInfo: FileSimpleInfo,
+        replyCallback: (Result<Boolean>) -> Unit
+    ) {
+        try {
+            rpcClientManager.copyFile(srcFileSimpleInfo, destFileSimpleInfo, replyCallback)
+        } catch (e: Exception) {
             handleError()
         }
     }

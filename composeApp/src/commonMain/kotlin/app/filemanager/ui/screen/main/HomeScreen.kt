@@ -11,8 +11,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.StatusEnum
+import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceConnectType
+import app.filemanager.data.main.Local
+import app.filemanager.data.main.Share
 import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.*
 import app.filemanager.ui.screen.file.FileScreen
@@ -191,24 +194,91 @@ object HomeScreen : Screen {
         val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
         val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
         val deskType by fileState.deskType.collectAsState()
+        val isShareType = deskType is Share
 
         val fileFilterState = koinInject<FileFilterState>()
         val updateKey by fileFilterState.updateKey.collectAsState()
 
         if (fileState.checkedFileSimpleInfo.isNotEmpty()) {
+            // 用户选择了分享文件，但是没有粘贴文件。
+            if (deskType is Local && fileState.checkedFileSimpleInfo.find { it.protocol == FileProtocol.Share } != null) {
+                BottomAppBar(
+                    actions = {
+                        IconButton({
+                            if (isPasteCopyFile) fileState.cancelCopyFile()
+                            if (isPasteMoveFile) fileState.cancelMoveFile()
+                            fileState.checkedFileSimpleInfo.clear()
+                        }) {
+                            Icon(Icons.Filled.Close, null)
+                        }
+                    },
+                    floatingActionButton = {
+                        FloatingActionButton(
+                            onClick = {
+                                scope.launch {
+                                    fileState.pasteCopyFile(path, fileOperationState)
+                                }
+                            },
+                            containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
+                            elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
+                        ) {
+                            Icon(Icons.Filled.ContentPaste, null)
+                        }
+                    }
+                )
+                return
+            }
+
+            val files = fileFilterState.filter(fileState.fileAndFolder, updateKey)
+            val isCheckedAll =
+                fileState.checkedFileSimpleInfo.size == files.count {
+                    fileState.checkedFileSimpleInfo.contains(it)
+                } && fileState.checkedFileSimpleInfo.size == files.size
+            // 用户选择了分享文件
+            if (isShareType) {
+                BottomAppBar(
+                    actions = {
+                        Box(
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .toggleable(
+                                    value = isCheckedAll,
+                                    onValueChange = {
+                                        fileState.checkedFileSimpleInfo.clear()
+                                        if (!isCheckedAll) {
+                                            fileState.checkedFileSimpleInfo.addAll(files)
+                                        }
+                                    },
+                                    role = Role.Checkbox,
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Checkbox(isCheckedAll, onCheckedChange = null)
+                        }
+
+                        IconButton({
+                            if (isPasteCopyFile) fileState.cancelCopyFile()
+                            if (isPasteMoveFile) fileState.cancelMoveFile()
+                            fileState.checkedFileSimpleInfo.clear()
+                        }) {
+                            Icon(Icons.Filled.Close, null)
+                        }
+                    },
+                )
+                return
+            }
+
+
             BottomAppBar(
                 actions = {
-                    val files = fileFilterState.filter(fileState.fileAndFolder, updateKey)
-                    val isCheckedAll =
-                        fileState.checkedFileSimpleInfo.size == files.count {
-                            fileState.checkedFileSimpleInfo.contains(it)
-                        } && fileState.checkedFileSimpleInfo.size == files.size
                     Box(
                         modifier = Modifier
                             .padding(16.dp)
                             .toggleable(
                                 value = isCheckedAll,
                                 onValueChange = {
+                                    if (isPasteCopyFile) fileState.cancelCopyFile()
+                                    if (isPasteMoveFile) fileState.cancelMoveFile()
                                     fileState.checkedFileSimpleInfo.clear()
                                     if (!isCheckedAll) {
                                         fileState.checkedFileSimpleInfo.addAll(files)
@@ -248,50 +318,46 @@ object HomeScreen : Screen {
 
                     Spacer(Modifier.weight(1f))
 
-                    if (deskType is Device) {
-                        FileBottomAppMenu(
-                            onRemove = { paths ->
-                                scope.launch {
-                                    when (snackbarHostState.showSnackbar(
-                                        message = "确认要删除选择文件或文件夹吗？",
-                                        actionLabel = "删除",
-                                        withDismissAction = true,
-                                        duration = SnackbarDuration.Short
-                                    )) {
-                                        SnackbarResult.Dismissed -> {}
-                                        SnackbarResult.ActionPerformed -> {
-                                            scope.launch {
-                                                for (it in paths) {
-                                                    fileState.deleteFile(
-                                                        Task(
-                                                            taskType = TaskType.Delete,
-                                                            status = StatusEnum.LOADING,
-                                                            values = mutableMapOf("path" to it)
-                                                        ),
-                                                        it
-                                                    )
-                                                }
-                                                fileState.updateFileAndFolder()
-                                                fileFilterState.updateFilerKey()
+                    FileBottomAppMenu(
+                        onRemove = { paths ->
+                            scope.launch {
+                                when (snackbarHostState.showSnackbar(
+                                    message = "确认要删除选择文件或文件夹吗？",
+                                    actionLabel = "删除",
+                                    withDismissAction = true,
+                                    duration = SnackbarDuration.Short
+                                )) {
+                                    SnackbarResult.Dismissed -> {}
+                                    SnackbarResult.ActionPerformed -> {
+                                        scope.launch {
+                                            for (it in paths) {
+                                                fileState.deleteFile(
+                                                    Task(
+                                                        taskType = TaskType.Delete,
+                                                        status = StatusEnum.LOADING,
+                                                        values = mutableMapOf("path" to it)
+                                                    ),
+                                                    it
+                                                )
                                             }
+                                            fileState.updateFileAndFolder()
+                                            fileFilterState.updateFilerKey()
                                         }
                                     }
                                 }
                             }
-                        )
-                    }
+                        }
+                    )
 
                     Spacer(Modifier.width(8.dp))
                 },
                 floatingActionButton = {
-                    if (deskType is Device) {
-                        FloatingActionButton(
-                            onClick = { fileState.updateCreateFolder(true) },
-                            containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
-                            elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
-                        ) {
-                            Icon(Icons.Filled.Add, null)
-                        }
+                    FloatingActionButton(
+                        onClick = { fileState.updateCreateFolder(true) },
+                        containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
+                        elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation()
+                    ) {
+                        Icon(Icons.Filled.Add, null)
                     }
                 }
             )

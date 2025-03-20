@@ -58,11 +58,11 @@ class FileState : KoinComponent {
 
     private val _deskType: MutableStateFlow<DiskBase> = MutableStateFlow(Local())
     val deskType: StateFlow<DiskBase> = _deskType
-    fun updateDesk(protocol: FileProtocol, type: DiskBase) {
+    fun updateDesk(protocol: FileProtocol, type: DiskBase, isRefresh: Boolean = true) {
         if (_deskType.value == type) return
+        _deskType.value = type
+        if (!isRefresh) return
         MainScope().launch {
-            _deskType.value = type
-
             drawerState.getBookmarks(type)
             val rootPaths = getRootPaths()
             if (rootPaths.isNotEmpty()) {
@@ -399,6 +399,7 @@ class FileState : KoinComponent {
         }
 
         var isReturn = false
+        var result: Result<Boolean> = Result.success(false)
         if (srcFileSimpleInfo.protocol == FileProtocol.Device || destFileSimpleInfo.protocol == FileProtocol.Device) {
             var device: Device? = null
             // Local to Device
@@ -417,8 +418,23 @@ class FileState : KoinComponent {
                 return Result.failure(EmptyDataException())
             }
 
-            var result: Result<Boolean> = Result.success(false)
             device.copyFile(srcFileSimpleInfo, destFileSimpleInfo) {
+                result = it
+                isReturn = true
+            }
+
+            while (!isReturn) {
+                delay(100L)
+            }
+            return result
+        }
+
+        if (srcFileSimpleInfo.protocol == FileProtocol.Share && destFileSimpleInfo.protocol == FileProtocol.Local) {
+            val share: Share =
+                deviceState.shares.firstOrNull { it.id == srcFileSimpleInfo.protocolId } ?: return Result.failure(
+                    EmptyDataException()
+                )
+            share.copyFile(srcFileSimpleInfo, destFileSimpleInfo) {
                 result = it
                 isReturn = true
             }

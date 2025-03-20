@@ -22,11 +22,8 @@ import androidx.compose.ui.unit.dp
 import app.filemanager.data.StatusEnum
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.toIcon
-import app.filemanager.data.main.Device
-import app.filemanager.data.main.DeviceCategory
-import app.filemanager.data.main.DeviceConnectType
+import app.filemanager.data.main.*
 import app.filemanager.data.main.DeviceType.*
-import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.service.data.ConnectType.*
 import app.filemanager.service.data.SocketDevice
@@ -362,6 +359,7 @@ private fun AppDrawerBookmark() {
                 selected = !isFavorite && path == bookmark.path,
                 onClick = {
                     scope.launch {
+                        fileState.updateDesk(FileProtocol.Local, Local())
                         fileState.updatePath(bookmark.path)
                     }
                     if (mainState.windowSize == WindowSizeClass.Compact) {
