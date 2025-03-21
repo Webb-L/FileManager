@@ -84,7 +84,7 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
                 onRemove = { deletePath ->
                     scope.launch {
                         val showSnackbar = snackbarHostState.showSnackbar(
-                            message = deletePath,
+                            message = it.name,
                             actionLabel = "删除",
                             withDismissAction = true,
                             duration = SnackbarDuration.Short
