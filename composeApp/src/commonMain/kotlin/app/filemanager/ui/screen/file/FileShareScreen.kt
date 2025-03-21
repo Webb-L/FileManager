@@ -1,6 +1,12 @@
 package app.filemanager.ui.screen.file
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,9 +24,12 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileSimpleInfo
@@ -35,6 +44,8 @@ import app.filemanager.service.data.ConnectType.*
 import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
 import app.filemanager.ui.components.FileIcon
+import app.filemanager.ui.components.IpsButton
+import app.filemanager.ui.screen.device.DeviceSettingsScreen
 import app.filemanager.ui.state.file.FileShareLikeCategory.*
 import app.filemanager.ui.state.file.FileShareState
 import app.filemanager.ui.state.file.FileShareStatus
@@ -62,7 +73,6 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
         val scope = rememberCoroutineScope()
 
         val mainState = koinInject<MainState>()
-
         val deviceState = koinInject<DeviceState>()
 
         val fileShareState = koinInject<FileShareState>()
@@ -82,29 +92,47 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
 
         val socketDevices = deviceState.socketDevices.sortedBy { it.client != null }
 
-        var category by remember { mutableStateOf(WAITING) }
+        /* 链接方式分享 */
         var isExpandLinkShare by remember { mutableStateOf(true) }
-        var isHideFile by remember { mutableStateOf(true) }
-        var isExpandFileList by remember { mutableStateOf(true) }
-        var selectFileType by remember { mutableStateOf(0) }
-        val password by fileShareState.connectPassword.collectAsState()
-
-        var openQrCodeDialog by remember { mutableStateOf<Pair<String, ImageRequest>?>(null) }
-
-        val httpShareFileServer = HttpShareFileServer.getInstance(fileShareState)
-
-        var curLinkDevice by remember {
-            mutableStateOf<Device?>(null)
-        }
 
         val sheetState = rememberModalBottomSheetState()
         var showBottomSheet by remember { mutableStateOf(false) }
+        // 全部、反选
+        var selectFileType by remember { mutableStateOf(0) }
+        // 是否允许访问隐藏文件和文件夹
+        var isHideFile by remember { mutableStateOf(true) }
 
+        // 等待、允许、拒绝
+        var category by remember { mutableStateOf(WAITING) }
         val tooltipState = rememberTooltipState(isPersistent = true)
+
+        // 服务卡片
+        val password by fileShareState.connectPassword.collectAsState()
+        var openQrCodeDialog by remember { mutableStateOf<Pair<String, ImageRequest>?>(null) }
+        val httpShareFileServer = HttpShareFileServer.getInstance(fileShareState)
+        var curLinkDevice by remember { mutableStateOf<Device?>(null) }
+
+
+        /* 分享到其他设备 */
+        val loadingDevices by deviceState.loadingDevices.collectAsState()
+
+        val infiniteTransition = rememberInfiniteTransition()
+        val rotation by infiniteTransition.animateFloat(
+            initialValue = 360f,
+            targetValue = if (loadingDevices) 0f else 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(
+                    durationMillis = 1500,
+                    easing = LinearEasing
+                ),
+                repeatMode = RepeatMode.Restart
+            )
+        )
+
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("分享文件") },
+                    title = { Text("分享") },
                     navigationIcon = {
                         IconButton({
                             if (httpShareFileServer.isRunning()) {
@@ -301,7 +329,34 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                             }
                             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                             Spacer(Modifier.height(16.dp))
-                            AppDrawerHeader(title = "分享到其他设备", actions = {})
+                            AppDrawerHeader(title = "分享到其他设备", actions = {
+                                Row {
+                                    Icon(
+                                        Icons.Default.Add,
+                                        null,
+                                        Modifier.clip(RoundedCornerShape(25.dp)).clickable {
+                                            deviceState.updateDeviceAdd(true)
+                                        }
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Icon(
+                                        Icons.Default.Sync,
+                                        null,
+                                        Modifier
+                                            .clip(RoundedCornerShape(25.dp))
+                                            .graphicsLayer { rotationZ = rotation }
+                                            .alpha(if (loadingDevices) 0.5f else 1f)
+                                            .clickable {
+                                                if (loadingDevices) return@clickable
+                                                scope.launch {
+                                                    deviceState.scanner(getAllIPAddresses(type = SocketClientIPEnum.IPV4_UP))
+                                                }
+                                            }
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    IpsButton()
+                                }
+                            })
                         }
                     }
                     items(socketDevices) { device ->
@@ -531,7 +586,6 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                     }
                 }
             }
-
 
             if (openQrCodeDialog != null) {
                 AlertDialog(
