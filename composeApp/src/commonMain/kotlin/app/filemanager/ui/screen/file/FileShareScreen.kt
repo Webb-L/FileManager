@@ -1,12 +1,7 @@
 package app.filemanager.ui.screen.file
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,7 +19,6 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -45,7 +39,6 @@ import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
 import app.filemanager.ui.components.FileIcon
 import app.filemanager.ui.components.IpsButton
-import app.filemanager.ui.screen.device.DeviceSettingsScreen
 import app.filemanager.ui.state.file.FileShareLikeCategory.*
 import app.filemanager.ui.state.file.FileShareState
 import app.filemanager.ui.state.file.FileShareStatus
@@ -362,13 +355,30 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                     items(socketDevices) { device ->
                         ListItem(
                             modifier = Modifier.clickable {
-                                fileShareState.sendFile[device.id] = FileShareStatus.WAITING
-                                deviceState.share(device)
-                                fileShareState.shareToDevices[device.id] =
-                                    Pair(
-                                        isHideFile,
-                                        fileShareState.checkedFiles.toList()
-                                    )
+                                when (fileShareState.sendFile[device.id]) {
+                                    FileShareStatus.SENDING -> {}
+                                    FileShareStatus.REJECTED -> {}
+                                    FileShareStatus.ERROR -> {}
+                                    FileShareStatus.COMPLETED -> {}
+                                    FileShareStatus.WAITING -> {
+//                                        fileShareState.sendFile[device.id] = FileShareStatus.WAITING
+                                        deviceState.share(device)
+//                                        fileShareState.shareToDevices[device.id] =
+//                                            Pair(
+//                                                isHideFile,
+//                                                fileShareState.checkedFiles.toList()
+//                                            )
+                                    }
+                                    null -> {
+                                        fileShareState.sendFile[device.id] = FileShareStatus.WAITING
+                                        deviceState.share(device)
+                                        fileShareState.shareToDevices[device.id] =
+                                            Pair(
+                                                isHideFile,
+                                                fileShareState.checkedFiles.toList()
+                                            )
+                                    }
+                                }
                             },
                             overlineContent = {
                                 when (device.connectType) {

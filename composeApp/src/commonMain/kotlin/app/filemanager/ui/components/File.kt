@@ -261,6 +261,8 @@ fun FileShareMenu(
 ) {
     val fileState = koinInject<FileState>()
     IconButton({
+        // 已经选择后不能再选择。
+        if (fileState.checkedFileSimpleInfo.contains(file)) return@IconButton
         fileState.checkedFileSimpleInfo.add(file)
         fileState.copyFile()
     }) {

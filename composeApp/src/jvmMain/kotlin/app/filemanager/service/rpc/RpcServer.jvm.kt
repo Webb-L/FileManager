@@ -59,11 +59,13 @@ actual suspend fun startRpcServer() {
                     // 接收请求体并反序列化为 SocketDevice 对象
                     val socketDevice = ProtoBuf.decodeFromByteArray<SocketDevice>(call.receive<ByteArray>())
 
-                    // TODO 检查设备是否存在列表没有就添加
-                    // 打印接收到的数据
-                    println("Received SocketDevice: $socketDevice")
-
                     val deviceState: DeviceState by inject(DeviceState::class.java)
+
+                    // 已经连接了，禁止再次连接。
+                    if (deviceState.shares.find { it.id == socketDevice.id } != null) {
+                        call.respond(HttpStatusCode.Conflict)
+                        return@post
+                    }
 
                     deviceState.shareRequest[socketDevice.id] = Pair(WAITING, Clock.System.now().toEpochMilliseconds())
                     // 返回成功响应

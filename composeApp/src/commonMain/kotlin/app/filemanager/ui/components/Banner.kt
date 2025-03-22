@@ -34,7 +34,7 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
 
 
     LaunchedEffect(Unit) {
-        while (timeRemaining > 0) {
+        while (timeRemaining > 0 && deviceState.shareRequest[socketDevice.id] != null) {
             delay(1000)
             timeRemaining =
                 (CONNECT_TIMEOUT + ((deviceState.shareRequest[socketDevice.id]!!.second - Clock.System.now()
@@ -60,6 +60,7 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
             AUTO_CONNECT, APPROVED -> {
                 deviceState.connectShare(socketDevice)
             }
+
             else -> {}
         }
         deviceState.shareRequest.remove(socketDevice.id)
@@ -128,7 +129,7 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
 
 
     LaunchedEffect(Unit) {
-        while (timeRemaining > 0) {
+        while (timeRemaining > 0 && deviceState.connectionRequest[socketDevice.id] != null) {
             delay(1000)
             timeRemaining =
                 (CONNECT_TIMEOUT + ((deviceState.connectionRequest[socketDevice.id]!!.second - Clock.System.now()

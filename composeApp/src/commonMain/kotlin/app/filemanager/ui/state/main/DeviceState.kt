@@ -14,6 +14,8 @@ import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager
 import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
 import app.filemanager.service.rpc.RpcShareClientManager
+import app.filemanager.ui.state.file.FileShareState
+import app.filemanager.ui.state.file.FileShareStatus
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import io.ktor.client.*
@@ -36,6 +38,7 @@ import org.koin.core.component.inject
 class DeviceState : KoinComponent {
     private val database by inject<FileManagerDatabase>()
     private val mainState by inject<MainState>()
+    private val fileShareState = inject<FileShareState>()
     private val mainScope = MainScope()
     private val client = HttpClient {
         expectSuccess = false
@@ -164,6 +167,7 @@ class DeviceState : KoinComponent {
 
     // 允许远程设备连接分享服务
     val allowDeviceShareConnection = mutableSetOf<String>()
+
     @OptIn(InternalAPI::class, ExperimentalSerializationApi::class)
     fun share(device: SocketDevice) {
         mainScope.launch {
@@ -176,14 +180,19 @@ class DeviceState : KoinComponent {
                     }
                 }
 
-                // TODO 请求成功
+                println("Response status: ${response.status}")
+                println("Response body: ${response.bodyAsText()}")
+                // 等待对方同意
                 if (response.status == HttpStatusCode.OK) {
                     allowDeviceShareConnection.add(device.id)
                 }
-                println("Response status: ${response.status}")
-                println("Response body: ${response.bodyAsText()}")
+                // 已经连接
+                if (response.status == HttpStatusCode.Conflict) {
+                    fileShareState.value.sendFile[device.id] = FileShareStatus.COMPLETED
+                }
             } catch (e: Exception) {
                 println("Request failed: ${e.message}")
+                fileShareState.value.sendFile[device.id] = FileShareStatus.ERROR
             } finally {
                 // 关闭 HttpClient
                 client.close()

@@ -98,6 +98,8 @@ fun AppDrawer() {
             item { AppDrawerBookmark() }
             item { HorizontalDivider() }
             item { AppDrawerDevice() }
+            item { HorizontalDivider() }
+            item { AppDrawerShare() }
 // TODO 3.0版本
 //            item { HorizontalDivider() }
 //            item {
@@ -546,6 +548,63 @@ private fun AppDrawerDevice() {
             socketDevice!!,
             onCancel = { socketDevice = null },
         )
+    }
+}
+
+@Composable
+private fun AppDrawerShare() {
+    val deviceState = koinInject<DeviceState>()
+    if (deviceState.shares.isEmpty()) return
+
+    val fileState = koinInject<FileState>()
+
+    val drawerState = koinInject<DrawerState>()
+    val isExpandShare by drawerState.isExpandShare.collectAsState()
+
+    val scope = rememberCoroutineScope()
+
+    AppDrawerItem(
+        "分享",
+        actions = {
+            Icon(
+                if (isExpandShare) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                null,
+                Modifier.clip(RoundedCornerShape(25.dp))
+                    .clickable { drawerState.updateExpandShare(!isExpandShare) }
+            )
+        }
+    ) {
+        if (!isExpandShare) return@AppDrawerItem
+        for ((index, device) in deviceState.shares.withIndex()) {
+            NavigationDrawerItem(
+                icon = {
+                    when (device.type) {
+                        Android -> Icon(Icons.Default.PhoneAndroid, null)
+                        IOS -> Icon(Icons.Default.PhoneIphone, null)
+                        JVM -> Icon(Icons.Default.Devices, null)
+                        JS -> Icon(Icons.Default.Javascript, null)
+                    }
+                },
+                label = { Text(device.name) },
+                selected = false,
+                badge = {
+                    Icon(
+                        Icons.Default.Close,
+                        "取消连接",
+                        Modifier
+                            .clip(RoundedCornerShape(25.dp))
+                            .clickable {
+                            }
+                    )
+                },
+                onClick = {
+                    deviceState.shares.firstOrNull { it.id == device.id }?.let {
+                        fileState.updateDesk(FileProtocol.Share, it)
+                    }
+                },
+                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+            )
+        }
     }
 }
 

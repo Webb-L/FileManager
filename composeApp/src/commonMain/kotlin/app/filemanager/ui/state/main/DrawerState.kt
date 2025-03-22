@@ -28,6 +28,12 @@ class DrawerState() {
         _isExpandDevice.value = value
     }
 
+    private val _isExpandShare: MutableStateFlow<Boolean> = MutableStateFlow(true)
+    val isExpandShare: StateFlow<Boolean> = _isExpandShare
+    fun updateExpandShare(value: Boolean) {
+        _isExpandShare.value = value
+    }
+
     private val _isExpandNetwork: MutableStateFlow<Boolean> = MutableStateFlow(true)
     val isExpandNetwork: StateFlow<Boolean> = _isExpandNetwork
     fun updateExpandNetwork(value: Boolean) {
