@@ -114,45 +114,19 @@ class RpcShareClientManager : KoinComponent {
         var failureCount = 0
 
         // 只复制一个文件
-//        if (!srcFileSimpleInfo.isDirectory) {
-//            fileHandle.writeBytes(
-//                remoteId,
-//                srcFileSimpleInfo,
-//                destFileSimpleInfo,
-//                srcFileSimpleInfo
-//            ) {
-//                replyCallback(it)
-//            }
-//            return
-//        }
+        if (!srcFileSimpleInfo.isDirectory) {
+            writeBytes(
+                srcFileSimpleInfo,
+                destFileSimpleInfo,
+                srcFileSimpleInfo
+            ) {
+                replyCallback(it)
+            }
+            return
+        }
 
         val list = mutableListOf<FileSimpleInfo>()
 
-        // 获取远程所有的文件和文件夹
-//        var fileService: FileService = rpc.fileService
-//        val socketDevice =
-//            deviceState.shares.firstOrNull { it.id == destFileSimpleInfo.protocolId }
-//        if (socketDevice == null) {
-//            replyCallback(Result.failure(Exception("设备离线")))
-//            return
-//        }
-//        fileService = socketDevice.rpcClientManager
-
-        // 只复制文件或文件夹
-//        if (srcFileSimpleInfo.size == 0L) {
-//            val result = if (srcFileSimpleInfo.isDirectory)
-//                fileService.createFolder(rpc.token, listOf(destFileSimpleInfo.path))
-//            else
-//                fileService.createFile(rpc.token, listOf(destFileSimpleInfo.path))
-//
-//            if (result.isSuccess) {
-//                replyCallback(Result.success(result.value?.first()?.value == true))
-//            } else {
-//                replyCallback(Result.failure(result.deSerializable()))
-//            }
-//            return
-//        }
-//
         streamScoped {
             shareService.traversePath(token, srcFileSimpleInfo.path).collect { fileAndFolder ->
                 if (fileAndFolder.isSuccess) {
