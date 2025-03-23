@@ -121,6 +121,7 @@ kotlin {
             implementation(libs.ktor.server.core)
             implementation(libs.ktor.server.netty)
             implementation(libs.ktor.server.cors)
+            implementation(libs.ktor.server.sse)
             implementation(libs.ktor.server.websockets)
             implementation(libs.ktor.server.host.common)
             implementation(libs.ktor.server.freemarker)
@@ -197,6 +198,11 @@ libres {
 tasks.getByPath("jvmProcessResources").dependsOn("libresGenerateResources")
 tasks.getByPath("jvmSourcesJar").dependsOn("libresGenerateResources")
 tasks.getByPath("jsProcessResources").dependsOn("libresGenerateResources")
+dependencies {
+    implementation("io.ktor:ktor-server-core:3.1.1")
+    implementation("io.ktor:ktor-server-sse:3.1.1")
+    implementation("io.ktor:ktor-server-core:3.1.1")
+}
 
 buildConfig {
     // BuildConfig configuration here.

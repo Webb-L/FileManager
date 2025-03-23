@@ -401,25 +401,15 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                             },
                             supportingContent = {
                                 when (fileShareState.sendFile[device.id]) {
-                                    FileShareStatus.SENDING -> {
-                                        Text("发送中...")
-                                    }
+                                    FileShareStatus.SENDING -> Text("发送中...")
 
-                                    FileShareStatus.REJECTED -> {
-                                        Text("对方拒绝了")
-                                    }
+                                    FileShareStatus.REJECTED -> Text("对方拒绝了")
 
-                                    FileShareStatus.ERROR -> {
-                                        Text("发送失败")
-                                    }
+                                    FileShareStatus.ERROR -> Text("发送失败")
 
-                                    FileShareStatus.COMPLETED -> {
-                                        Text("已完成")
-                                    }
+                                    FileShareStatus.COMPLETED -> Text("等待对方复制文件")
 
-                                    FileShareStatus.WAITING -> {
-                                        Text("等待对方确认")
-                                    }
+                                    FileShareStatus.WAITING -> Text("等待对方确认")
 
                                     null -> Text("点击发送文件")
                                 }

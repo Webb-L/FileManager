@@ -11,10 +11,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.main.DeviceConnectType
-import app.filemanager.data.main.DeviceConnectType.APPROVED
-import app.filemanager.data.main.DeviceConnectType.AUTO_CONNECT
+import app.filemanager.data.main.DeviceConnectType.*
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
+import app.filemanager.ui.state.file.FileShareStatus
 import app.filemanager.ui.state.main.DeviceState
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
@@ -40,10 +40,11 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
                 (CONNECT_TIMEOUT + ((deviceState.shareRequest[socketDevice.id]!!.second - Clock.System.now()
                     .toEpochMilliseconds()) / 1000L)).toInt()
         }
-        // Automatically reject after the countdown ends
+        // 等待时间结束
         if (timeRemaining <= 0) {
             deviceState.shareRequest[socketDevice.id] =
-                Pair(DeviceConnectType.REJECTED, Clock.System.now().toEpochMilliseconds())
+                Pair(REJECTED, Clock.System.now().toEpochMilliseconds())
+            deviceState.shareConnectionStates[socketDevice.id] = FileShareStatus.REJECTED
         }
     }
 
@@ -54,14 +55,16 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
     }
 
     fun updateShareRequest(deviceType: DeviceConnectType) {
-        println(socketDevice)
         // TODO 保存到数据库
         when (deviceType) {
             AUTO_CONNECT, APPROVED -> {
                 deviceState.connectShare(socketDevice)
+                deviceState.shareConnectionStates[socketDevice.id] = FileShareStatus.COMPLETED
             }
 
-            else -> {}
+            else -> {
+                deviceState.shareConnectionStates[socketDevice.id] = FileShareStatus.REJECTED
+            }
         }
         deviceState.shareRequest.remove(socketDevice.id)
         expanded = false
@@ -96,13 +99,13 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
                     DropdownMenuItem(
                         text = { Text("自动拒绝") },
                         onClick = {
-                            updateShareRequest(DeviceConnectType.PERMANENTLY_BANNED)
+                            updateShareRequest(PERMANENTLY_BANNED)
                         }
                     )
                     DropdownMenuItem(
                         text = { Text("拒绝") },
                         onClick = {
-                            updateShareRequest(DeviceConnectType.REJECTED)
+                            updateShareRequest(REJECTED)
                         }
                     )
                 }
@@ -138,7 +141,7 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
         // Automatically reject after the countdown ends
         if (timeRemaining <= 0) {
             deviceState.connectionRequest[socketDevice.id] =
-                Pair(DeviceConnectType.REJECTED, Clock.System.now().toEpochMilliseconds())
+                Pair(REJECTED, Clock.System.now().toEpochMilliseconds())
         }
     }
 
@@ -183,7 +186,7 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
                         text = { Text("自动拒绝") },
                         onClick = {
                             deviceState.connectionRequest[socketDevice.id] = Pair(
-                                DeviceConnectType.PERMANENTLY_BANNED,
+                                PERMANENTLY_BANNED,
                                 deviceState.connectionRequest[socketDevice.id]!!.second
                             )
                             expanded = false
@@ -193,7 +196,7 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
                         text = { Text("拒绝") },
                         onClick = {
                             deviceState.connectionRequest[socketDevice.id] = Pair(
-                                DeviceConnectType.REJECTED,
+                                REJECTED,
                                 deviceState.connectionRequest[socketDevice.id]!!.second
                             )
                             expanded = false

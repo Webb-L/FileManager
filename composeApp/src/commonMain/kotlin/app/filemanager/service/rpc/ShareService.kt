@@ -178,6 +178,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
                 return@channelFlow
             }
 
+            // TODO 不应该使用 fileShareState.checkedFiles
             val fileSimpleInfo = fileShareState.checkedFiles.find { path.indexOf("/${it.name}") == 0 }
             if (fileSimpleInfo==null) {
                 send(ParameterErrorException().toSocketResult())

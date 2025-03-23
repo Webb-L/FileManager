@@ -1,11 +1,13 @@
 package app.filemanager.service.rpc
 
+import androidx.compose.runtime.snapshotFlow
 import app.filemanager.PlatformType
 import app.filemanager.createSettings
 import app.filemanager.data.main.DeviceConnectType.WAITING
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
+import app.filemanager.ui.state.file.FileShareStatus
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.PathUtils
 import io.ktor.http.*
@@ -15,12 +17,14 @@ import io.ktor.server.netty.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.sse.*
 import kotlinx.datetime.Clock
 import kotlinx.rpc.krpc.ktor.server.Krpc
 import kotlinx.rpc.krpc.ktor.server.rpc
 import kotlinx.rpc.krpc.serialization.protobuf.protobuf
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromByteArray
+import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
 import org.koin.java.KoinJavaComponent.inject
@@ -38,7 +42,10 @@ actual suspend fun startRpcServer() {
     println(System.getProperty("java.io.tmpdir"))
 
     embeddedServer(Netty, PORT) {
+        install(SSE)
         install(Krpc)
+
+        configureShareSse()
 
         routing {
             get("/ping") {
@@ -95,6 +102,53 @@ actual suspend fun startRpcServer() {
             }
         }
     }.start(wait = true)
+}
+
+@OptIn(ExperimentalSerializationApi::class)
+fun Application.configureShareSse() {
+    val deviceState: DeviceState by inject(DeviceState::class.java)
+
+    routing {
+        sse("/events/{device}") {
+            val deviceHex = call.parameters["device"] ?: ""
+            if (deviceHex.isEmpty()) {
+                send(event = FileShareStatus.ERROR.toString(), data = "")
+                close()
+                return@sse
+            }
+
+            try {
+                // 接收请求体并反序列化为 SocketDevice 对象
+                val socketDevice = ProtoBuf.decodeFromHexString<SocketDevice>(deviceHex)
+
+                // 已经连接了，禁止再次连接。
+                if (deviceState.shares.find { it.id == socketDevice.id } != null) {
+                    send(event = FileShareStatus.REJECTED.toString(), data = "请勿重复连接")
+                    close()
+                    return@sse
+                }
+
+                deviceState.shareRequest[socketDevice.id] = Pair(WAITING, Clock.System.now().toEpochMilliseconds())
+                // 返回成功响应
+                send(event = FileShareStatus.WAITING.toString(), data = "等待对方同意")
+
+                snapshotFlow { deviceState.shareConnectionStates.toMap() }
+                    .collect { shares ->
+                        println(shares)
+                        if (shares.containsKey(socketDevice.id)) {
+                            send(event = (shares[socketDevice.id] ?: FileShareStatus.REJECTED).toString(), data = "")
+                            close()
+                            deviceState.shareConnectionStates.remove(socketDevice.id)
+                        }
+                    }
+
+            } catch (e: Exception) {
+                // 捕获其他异常
+                send(event = FileShareStatus.ERROR.toString(), data = e.message)
+                close()
+            }
+        }
+    }
 }
 
 actual fun getAllIPAddresses(type: SocketClientIPEnum): List<String> {

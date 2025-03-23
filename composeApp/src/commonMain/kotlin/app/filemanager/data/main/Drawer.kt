@@ -110,7 +110,6 @@ enum class DeviceCategory(type: String) {
     SERVER("SERVER")
 }
 
-
 data class Device(
     val id: String,
     override val name: String,
