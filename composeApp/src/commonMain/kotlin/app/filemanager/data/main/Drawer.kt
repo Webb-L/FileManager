@@ -248,15 +248,13 @@ data class Share(
     val rpcClientManager: RpcShareClientManager,
     val type: DeviceType,
     val token: String
-) : DiskBase() {
+) : DiskBase(), KoinComponent {
+    private val fileState: FileState by inject()
+    private val deviceState: DeviceState by inject()
+
     private fun handleError() {
-//        deviceState.devices.remove(this)
-//        deviceState.socketDevices.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let { index ->
-//            deviceState.socketDevices[index] = deviceState.socketDevices[index].withCopy(
-//                connectType = ConnectType.Fail
-//            )
-//        }
-//        fileState.updateDesk(FileProtocol.Local, Local())
+        deviceState.shares.remove(this)
+        fileState.updateDesk(FileProtocol.Local, Local())
         println("Error in sharing")
     }
 

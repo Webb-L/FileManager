@@ -575,17 +575,17 @@ private fun AppDrawerShare() {
         }
     ) {
         if (!isExpandShare) return@AppDrawerItem
-        for ((index, device) in deviceState.shares.withIndex()) {
+        for ((index, share) in deviceState.shares.withIndex()) {
             NavigationDrawerItem(
                 icon = {
-                    when (device.type) {
+                    when (share.type) {
                         Android -> Icon(Icons.Default.PhoneAndroid, null)
                         IOS -> Icon(Icons.Default.PhoneIphone, null)
                         JVM -> Icon(Icons.Default.Devices, null)
                         JS -> Icon(Icons.Default.Javascript, null)
                     }
                 },
-                label = { Text(device.name) },
+                label = { Text(share.name) },
                 selected = false,
                 badge = {
                     Icon(
@@ -594,11 +594,15 @@ private fun AppDrawerShare() {
                         Modifier
                             .clip(RoundedCornerShape(25.dp))
                             .clickable {
+                                if (share.rpcClientManager.disconnect()) {
+                                    deviceState.shares.remove(share)
+                                    fileState.updateDesk(FileProtocol.Local, Local())
+                                }
                             }
                     )
                 },
                 onClick = {
-                    deviceState.shares.firstOrNull { it.id == device.id }?.let {
+                    deviceState.shares.firstOrNull { it.id == share.id }?.let {
                         fileState.updateDesk(FileProtocol.Share, it)
                     }
                 },
