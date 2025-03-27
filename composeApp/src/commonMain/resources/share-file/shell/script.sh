@@ -1,13 +1,19 @@
 #!/bin/bash
 
 # API服务器地址设为常量
-API_SERVER="http://127.0.0.1:12040"
+API_SERVER="#API_SERVER#"
 
 # User-Agent常量
-USER_AGENT="FileDownloader/1.0 (Custom Shell Script)"
+USER_AGENT="#USER_AGENT#"
 
 # 设置本地目标目录为当前目录
-TARGET_DIR="."
+TARGET_DIR="./#TARGET_DIR#"
+
+# 如果目标目录不存在，则创建它
+if [ ! -d "$TARGET_DIR" ]; then
+    echo "目标目录($TARGET_DIR)不存在，将自动创建..."
+    mkdir -p "$TARGET_DIR"
+fi
 
 # 如果目标目录不为空，则要求用户确认
 if [ "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
@@ -87,7 +93,7 @@ process_files_and_directories() {
 
 # 从根目录开始处理
 echo "开始下载文件和创建目录到当前文件夹..."
-process_files_and_directories "/" "$TARGET_DIR"
+process_files_and_directories "#ROOT_PATH#" "$TARGET_DIR"
 
 # 打印统计结果
 echo "========== 下载统计 =========="

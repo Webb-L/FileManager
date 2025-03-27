@@ -3,7 +3,9 @@ package app.filemanager.service
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceType
+import app.filemanager.extensions.parsePath
 import app.filemanager.extensions.replaceLast
+import app.filemanager.readResourceFile
 import app.filemanager.ui.state.file.FileShareState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.NaturalOrderComparator
@@ -309,6 +311,14 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
     }
 
 
+    /**
+     * 根据请求类型响应数据。
+     * 如果请求是 API 请求，则返回包含文件信息的 JSON 数据；
+     * 如果是普通请求，则返回渲染的 HTML 模板内容。
+     *
+     * @param search 搜索关键字，可为空，用于过滤文件信息。
+     * @param files 文件信息列表，每个 `FileSimpleInfo` 包含文件相关的详细信息（如名称、大小、路径等）。
+     */
     private suspend fun RoutingCall.respondByRequestType(
         search: String?,
         files: List<FileSimpleInfo>
@@ -317,15 +327,43 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
             response.header("Content-Type", "application/json")
             respond(Json.encodeToString(files))
         } else {
+            // Map<类型，Pair<扩展名，内容>>
+            val scripts = mapOf<String, Pair<String, String>>(
+                "Bash" to Pair("sh", readShellFile("share-file/shell/script.sh")),
+                "PowerShell" to Pair("ps1", readShellFile("share-file/shell/script.ps1"))
+            )
+
             respond(
                 FreeMarkerContent(
                     "index.ftl",
                     mapOf(
                         "search" to search,
-                        "files" to files
+                        "files" to files,
+                        "scripts" to scripts
                     )
                 )
             )
         }
+    }
+
+    /**
+     * 读取指定路径的 shell 文件内容，并动态替换其中的占位符。
+     *
+     * @param path 指定 shell 文件的路径。
+     * @return 处理过的文件内容字符串，其中一些占位符会被动态替换，包括：
+     * - `#API_SERVER#`: 替换为当前请求的完整服务地址。
+     * - `#USER_AGENT#`: 替换为当前请求头中的 User-Agent 信息。
+     * - `#ROOT_PATH#`: 替换为当前请求 URI（根路径若为 "/" 则为空）。
+     * - `#TARGET_DIR#`: 替换为请求 URI 路径中最后一个路径片段。
+     */
+    private fun RoutingCall.readShellFile(path: String): String {
+        val fullUrl = "${request.origin.scheme}://${request.host()}:${request.port()}"
+        val paths = request.uri.parsePath()
+        return readResourceFile(path)
+            .decodeToString()
+            .replace("#API_SERVER#", fullUrl)
+            .replace("#USER_AGENT#", request.userAgent() ?: "")
+            .replace("#ROOT_PATH#", if (request.uri == "/") "" else request.uri)
+            .replace("#TARGET_DIR#", if (paths.isEmpty()) "" else paths.last())
     }
 }
