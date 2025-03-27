@@ -6,6 +6,7 @@ import app.filemanager.data.main.Share
 import app.filemanager.service.rpc.RpcClientManager
 import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
 import app.filemanager.service.rpc.RpcShareClientManager
+import app.filemanager.utils.serializer.SocketDeviceSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -20,7 +21,7 @@ enum class ConnectType(type: String) {
     Rejected("Rejected"),
 }
 
-@Serializable
+@Serializable(with = SocketDeviceSerializer::class)
 data class SocketDevice(
     val id: String,
     val name: String,
