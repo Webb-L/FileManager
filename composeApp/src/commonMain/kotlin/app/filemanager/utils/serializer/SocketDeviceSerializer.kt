@@ -3,8 +3,7 @@ package app.filemanager.utils.serializer
 import app.filemanager.data.main.DeviceType
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
-import app.filemanager.utils.SymmetricCryptoImpl
-import app.filemanager.utils.SymmetricCryptoInterface
+import app.filemanager.utils.SymmetricCrypto
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.MapSerializer
@@ -18,8 +17,6 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 class SocketDeviceSerializer : KSerializer<SocketDevice> {
-    private val crypto: SymmetricCryptoInterface = SymmetricCryptoImpl()
-
     private val mapSerializer = MapSerializer(String.serializer(), String.serializer())
 
     override val descriptor: SerialDescriptor = buildClassSerialDescriptor("SocketDeviceCrypto") {
@@ -41,7 +38,7 @@ class SocketDeviceSerializer : KSerializer<SocketDevice> {
         val protoBytes = ProtoBuf.encodeToByteArray(mapSerializer, map)
 
         encoder.encodeStructure(descriptor) {
-            encodeStringElement(descriptor, 0, Base64.encode(crypto.encrypt(protoBytes)))
+            encodeStringElement(descriptor, 0, Base64.encode(SymmetricCrypto.encrypt(protoBytes)))
         }
     }
 
@@ -59,7 +56,7 @@ class SocketDeviceSerializer : KSerializer<SocketDevice> {
             }
         }
 
-        val map = ProtoBuf.decodeFromByteArray(mapSerializer, crypto.decrypt(Base64.decode(encryptedString)))
+        val map = ProtoBuf.decodeFromByteArray(mapSerializer, SymmetricCrypto.decrypt(Base64.decode(encryptedString)))
         return SocketDevice(
             id = map["id"].orEmpty(),
             name = map["name"].orEmpty(),

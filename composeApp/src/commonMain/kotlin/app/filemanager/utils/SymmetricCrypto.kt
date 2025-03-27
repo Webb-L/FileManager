@@ -71,7 +71,7 @@ interface SymmetricCryptoInterface {
     fun decrypt(data: ByteArray): ByteArray
 }
 
-expect class SymmetricCryptoImpl() : SymmetricCryptoInterface {
+expect object SymmetricCrypto : SymmetricCryptoInterface {
     override fun encrypt(text: String): String
     override fun decrypt(text: String): String
     override fun encrypt(data: ByteArray): ByteArray

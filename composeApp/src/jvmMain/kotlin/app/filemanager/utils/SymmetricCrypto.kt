@@ -7,7 +7,7 @@ import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import kotlin.random.Random
 
-actual class SymmetricCryptoImpl : SymmetricCryptoInterface {
+actual object SymmetricCrypto : SymmetricCryptoInterface {
 
     private fun getKeySpec(key: String): SecretKeySpec {
         val sha = MessageDigest.getInstance(CryptoParameters.keyDigestAlgorithm)
