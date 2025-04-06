@@ -32,6 +32,8 @@ import ua_parser.Parser
 import java.io.File
 import java.io.RandomAccessFile
 import java.net.URLDecoder
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 actual class HttpShareFileServer actual constructor(private val fileShareState: FileShareState) :
     HttpShareFileServerInterface {
@@ -209,7 +211,7 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
                                     if (sharedFileInfo?.first == true) true else !file.isHidden
                                 searchMatch && visibilityMatch
                             }
-                            .map { file -> file.withCopy(path = "/${file.name}") }
+                            .map { file -> file.withCopy(path = "/${file.name}".urlPath()) }
                             .sortedWith(
                                 compareByDescending<FileSimpleInfo> { it.isDirectory }
                                     .then(NaturalOrderComparator())
@@ -305,7 +307,7 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
                             val visibilityMatch = if (files.first == true) true else !file.isHidden
                             searchMatch && visibilityMatch
                         }
-                        .map { file -> file.withCopy(path = "$urlPath/${file.name}") }
+                        .map { file -> file.withCopy(path = "$urlPath/${file.name}".urlPath()) }
                         .sortedWith(
                             compareByDescending<FileSimpleInfo> { it.isDirectory }
                                 .then(NaturalOrderComparator())
@@ -373,7 +375,28 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
             .decodeToString()
             .replace("#API_SERVER#", fullUrl)
             .replace("#USER_AGENT#", request.userAgent() ?: "")
-            .replace("#ROOT_PATH#", if (request.uri == "/") "" else request.uri)
-            .replace("#TARGET_DIR#", if (paths.isEmpty()) "" else paths.last())
+            .replace("#ROOT_PATH#", if (request.path() == "/") "" else request.path())
+            .replace("#TARGET_DIR#", if (paths.isEmpty()) "" else URLDecoder.decode(paths.last(), "UTF-8"))
+    }
+
+    /**
+     * 实现类似FreeMarker的url_path函数功能
+     * 对字符串进行URL路径编码，但保留路径分隔符('/')
+     */
+    private fun String.urlPath(): String {
+        // 如果字符串为空，直接返回
+        if (this.isEmpty()) return this
+
+        // 按照'/'分割路径
+        val segments = this.split('/')
+
+        // 对每个段进行URL编码，但保留'/'作为分隔符
+        val encodedSegments = segments.map { segment ->
+            URLEncoder.encode(segment, StandardCharsets.UTF_8.name())
+                .replace("+", "%20") // 确保空格编码为%20而不是+
+        }
+
+        // 重新组合路径
+        return encodedSegments.joinToString("/")
     }
 }

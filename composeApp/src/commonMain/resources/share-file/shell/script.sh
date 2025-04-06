@@ -9,6 +9,13 @@ USER_AGENT="#USER_AGENT#"
 # 设置本地目标目录为当前目录
 TARGET_DIR="./#TARGET_DIR#"
 
+# URL 解码函数
+url_decode() {
+  local url="$1"
+  # 使用 printf 和 sed 进行 URL 解码
+  printf '%b' "${url//%/\\x}"
+}
+
 # 如果目标目录不存在，则创建它
 if [ ! -d "$TARGET_DIR" ]; then
     echo "目标目录($TARGET_DIR)不存在，将自动创建..."
@@ -39,15 +46,17 @@ FAILED_DIRS=0
 process_files_and_directories() {
     local remote_path=$1
     local local_path=$2
+    # URL 解码 remote_path
+    local decoded_remote_path=$(url_decode "$remote_path")
 
-    echo "处理路径: $remote_path -> $local_path"
+    echo "处理路径: $decoded_remote_path -> $local_path"
 
-    # 发送 HTTP 请求获取当前路径的内容
+    # 发送 HTTP 请求获取当前路径的内容 (curl 参数不做 URL 解码)
     response=$(curl -s -H "X-API-Request: true" -H "User-Agent: ${USER_AGENT}" "${API_SERVER}${remote_path}")
 
     # 检查响应是否有效
     if ! echo "$response" | jq -e . >/dev/null 2>&1; then
-        echo "错误: 无法解析路径 $remote_path 的响应"
+        echo "错误: 无法解析路径 $decoded_remote_path 的响应"
         return 1
     fi
 
@@ -56,9 +65,13 @@ process_files_and_directories() {
         [ -z "$item" ] && continue
 
         name=$(echo "$item" | jq -r '.name')
+        # URL 解码文件名
+        decoded_name=$(url_decode "$name")
+
         is_dir=$(echo "$item" | jq -r '.isDirectory')
         item_path=$(echo "$item" | jq -r '.path')
-        local_item_path="$local_path/$name"
+        # 用解码后的名称创建本地路径
+        local_item_path="$local_path/$decoded_name"
 
         if [ "$is_dir" == "true" ]; then
             # 如果是目录，创建对应的本地目录
@@ -77,14 +90,16 @@ process_files_and_directories() {
             process_files_and_directories "$item_path" "$local_item_path"
 
         else
-            # 如果是文件，下载文件
-            echo "下载文件: $item_path -> $local_item_path"
+            # 显示解码后的路径
+            decoded_item_path=$(url_decode "$item_path")
+            echo "下载文件: $decoded_item_path -> $local_item_path"
             ((TOTAL_FILES++))
 
+            # curl 命令使用原始路径（不解码）
             if curl -s -f -H "X-API-Request: true" -H "User-Agent: ${USER_AGENT}" "${API_SERVER}${item_path}" -o "$local_item_path"; then
                 ((SUCCESS_FILES++))
             else
-                echo "错误: 无法下载文件 $item_path"
+                echo "错误: 无法下载文件 $decoded_item_path"
                 ((FAILED_FILES++))
             fi
         fi
@@ -93,7 +108,8 @@ process_files_and_directories() {
 
 # 从根目录开始处理
 echo "开始下载文件和创建目录到当前文件夹..."
-process_files_and_directories "#ROOT_PATH#" "$TARGET_DIR"
+root_path="#ROOT_PATH#"
+process_files_and_directories "$root_path" "$TARGET_DIR"
 
 # 打印统计结果
 echo "========== 下载统计 =========="

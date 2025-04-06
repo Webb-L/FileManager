@@ -89,7 +89,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
         var isExpandLinkShare by remember { mutableStateOf(true) }
 
         // 全部、反选
-        var selectFileType by remember { mutableStateOf(0) }
+        var selectFileType by remember { mutableStateOf(-1) }
         // 是否允许访问隐藏文件和文件夹
         var isHideFile by remember { mutableStateOf(false) }
 
@@ -412,6 +412,19 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
 
                         FileShareType.DEVICE -> fileShareState.shareToDevices[curDevice!!.id]?.first
                             ?: false
+                    }
+
+                    selectFileType = when (fileShareType) {
+                        FileShareType.NONE -> -1
+                        FileShareType.LINK -> {
+                            val temp = fileShareState.authorizedLinkShareDevices[curLinkDevice!!]?.second ?: listOf()
+                            if (temp.size == fileShareState.files.size) 0 else -1
+                        }
+
+                        FileShareType.DEVICE -> {
+                            val temp = fileShareState.shareToDevices[curDevice!!.id]?.second ?: listOf()
+                            if (temp.size == fileShareState.files.size) 0 else -1
+                        }
                     }
                 }
 

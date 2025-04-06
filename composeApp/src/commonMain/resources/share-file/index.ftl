@@ -79,7 +79,7 @@
                                 <span class="text-sm font-medium truncate">${file.name}</span>
                             </div>
                             <div class="text-background-on/50 dark:text-dark-background-on/50 flex items-center">
-                                <i class="fas fa-download ml-2 text-sm"></i>
+                                <i class="fas fa-download text-secondary ml-2 text-sm"></i>
                             </div>
                         </a>
                     </#if>
