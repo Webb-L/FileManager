@@ -70,20 +70,18 @@
                             </button>
                         </a>
                     <#else>
-                        <!-- 这里假设是文件的显示部分 -->
-                        <div class="file-card flex justify-between items-center p-4 bg-white dark:bg-dark-surface-container border border-outline/10 dark:border-dark-outline/10 rounded-lg">
+                        <!-- 文件使用下载链接 -->
+                        <a href="${file.path}" download="${file.name}" class="file-card flex justify-between items-center p-4 bg-white dark:bg-dark-surface-container border border-outline/10 dark:border-dark-outline/10 rounded-lg hover-state-layer active-state-layer ripple">
                             <div class="flex items-center overflow-hidden">
-                                <div class="w-10 h-10 rounded-full bg-tertiary-light/30 dark:bg-dark-tertiary-light/30 flex items-center justify-center mr-4 flex-shrink-0">
-                                    <i class="fas fa-file text-tertiary dark:text-dark-tertiary"></i>
+                                <div class="w-10 h-10 rounded-full bg-secondary-light/30 dark:bg-dark-secondary-light/30 flex items-center justify-center mr-4 flex-shrink-0">
+                                    <i class="fas fa-file text-secondary dark:text-dark-secondary"></i>
                                 </div>
                                 <span class="text-sm font-medium truncate">${file.name}</span>
                             </div>
-                            <div class="flex">
-                                <button class="text-primary dark:text-dark-primary p-2 rounded-full hover:bg-primary-light/20 dark:hover:bg-dark-primary-light/20 transition-colors">
-                                    <i class="fas fa-download"></i>
-                                </button>
+                            <div class="text-background-on/50 dark:text-dark-background-on/50 flex items-center">
+                                <i class="fas fa-download ml-2 text-sm"></i>
                             </div>
-                        </div>
+                        </a>
                     </#if>
                 </#list>
             </#if>
