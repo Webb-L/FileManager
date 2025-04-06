@@ -113,7 +113,7 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
         return this.request.headers["X-API-Request"] != null
     }
 
-    fun Application.configureFileSharing() {
+    private fun Application.configureFileSharing() {
         install(FreeMarker) {
             templateLoader = ClassTemplateLoader(this::class.java.classLoader, "share-file")
         }
@@ -206,7 +206,7 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
                                 val searchMatch =
                                     file.name.contains(call.request.queryParameters["search"] ?: "")
                                 val visibilityMatch =
-                                    if (sharedFileInfo?.first == false) true else !file.isHidden
+                                    if (sharedFileInfo?.first == true) true else !file.isHidden
                                 searchMatch && visibilityMatch
                             }
                             .map { file -> file.withCopy(path = "/${file.name}") }
@@ -229,16 +229,26 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
                     val urlPath = URLDecoder.decode(call.request.path(), "UTF-8")
 
                     val parentFileSimpleInfo = files.second.find { urlPath.indexOf("/${it.name}") == 0 }
-                    // 文件未在授权的文件列表中找到，或文件的隐藏状态与文件权限不匹配，则重定向到根目录
-                    if (parentFileSimpleInfo == null) {
-                        return@get call.respondRedirect("/", permanent = false)
-                    }
+                        ?: return@get call.respondRedirect("/", permanent = false)
 
                     val path = parentFileSimpleInfo.path.replaceLast("/${parentFileSimpleInfo.name}", urlPath)
                     val fileSimpleInfoResult = FileUtils.getFile(path).getOrNull()
 
                     // 如果文件信息结果为空，则重定向到根目录
                     if (fileSimpleInfoResult == null) {
+                        return@get call.respondRedirect("/", permanent = false)
+                    }
+
+                    // 检查路径中的每个段落，判断是否包含隐藏文件
+                    val pathSegments = urlPath.parsePath()
+                    if (pathSegments.indices.any { index ->
+                            val newPath = parentFileSimpleInfo.path.replaceLast(
+                                "/${parentFileSimpleInfo.name}",
+                                "/" + pathSegments.subList(0, index + 1).joinToString(PathUtils.getPathSeparator())
+                            )
+                            val fileSimpleInfo = FileUtils.getFile(newPath).getOrNull()
+                            fileSimpleInfo != null && files.first == false && fileSimpleInfo.isHidden == true
+                        }) {
                         return@get call.respondRedirect("/", permanent = false)
                     }
 
@@ -292,7 +302,7 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
                     val fileSimpleInfos = PathUtils.getFileAndFolder(path).getOrDefault(listOf())
                         .filter { file ->
                             val searchMatch = file.name.contains(call.request.queryParameters["search"] ?: "")
-                            val visibilityMatch = if (files.first == false) true else !file.isHidden
+                            val visibilityMatch = if (files.first == true) true else !file.isHidden
                             searchMatch && visibilityMatch
                         }
                         .map { file -> file.withCopy(path = "$urlPath/${file.name}") }

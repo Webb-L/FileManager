@@ -35,8 +35,14 @@ data class SocketDevice(
     @Transient
     var client: RpcClientManager? = null
 
-    fun toDevice(): Device {
-        return Device(id = id, name = name, host = mutableMapOf(host to client!!), type = type, token = token)
+    fun toDevice(includeHost: Boolean = true): Device {
+        return Device(
+            id = id,
+            name = name,
+            host = if (includeHost) mutableMapOf(host to client!!) else mutableMapOf(),
+            type = type,
+            token = token
+        )
     }
 
     fun toShare(client: RpcShareClientManager): Share {

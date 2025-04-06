@@ -131,7 +131,7 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
                                             val searchMatch =
                                                 file.name.contains(call.request.queryParameters["search"] ?: "")
                                             val visibilityMatch =
-                                                if (sharedFileInfo?.first == false) true else !file.isHidden
+                                                if (sharedFileInfo?.first == true) true else !file.isHidden
                                             searchMatch && visibilityMatch
                                         }
                                         .sortedWith(
@@ -212,7 +212,7 @@ actual class HttpShareFileServer actual constructor(private val fileShareState: 
                         val fileSimpleInfos = PathUtils.getFileAndFolder(path).getOrDefault(listOf())
                             .filter { file ->
                                 val searchMatch = file.name.contains(call.request.queryParameters["search"] ?: "")
-                                val visibilityMatch = if (files.first == false) true else !file.isHidden
+                                val visibilityMatch = if (files.first == true) true else !file.isHidden
                                 searchMatch && visibilityMatch
                             }
                             .sortedWith(

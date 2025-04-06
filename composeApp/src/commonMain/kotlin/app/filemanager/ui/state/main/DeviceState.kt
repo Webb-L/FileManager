@@ -25,7 +25,6 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.util.logging.*
-import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -173,7 +172,7 @@ class DeviceState : KoinComponent {
     // 设置连接状态 Map<设备Id， 设备连接类型>
     val shareConnectionStates = mutableStateMapOf<String, FileShareStatus>()
 
-    @OptIn(InternalAPI::class, ExperimentalSerializationApi::class)
+    @OptIn(ExperimentalSerializationApi::class)
     fun share(device: SocketDevice) {
         val scope = MainScope()
         scope.launch {
@@ -181,7 +180,7 @@ class DeviceState : KoinComponent {
                 withContext(Dispatchers.Default) {
                     val socketDevice = ProtoBuf.encodeToHexString(getSocketDevice())
                     val httpClient = HttpClient { install(SSE) }
-                    httpClient.sse("http://${device.host}:${device.port}/events/$socketDevice") {
+                    httpClient.sse("http://${device.host}:${device.port}/share/$socketDevice") {
                         incoming.collect { event ->
                             KtorSimpleLogger("DeviceState").info(event.toString())
                             val fileShareStatus = FileShareStatus.valueOf(event.event ?: "")

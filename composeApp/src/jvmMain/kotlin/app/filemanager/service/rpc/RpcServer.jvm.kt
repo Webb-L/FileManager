@@ -10,11 +10,9 @@ import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
 import app.filemanager.ui.state.file.FileShareStatus
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.PathUtils
-import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sse.*
@@ -23,7 +21,6 @@ import kotlinx.rpc.krpc.ktor.server.Krpc
 import kotlinx.rpc.krpc.ktor.server.rpc
 import kotlinx.rpc.krpc.serialization.protobuf.protobuf
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.decodeFromHexString
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
@@ -32,6 +29,7 @@ import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.NetworkInterface
+import kotlin.collections.set
 
 @OptIn(ExperimentalSerializationApi::class)
 actual suspend fun startRpcServer() {
@@ -60,32 +58,6 @@ actual suspend fun startRpcServer() {
                 call.respondBytes { ProtoBuf.encodeToByteArray(socketDevice) }
             }
 
-            // 对方想发送文件给你
-            post("/share") {
-                try {
-                    // 接收请求体并反序列化为 SocketDevice 对象
-                    val socketDevice = ProtoBuf.decodeFromByteArray<SocketDevice>(call.receive<ByteArray>())
-
-                    val deviceState: DeviceState by inject(DeviceState::class.java)
-
-                    // 已经连接了，禁止再次连接。
-                    if (deviceState.shares.find { it.id == socketDevice.id } != null) {
-                        call.respond(HttpStatusCode.Conflict)
-                        return@post
-                    }
-
-                    deviceState.shareRequest[socketDevice.id] = Pair(WAITING, Clock.System.now().toEpochMilliseconds())
-                    // 返回成功响应
-                    call.respond(HttpStatusCode.OK)
-                } catch (e: ContentTransformationException) {
-                    // 捕获反序列化失败异常（例如请求体格式错误）
-                    call.respond(HttpStatusCode.BadRequest, "Invalid request body: ${e.message}")
-                } catch (e: Exception) {
-                    // 捕获其他异常
-                    call.respond(HttpStatusCode.InternalServerError, "An error occurred: ${e.message}")
-                }
-            }
-
             rpc {
                 rpcConfig {
                     serialization {
@@ -109,7 +81,7 @@ fun Application.configureShareSse() {
     val deviceState: DeviceState by inject(DeviceState::class.java)
 
     routing {
-        sse("/events/{device}") {
+        sse("/share/{device}") {
             val deviceHex = call.parameters["device"] ?: ""
             if (deviceHex.isEmpty()) {
                 send(event = FileShareStatus.ERROR.toString(), data = "")
@@ -137,8 +109,8 @@ fun Application.configureShareSse() {
                         println(shares)
                         if (shares.containsKey(socketDevice.id)) {
                             send(event = (shares[socketDevice.id] ?: FileShareStatus.REJECTED).toString(), data = "")
-                            close()
                             deviceState.shareConnectionStates.remove(socketDevice.id)
+                            close()
                         }
                     }
 

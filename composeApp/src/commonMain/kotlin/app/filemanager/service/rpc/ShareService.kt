@@ -6,10 +6,13 @@ import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceConnectType.APPROVED
 import app.filemanager.data.main.DeviceConnectType.REJECTED
+import app.filemanager.exception.AuthorityException
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.exception.ParameterErrorException
 import app.filemanager.exception.toSocketResult
 import app.filemanager.extensions.getFileAndFolder
+import app.filemanager.extensions.parsePath
+import app.filemanager.extensions.randomString
 import app.filemanager.extensions.replaceLast
 import app.filemanager.service.WebSocketResult
 import app.filemanager.service.data.SocketDevice
@@ -31,35 +34,25 @@ import kotlin.coroutines.CoroutineContext
 @Rpc
 interface ShareService : RemoteService {
     // 远程设备需要我本地文件
-    // TODO 检查权限
     suspend fun list(
         token: String,
         path: String
     ): WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>
 
     // 发送遍历的目录
-    // TODO 检查权限
     suspend fun traversePath(
         token: String,
         path: String
     ): Flow<WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>>
 
     // 读取文件数据
-    // TODO 检查权限
     suspend fun readFileChunks(
         token: String,
         path: String,
         chunkSize: Long
     ): Flow<WebSocketResult<Pair<Long, ByteArray>>>
 
-    // 获取文件信息
-    // TODO 检查权限
-//    suspend fun getFileByPath(token: String, path: String): WebSocketResult<FileSimpleInfo>
-
-    // 获取文件信息
-    // TODO 检查权限
-//    suspend fun getFileByPathAndName(token: String, path: String, name: String): WebSocketResult<FileSimpleInfo>
-
+    // 连接分享
     suspend fun connect(device: SocketDevice): Pair<DeviceConnectType, String>
 }
 
@@ -70,57 +63,60 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
     private val fileShareState: FileShareState by inject()
     private val deviceCertificateState: DeviceCertificateState by inject()
 
-    // TODO 检查是否有权限
     override suspend fun list(
         token: String,
         path: String
     ): WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>> {
-//        if (deviceCertificateState.checkPermission(
-//                token,
-//                path,
-//                "read"
-//            )
-//        ) {
-//            return AuthorityException("对方没有为你设置权限").toSocketResult()
-//        }
-
-        if (path.isEmpty()) {
-            return ParameterErrorException().toSocketResult()
+        val validationResult: Pair<Boolean, List<FileSimpleInfo>>
+        try {
+            validationResult = validateShareAndGetFiles(token, path)
+        } catch (e: Exception) {
+            return e.toSocketResult()
         }
+
+        val fileSimpleInfoList = validationResult.second
+            .filter { file -> if (validationResult.first) true else !file.isHidden }
 
         if (path == "/") {
             return WebSocketResult(
                 value = mutableMapOf<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>().apply {
-                    fileShareState.checkedFiles.forEach { fileSimpleInfo ->
-                        val key = if (fileSimpleInfo.protocol == FileProtocol.Local)
-                            Pair(FileProtocol.Share, settings.getString("deviceId", ""))
-                        else
-                            Pair(fileSimpleInfo.protocol, fileSimpleInfo.protocolId)
+                    fileSimpleInfoList
+                        .forEach { fileSimpleInfo ->
+                            val key = if (fileSimpleInfo.protocol == FileProtocol.Local)
+                                Pair(FileProtocol.Share, settings.getString("deviceId", ""))
+                            else
+                                Pair(fileSimpleInfo.protocol, fileSimpleInfo.protocolId)
 
-                        val simpleInfo = fileSimpleInfo.withCopy(
-                            path = fileSimpleInfo.name,
-                            protocol = FileProtocol.Local,
-                            protocolId = ""
-                        )
+                            val simpleInfo = fileSimpleInfo.withCopy(
+                                path = fileSimpleInfo.name,
+                                protocol = FileProtocol.Local,
+                                protocolId = ""
+                            )
 
-                        if (!containsKey(key)) {
-                            put(key, mutableListOf(simpleInfo))
-                        } else {
-                            get(key)?.add(simpleInfo)
+                            if (!containsKey(key)) {
+                                put(key, mutableListOf(simpleInfo))
+                            } else {
+                                get(key)?.add(simpleInfo)
+                            }
                         }
-                    }
                 }
             )
         }
 
+        // 检查路径中的每个段落，判断是否包含隐藏文件
+        val fileSimpleInfo: FileSimpleInfo
+        try {
+            fileSimpleInfo = validatePathAndCheckHiddenFileAccess(
+                path,
+                fileSimpleInfoList.find { path.indexOf("/${it.name}") == 0 }
+                    ?: return ParameterErrorException().toSocketResult(),
+                validationResult,
+            )
+        } catch (e: Exception) {
+            return e.toSocketResult()
+        }
 
-        val fileSimpleInfo = fileShareState.checkedFiles.find { path.indexOf("/${it.name}") == 0 }
-            ?: return ParameterErrorException().toSocketResult()
-
-        val parentPath = "${fileSimpleInfo.path.replaceLast("/${fileSimpleInfo.name}", "")}$path"
-
-        val fileAndFolder = parentPath.getFileAndFolder()
-
+        val fileAndFolder = fileSimpleInfo.path.getFileAndFolder()
         if (fileAndFolder.isFailure) {
             val exceptionOrNull = fileAndFolder.exceptionOrNull() ?: EmptyDataException()
             return WebSocketResult(
@@ -140,7 +136,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
 
 
                     val simpleInfo = fileSimpleInfo.apply {
-                        this.path = this.path.replace(parentPath, "")
+                        this.path = this.path.replace(fileSimpleInfo.path, "")
                         this.protocol = FileProtocol.Local
                         this.protocolId = ""
                     }
@@ -160,34 +156,34 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
     ): Flow<WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>> {
         var isFirst = false
         return channelFlow {
-//            if (deviceCertificateState.checkPermission(
-//                    token,
-//                    path,
-//                    "read"
-//                )
-//            ) {
-//                send(AuthorityException("对方没有为你设置权限").toSocketResult())
-//                cancel()
-//                return@channelFlow
-//            }
 
-            if (path.isEmpty()) {
-                launch {
-                    send(EmptyDataException().toSocketResult())
-                }
+            val validationResult: Pair<Boolean, List<FileSimpleInfo>>;
+            try {
+                validationResult = validateShareAndGetFiles(token, path)
+            } catch (e: Exception) {
+                send(e.toSocketResult())
                 return@channelFlow
             }
 
-            // TODO 不应该使用 fileShareState.checkedFiles
-            val fileSimpleInfo = fileShareState.checkedFiles.find { path.indexOf("/${it.name}") == 0 }
-            if (fileSimpleInfo==null) {
+            val fileSimpleInfoList = validationResult.second
+                .filter { file -> if (validationResult.first) true else !file.isHidden }
+
+            val parentFileSimpleInfo = fileSimpleInfoList.find { path.indexOf("/${it.name}") == 0 }
+            if (parentFileSimpleInfo == null) {
                 send(ParameterErrorException().toSocketResult())
                 return@channelFlow
             }
 
-            val parentPath = "${fileSimpleInfo.path.replaceLast("/${fileSimpleInfo.name}", "")}$path"
+            // 检查路径中的每个段落，判断是否包含隐藏文件
+            val fileSimpleInfo: FileSimpleInfo
+            try {
+                fileSimpleInfo = validatePathAndCheckHiddenFileAccess(path, parentFileSimpleInfo, validationResult)
+            } catch (e: Exception) {
+                send(e.toSocketResult())
+                return@channelFlow
+            }
 
-            PathUtils.traverse(parentPath) { fileAndFolder ->
+            PathUtils.traverse(fileSimpleInfo.path) { fileAndFolder ->
                 try {
                     val result = if (fileAndFolder.isFailure) {
                         val exceptionOrNull = fileAndFolder.exceptionOrNull() ?: EmptyDataException()
@@ -201,7 +197,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
                             val files: MutableList<FileSimpleInfo> = mutableListOf()
                             files.addAll(fileAndFolder.getOrDefault(listOf()))
                             if (!isFirst) {
-                                files.add(FileUtils.getFile(parentPath).getOrNull()!!)
+                                files.add(FileUtils.getFile(fileSimpleInfo.path).getOrNull()!!)
                                 isFirst = true
                             }
                             files.forEach { fileSimpleInfo ->
@@ -212,13 +208,13 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
 
                                 if (!containsKey(key)) {
                                     put(key, mutableListOf(fileSimpleInfo.apply {
-                                        this.path = this.path.replace(parentPath, "")
+                                        this.path = this.path.replace(fileSimpleInfo.path, "")
                                         this.protocol = FileProtocol.Local
                                         this.protocolId = ""
                                     }))
                                 } else {
                                     get(key)?.add(fileSimpleInfo.apply {
-                                        this.path = this.path.replace(parentPath, "")
+                                        this.path = this.path.replace(fileSimpleInfo.path, "")
                                         this.protocol = FileProtocol.Local
                                         this.protocolId = ""
                                     })
@@ -227,9 +223,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
                         })
                     }
 
-                    launch {
-                        send(result)
-                    }
+                    launch { send(result) }
                 } catch (e: Exception) {
                     println(e)
                 }
@@ -243,32 +237,34 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
         chunkSize: Long
     ): Flow<WebSocketResult<Pair<Long, ByteArray>>> {
         return channelFlow {
-//            if (deviceCertificateState.checkPermission(
-//                    token,
-//                    path,
-//                    "read"
-//                )
-//            ) {
-//                send(AuthorityException("对方没有为你设置权限").toSocketResult())
-//                cancel()
-//                return@channelFlow
-//            }
 
-            if (path.isEmpty()) {
-                launch {
-                    send(EmptyDataException().toSocketResult())
-                }
+            val validationResult: Pair<Boolean, List<FileSimpleInfo>>;
+            try {
+                validationResult = validateShareAndGetFiles(token, path)
+            } catch (e: Exception) {
+                send(e.toSocketResult())
                 return@channelFlow
             }
 
-            val fileSimpleInfo = fileShareState.checkedFiles.find { path.indexOf("/${it.name}") == 0 }
-            if (fileSimpleInfo==null) {
+            val fileSimpleInfoList = validationResult.second
+                .filter { file -> if (validationResult.first) true else !file.isHidden }
+
+            val parentFileSimpleInfo = fileSimpleInfoList.find { path.indexOf("/${it.name}") == 0 }
+            if (parentFileSimpleInfo == null) {
                 send(ParameterErrorException().toSocketResult())
                 return@channelFlow
             }
 
-            val parentPath = "${fileSimpleInfo.path.replaceLast("/${fileSimpleInfo.name}", "")}$path"
-            FileUtils.readFileChunks(parentPath, chunkSize) { result ->
+            // 检查路径中的每个段落，判断是否包含隐藏文件
+            val fileSimpleInfo: FileSimpleInfo
+            try {
+                fileSimpleInfo = validatePathAndCheckHiddenFileAccess(path, parentFileSimpleInfo, validationResult)
+            } catch (e: Exception) {
+                send(e.toSocketResult())
+                return@channelFlow
+            }
+
+            FileUtils.readFileChunks(fileSimpleInfo.path, chunkSize) { result ->
                 val sendData = if (result.isSuccess) {
                     WebSocketResult(value = result.getOrDefault(Pair(0L, byteArrayOf())))
                 } else {
@@ -289,9 +285,65 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
     override suspend fun connect(device: SocketDevice): Pair<DeviceConnectType, String> {
         // 检查是否有权限。
         return if (deviceState.allowDeviceShareConnection.contains(device.id)) {
-            Pair(APPROVED, "")
+            val token = 32.randomString()
+            fileShareState.deviceToken[token] = device.id
+            Pair(APPROVED, token)
         } else {
             Pair(REJECTED, "")
         }
+    }
+
+    /**
+     * 验证共享文件的权限并获取已共享文件列表
+     *
+     * @param token 设备令牌标识
+     * @param path 文件路径
+     * @return 如果验证通过，返回共享文件列表；否则返回错误结果
+     */
+    private fun validateShareAndGetFiles(token: String, path: String): Pair<Boolean, List<FileSimpleInfo>> {
+        val deviceId = fileShareState.deviceToken[token] ?: throw ParameterErrorException()
+        val sharedFiles =
+            fileShareState.shareToDevices[deviceId] ?: throw ParameterErrorException()
+
+        if (path.isEmpty()) throw ParameterErrorException()
+
+        return sharedFiles
+    }
+
+    /**
+     * 验证文件路径并检查访问权限
+     *
+     * @param relativePath 相对路径
+     * @param parentFile 父文件信息
+     * @param accessPermission 访问权限验证结果
+     * @return 验证通过的文件信息
+     * @throws ParameterErrorException 当文件不存在时抛出
+     * @throws AuthorityException 当尝试访问无权限的隐藏文件或文件夹时抛出
+     */
+    private fun validatePathAndCheckHiddenFileAccess(
+        relativePath: String,
+        parentFile: FileSimpleInfo,
+        accessPermission: Pair<Boolean, Any>
+    ): FileSimpleInfo {
+        // 检查文件是否隐藏
+        val absolutePath = "${parentFile.path.replaceLast("/${parentFile.name}", "")}$relativePath"
+        val fileInfo =
+            FileUtils.getFile(absolutePath).getOrNull() ?: throw ParameterErrorException()
+        if (!accessPermission.first && fileInfo.isHidden) throw AuthorityException("对方拒绝访问隐藏文件或文件夹")
+
+        val pathSegments = relativePath.parsePath()
+
+        if (pathSegments.indices.any { index ->
+                val intermediatePathToCheck = parentFile.path.replaceLast(
+                    "/${parentFile.name}",
+                    "/" + pathSegments.subList(0, index + 1).joinToString(PathUtils.getPathSeparator())
+                )
+                val intermediateFileInfo = FileUtils.getFile(intermediatePathToCheck).getOrNull()
+                intermediateFileInfo != null && !accessPermission.first && intermediateFileInfo.isHidden
+            }) {
+            throw AuthorityException("对方拒绝访问隐藏文件或文件夹")
+        }
+
+        return fileInfo
     }
 }

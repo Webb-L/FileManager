@@ -65,6 +65,7 @@ class RpcShareClientManager : KoinComponent {
                     val deviceShare = device.toShare(this)
                     deviceState.shares.add(deviceShare)
                     fileState.updateDesk(FileProtocol.Share, deviceShare)
+                    token = share.second
                 }
 
                 DeviceConnectType.PERMANENTLY_BANNED, DeviceConnectType.REJECTED -> {}

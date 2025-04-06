@@ -36,6 +36,7 @@ import app.filemanager.extensions.randomString
 import app.filemanager.extensions.timestampToSyncDate
 import app.filemanager.service.HttpShareFileServer
 import app.filemanager.service.data.ConnectType.*
+import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
 import app.filemanager.ui.components.FileIcon
@@ -43,6 +44,7 @@ import app.filemanager.ui.components.IpsButton
 import app.filemanager.ui.state.file.FileShareLikeCategory.*
 import app.filemanager.ui.state.file.FileShareState
 import app.filemanager.ui.state.file.FileShareStatus
+import app.filemanager.ui.state.file.FileShareType
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.MainState
 import app.filemanager.ui.theme.Typography
@@ -86,12 +88,10 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
         /* 链接方式分享 */
         var isExpandLinkShare by remember { mutableStateOf(true) }
 
-        val sheetState = rememberModalBottomSheetState()
-        var showBottomSheet by remember { mutableStateOf(false) }
         // 全部、反选
         var selectFileType by remember { mutableStateOf(0) }
         // 是否允许访问隐藏文件和文件夹
-        var isHideFile by remember { mutableStateOf(true) }
+        var isHideFile by remember { mutableStateOf(false) }
 
         // 等待、允许、拒绝
         var category by remember { mutableStateOf(WAITING) }
@@ -118,6 +118,12 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                 repeatMode = RepeatMode.Restart
             )
         )
+        var curDevice by remember { mutableStateOf<SocketDevice?>(null) }
+
+
+        val sheetState = rememberModalBottomSheetState()
+        var showBottomSheet by remember { mutableStateOf(false) }
+        var fileShareType = FileShareType.NONE
 
         Scaffold(
             topBar = {
@@ -154,6 +160,8 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                             IconButton({
                                 showBottomSheet = !showBottomSheet
                                 curLinkDevice = null
+                                curDevice = null
+                                fileShareType = FileShareType.NONE
                             }) {
                                 Icon(if (!showBottomSheet) Icons.Default.Description else Icons.Default.Close, null)
                             }
@@ -237,6 +245,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                         IconButton({
                                             showBottomSheet = true
                                             curLinkDevice = device
+                                            fileShareType = FileShareType.LINK
                                         }) {
                                             Icon(Icons.Default.Done, null)
                                         }
@@ -330,7 +339,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                     FileShareStatus.COMPLETED -> {}
                                     FileShareStatus.WAITING -> {
 //                                        fileShareState.sendFile[device.id] = FileShareStatus.WAITING
-                                        deviceState.share(device)
+//                                        deviceState.share(device)
 //                                        fileShareState.shareToDevices[device.id] =
 //                                            Pair(
 //                                                isHideFile,
@@ -339,13 +348,9 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                     }
 
                                     null -> {
-                                        fileShareState.sendFile[device.id] = FileShareStatus.WAITING
-                                        deviceState.share(device)
-                                        fileShareState.shareToDevices[device.id] =
-                                            Pair(
-                                                isHideFile,
-                                                fileShareState.checkedFiles.toList()
-                                            )
+                                        curDevice = device
+                                        showBottomSheet = true
+                                        fileShareType = FileShareType.DEVICE
                                     }
                                 }
                             },
@@ -397,10 +402,24 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
             }
 
             if (showBottomSheet) {
+                val isFileShareReady = curLinkDevice != null || curDevice != null
+
+                if (isFileShareReady) {
+                    isHideFile = when (fileShareType) {
+                        FileShareType.NONE -> false
+                        FileShareType.LINK -> fileShareState.authorizedLinkShareDevices[curLinkDevice!!]?.first
+                            ?: false
+
+                        FileShareType.DEVICE -> fileShareState.shareToDevices[curDevice!!.id]?.first
+                            ?: false
+                    }
+                }
+
                 ModalBottomSheet(
                     onDismissRequest = {
                         showBottomSheet = false
                         curLinkDevice = null
+                        curDevice = null
                     },
                     sheetState = sheetState
                 ) {
@@ -408,7 +427,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                         Row(Modifier.padding(bottom = 8.dp)) {
                             Column {
                                 Text("分享列表(${files.size})")
-                                if (curLinkDevice != null) {
+                                if (isFileShareReady) {
                                     Spacer(Modifier.height(4.dp))
                                     Text("请选择需要分享的文件或文件夹", style = typography.bodySmall)
                                 }
@@ -416,21 +435,36 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
 
                             Spacer(Modifier.weight(1f))
 
-
-                            if (curLinkDevice != null) {
+                            if (isFileShareReady) {
                                 Button({
-                                    fileShareState.pendingLinkShareDevices.apply {
-                                        if (contains(curLinkDevice)) {
-                                            remove(curLinkDevice)
+                                    when (fileShareType) {
+                                        FileShareType.NONE -> {}
+                                        FileShareType.LINK -> {
+                                            fileShareState.pendingLinkShareDevices.apply {
+                                                if (contains(curLinkDevice)) {
+                                                    remove(curLinkDevice)
+                                                }
+                                            }
+                                            fileShareState.authorizedLinkShareDevices[curLinkDevice!!] =
+                                                Pair(isHideFile, fileShareState.checkedFiles.toList())
+                                        }
+
+                                        FileShareType.DEVICE -> {
+                                            fileShareState.sendFile[curDevice!!.id] = FileShareStatus.WAITING
+                                            deviceState.share(curDevice!!)
+                                            fileShareState.shareToDevices[curDevice!!.id] =
+                                                Pair(
+                                                    isHideFile,
+                                                    fileShareState.checkedFiles.toList()
+                                                )
                                         }
                                     }
-                                    fileShareState.authorizedLinkShareDevices[curLinkDevice!!] =
-                                        Pair(isHideFile, fileShareState.checkedFiles.toList())
 
 
                                     fileShareState.checkedFiles.clear()
                                     showBottomSheet = false
                                     curLinkDevice = null
+                                    curDevice = null
                                 }) {
                                     Text("完成")
                                 }
@@ -438,7 +472,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                         }
 
 
-                        if (curLinkDevice != null) {
+                        if (isFileShareReady) {
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
@@ -474,15 +508,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                     selected = isHideFile,
                                     label = { Text("隐藏文件") },
                                     shape = RoundedCornerShape(25.dp),
-                                    onClick = {
-                                        isHideFile = !isHideFile
-                                        if (curLinkDevice != null) {
-                                            fileShareState.authorizedLinkShareDevices[curLinkDevice!!] = Pair(
-                                                isHideFile,
-                                                fileShareState.checkedFiles.toList()
-                                            )
-                                        }
-                                    })
+                                    onClick = { isHideFile = !isHideFile })
                             }
                         } else {
                             Spacer(Modifier.height(16.dp))
@@ -529,7 +555,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                     }
                                 },
                                 modifier = Modifier.clickable {
-                                    if (curLinkDevice == null) return@clickable
+                                    if (curLinkDevice == null && curDevice == null) return@clickable
 
                                     if (checkedFiles.contains(file)) {
                                         fileShareState.checkedFiles.remove(file)

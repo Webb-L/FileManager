@@ -24,6 +24,7 @@ class FileShareState {
     }
 
     // 已授权通过链接访问文件的设备
+    // Map<设备id, Pair<是否允许访问隐藏文件, 分享文件列表>>
     val authorizedLinkShareDevices = mutableStateMapOf<Device, Pair<Boolean, List<FileSimpleInfo>>>()
 
     // 等待授权通过链接访问文件的设备
@@ -32,7 +33,12 @@ class FileShareState {
     // 被拒绝通过链接访问文件的设备
     val rejectedLinkShareDevices = mutableStateListOf<Device>()
 
+    // 已授权通过设备访问文件的设备
+    // Map<设备id, Pair<是否允许访问隐藏文件, 分享文件列表>>
     val shareToDevices = mutableStateMapOf<String, Pair<Boolean, List<FileSimpleInfo>>>()
+
+    // Map<token, 设备id>
+    val deviceToken = mutableStateMapOf<String, String>()
 }
 
 
@@ -78,4 +84,21 @@ enum class FileShareLikeCategory {
      * 此状态表明共享操作已经被明确拒绝，无法继续进行。
      */
     REJECTED
+}
+
+/**
+ * 表示文件共享的类型。
+ */
+enum class FileShareType {
+    NONE,
+
+    /**
+     * 表示一种文件共享方式，通过链接进行共享。
+     */
+    LINK,
+
+    /**
+     * 表示设备共享类型的枚举值，DEVICE表示通过设备进行文件共享。
+     */
+    DEVICE,
 }
