@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceConnectType.*
+import app.filemanager.db.FileManagerDatabase
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
 import app.filemanager.ui.state.file.FileShareStatus
@@ -23,6 +24,7 @@ import org.koin.compose.koinInject
 
 @Composable
 fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
+    val database = koinInject<FileManagerDatabase>()
     val deviceState = koinInject<DeviceState>()
 
     var expanded by remember { mutableStateOf(false) }
@@ -54,15 +56,37 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
         if (minutes == 0) "${seconds}秒" else "${minutes}分${seconds}秒"
     }
 
+    // TODO 自动同意
+    val deviceReceiveShare = database.deviceReceiveShareQueries.selectById(socketDevice.id).executeAsOneOrNull()
+    println(deviceReceiveShare)
+
     fun updateShareRequest(deviceType: DeviceConnectType) {
         // TODO 保存到数据库
         when (deviceType) {
             AUTO_CONNECT, APPROVED -> {
                 deviceState.connectShare(socketDevice)
                 deviceState.shareConnectionStates[socketDevice.id] = FileShareStatus.COMPLETED
+                if (deviceType == AUTO_CONNECT) {
+                    database.deviceReceiveShareQueries.insert(
+                        socketDevice.id,
+                        socketDevice.name,
+                        socketDevice.type,
+                        AUTO_CONNECT,
+                        "/home/webb/下载"
+                    )
+                }
             }
 
             else -> {
+                if (deviceType == PERMANENTLY_BANNED) {
+                    database.deviceReceiveShareQueries.insert(
+                        socketDevice.id,
+                        socketDevice.name,
+                        socketDevice.type,
+                        AUTO_CONNECT,
+                        ""
+                    )
+                }
                 deviceState.shareConnectionStates[socketDevice.id] = FileShareStatus.REJECTED
             }
         }
@@ -73,9 +97,7 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
     MaterialBanner(
         message = "${socketDevice.name} 请求向您发送文件或文件夹\n${timeText} 后将会自动拒绝。",
         actionLabel = "同意",
-        onActionClick = {
-            updateShareRequest(APPROVED)
-        },
+        onActionClick = { updateShareRequest(APPROVED) },
         menu = {
             Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
                 IconButton({ expanded = true }) {

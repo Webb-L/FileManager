@@ -65,6 +65,10 @@ fun createDatabase(driverFactory: DriverFactory): FileManagerDatabase {
         FileFilterAdapter = FileFilter.Adapter(
             typeAdapter = fileFilterType,
             extensionsAdapter = listOfStringsAdapter
+        ),
+        DeviceReceiveShareAdapter = DeviceReceiveShare.Adapter(
+            typeAdapter = driverAdapter,
+            connectionTypeAdapter = driverConnectTypeAdapter,
         )
     )
 
