@@ -33,29 +33,55 @@ import kotlin.coroutines.CoroutineContext
 
 @Rpc
 interface ShareService : RemoteService {
-    // 远程设备需要我本地文件
+    /**
+     * 获取指定路径下的文件列表
+     * @param token 设备认证令牌
+     * @param path 要列出的文件路径
+     * @return WebSocketResult包含文件列表的映射，键为协议和设备ID对，值为文件信息列表
+     */
     suspend fun list(
         token: String,
         path: String
     ): WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>
 
-    // 发送遍历的目录
+    /**
+     * 遍历指定路径下的文件目录结构
+     * @param token 设备认证令牌
+     * @param path 要遍历的起始路径
+     * @return Flow流式返回WebSocketResult，包含遍历过程中的文件列表
+     */
     suspend fun traversePath(
         token: String,
         path: String
     ): Flow<WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>>
 
-    // 读取文件数据
+    /**
+     * 分块读取文件内容
+     * @param token 设备认证令牌
+     * @param path 要读取的文件路径
+     * @param chunkSize 每个数据块的大小(字节)
+     * @return Flow流式返回WebSocketResult，包含文件块数据和偏移量
+     */
     suspend fun readFileChunks(
         token: String,
         path: String,
         chunkSize: Long
     ): Flow<WebSocketResult<Pair<Long, ByteArray>>>
 
-    // 连接分享
+    /**
+     * 连接设备并建立共享会话
+     * @param device 要连接的设备信息
+     * @return Pair包含连接状态和认证令牌(如果连接成功)
+     */
     suspend fun connect(device: SocketDevice): Pair<DeviceConnectType, String>
 }
 
+/**
+ * ShareService接口的实现类，提供文件共享相关功能
+ * 
+ * @property coroutineContext 协程上下文
+ * @constructor 创建文件共享服务实例
+ */
 class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareService, KoinComponent {
     private val settings = createSettings()
     private val fileState: FileState by inject()
@@ -63,6 +89,16 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
     private val fileShareState: FileShareState by inject()
     private val deviceCertificateState: DeviceCertificateState by inject()
 
+    /**
+     * 实现获取文件列表功能
+     * 1. 验证token和路径有效性
+     * 2. 检查隐藏文件访问权限
+     * 3. 返回格式化后的文件列表
+     * 
+     * @param token 设备认证令牌
+     * @param path 要列出的文件路径
+     * @return WebSocketResult包含文件列表
+     */
     override suspend fun list(
         token: String,
         path: String
@@ -150,6 +186,16 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
         )
     }
 
+    /**
+     * 实现目录遍历功能
+     * 1. 验证token和路径有效性
+     * 2. 使用PathUtils遍历目录结构
+     * 3. 通过Flow流式返回遍历结果
+     * 
+     * @param token 设备认证令牌
+     * @param path 要遍历的起始路径
+     * @return Flow流式返回遍历结果
+     */
     override suspend fun traversePath(
         token: String,
         path: String
@@ -231,6 +277,17 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
         }
     }
 
+    /**
+     * 实现文件分块读取功能
+     * 1. 验证token和路径有效性
+     * 2. 使用FileUtils分块读取文件
+     * 3. 通过Flow流式返回文件块数据
+     * 
+     * @param token 设备认证令牌
+     * @param path 要读取的文件路径
+     * @param chunkSize 每个数据块的大小(字节)
+     * @return Flow流式返回文件块数据
+     */
     override suspend fun readFileChunks(
         token: String,
         path: String,
@@ -283,8 +340,16 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
         }
     }
 
+    /**
+     * 实现设备连接功能
+     * 1. 检查设备是否在允许连接列表中
+     * 2. 生成随机token用于后续认证
+     * 3. 返回连接状态和token
+     * 
+     * @param device 要连接的设备信息
+     * @return Pair包含连接状态和认证令牌
+     */
     override suspend fun connect(device: SocketDevice): Pair<DeviceConnectType, String> {
-        // 检查是否有权限。
         return if (deviceState.allowDeviceShareConnection.contains(device.id)) {
             val token = 32.randomString()
             fileShareState.deviceToken[token] = device.id
@@ -300,6 +365,13 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
      * @param token 设备令牌标识
      * @param path 文件路径
      * @return 如果验证通过，返回共享文件列表；否则返回错误结果
+     */
+    /**
+     * 验证共享权限并获取共享文件列表
+     * @param token 设备认证令牌
+     * @param path 要访问的文件路径
+     * @return Pair包含是否有权限访问隐藏文件和共享文件列表
+     * @throws ParameterErrorException 当token无效或路径为空时抛出
      */
     private fun validateShareAndGetFiles(token: String, path: String): Pair<Boolean, List<FileSimpleInfo>> {
         val deviceId = fileShareState.deviceToken[token] ?: throw ParameterErrorException()
@@ -320,6 +392,18 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
      * @return 验证通过的文件信息
      * @throws ParameterErrorException 当文件不存在时抛出
      * @throws AuthorityException 当尝试访问无权限的隐藏文件或文件夹时抛出
+     */
+    /**
+     * 验证文件路径并检查隐藏文件访问权限
+     * 1. 检查文件是否存在
+     * 2. 验证中间路径中的隐藏文件访问权限
+     * 
+     * @param relativePath 相对路径
+     * @param parentFile 父文件信息
+     * @param accessPermission 访问权限验证结果
+     * @return 验证通过的文件信息
+     * @throws ParameterErrorException 当文件不存在时抛出
+     * @throws AuthorityException 当尝试访问无权限的隐藏文件时抛出
      */
     private fun validatePathAndCheckHiddenFileAccess(
         relativePath: String,

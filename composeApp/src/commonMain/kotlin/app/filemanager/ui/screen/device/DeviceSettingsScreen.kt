@@ -106,13 +106,13 @@ class DeviceSettingsScreen() : Screen {
                 AnimatedVisibility(isShowSearch) {
                     TextField(
                         value = deviceName,
-                        onValueChange = { deviceSettingsState.updatedDeviceName(it) },
+                        onValueChange = { deviceSettingsState.updateDeviceName(it) },
                         label = { Text("设备名") },
                         modifier = Modifier.padding(start = 16.dp, bottom = 8.dp),
                         leadingIcon = { Icon(Icons.Default.Search, null) },
                         trailingIcon = {
                             if (deviceName.isNotEmpty()) {
-                                IconButton(onClick = { deviceSettingsState.updatedDeviceName("") }) {
+                                IconButton(onClick = { deviceSettingsState.updateDeviceName("") }) {
                                     Icon(Icons.Default.Close, "清除")
                                 }
                             }
