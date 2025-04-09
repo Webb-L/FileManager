@@ -3,6 +3,7 @@ package app.filemanager.service.rpc
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.main.DeviceConnectType
+import app.filemanager.db.FileManagerDatabase
 import app.filemanager.extensions.pathLevel
 import app.filemanager.getSocketDevice
 import app.filemanager.service.data.SocketDevice
@@ -33,6 +34,7 @@ class RpcShareClientManager : KoinComponent {
     private val rpcClient by lazy { HttpClient { installKrpc() } }
     val fileState: FileState by inject()
     val deviceState: DeviceState by inject()
+    val database: FileManagerDatabase by inject()
 
     @OptIn(ExperimentalSerializationApi::class)
     suspend fun share(connectDevice: SocketDevice) {
@@ -64,8 +66,31 @@ class RpcShareClientManager : KoinComponent {
                 DeviceConnectType.AUTO_CONNECT, DeviceConnectType.APPROVED -> {
                     val deviceShare = device.toShare(this)
                     deviceState.shares.add(deviceShare)
-                    fileState.updateDesk(FileProtocol.Share, deviceShare)
                     token = share.second
+
+                    val deviceReceiveShare =
+                        database.deviceReceiveShareQueries.selectById(device.id).executeAsOneOrNull()
+                    // TODO 添加任务
+                    if (deviceReceiveShare?.connectionType == DeviceConnectType.AUTO_CONNECT) {
+                        FileUtils.getFile(deviceReceiveShare.path).onSuccess { destFileSimpleInfo ->
+                            val files = mutableListOf<FileSimpleInfo>()
+                            getList("/", "") { result ->
+                                if (result.isSuccess) {
+                                    files.addAll(result.getOrDefault(listOf()))
+                                }
+                            }
+
+                            for (file in files) {
+                                copyFile(file, destFileSimpleInfo) {
+                                    println(it)
+                                }
+                            }
+                        }
+
+                        return
+                    }
+
+                    fileState.updateDesk(FileProtocol.Share, deviceShare)
                 }
 
                 DeviceConnectType.PERMANENTLY_BANNED, DeviceConnectType.REJECTED -> {}
@@ -214,7 +239,7 @@ class RpcShareClientManager : KoinComponent {
         var isSuccess = true
         streamScoped {
             shareService.readFileChunks(
-                "rpc.token",
+                token,
                 srcFileSimpleInfoPath,
                 MAX_LENGTH.toLong()
             ).collect { result ->

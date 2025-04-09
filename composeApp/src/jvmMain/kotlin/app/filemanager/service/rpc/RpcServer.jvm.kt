@@ -3,7 +3,8 @@ package app.filemanager.service.rpc
 import androidx.compose.runtime.snapshotFlow
 import app.filemanager.PlatformType
 import app.filemanager.createSettings
-import app.filemanager.data.main.DeviceConnectType.WAITING
+import app.filemanager.data.main.DeviceConnectType.*
+import app.filemanager.db.FileManagerDatabase
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
@@ -79,6 +80,7 @@ actual suspend fun startRpcServer() {
 @OptIn(ExperimentalSerializationApi::class)
 fun Application.configureShareSse() {
     val deviceState: DeviceState by inject(DeviceState::class.java)
+    val database: FileManagerDatabase by inject(FileManagerDatabase::class.java)
 
     routing {
         sse("/share/{device}") {
@@ -99,6 +101,24 @@ fun Application.configureShareSse() {
                     close()
                     return@sse
                 }
+
+                val deviceReceiveShare =
+                    database.deviceReceiveShareQueries.selectById(socketDevice.id).executeAsOneOrNull()
+                when (deviceReceiveShare?.connectionType ?: WAITING) {
+                    AUTO_CONNECT -> {
+                        send(event = FileShareStatus.COMPLETED.toString(), data = "")
+                        deviceState.connectShare(socketDevice)
+                        close()
+                        return@sse
+                    }
+                    PERMANENTLY_BANNED -> {
+                        send(event = FileShareStatus.ERROR.toString(), data = "拒绝访问")
+                        close()
+                        return@sse
+                    }
+                    else -> {}
+                }
+                println(deviceReceiveShare)
 
                 deviceState.shareRequest[socketDevice.id] = Pair(WAITING, Clock.System.now().toEpochMilliseconds())
                 // 返回成功响应

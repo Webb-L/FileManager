@@ -188,7 +188,10 @@ class DeviceState : KoinComponent {
                                 FileShareStatus.SENDING -> {}
                                 FileShareStatus.REJECTED -> {}
                                 FileShareStatus.ERROR -> {}
-                                FileShareStatus.COMPLETED -> {}
+                                FileShareStatus.COMPLETED -> {
+                                    allowDeviceShareConnection.add(device.id)
+                                }
+
                                 FileShareStatus.WAITING -> {
                                     allowDeviceShareConnection.add(device.id)
                                 }

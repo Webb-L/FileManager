@@ -104,9 +104,9 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
         }
 
         // 检查路径中的每个段落，判断是否包含隐藏文件
-        val fileSimpleInfo: FileSimpleInfo
+        val parentFileSimpleInfo: FileSimpleInfo
         try {
-            fileSimpleInfo = validatePathAndCheckHiddenFileAccess(
+            parentFileSimpleInfo = validatePathAndCheckHiddenFileAccess(
                 path,
                 fileSimpleInfoList.find { path.indexOf("/${it.name}") == 0 }
                     ?: return ParameterErrorException().toSocketResult(),
@@ -116,7 +116,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
             return e.toSocketResult()
         }
 
-        val fileAndFolder = fileSimpleInfo.path.getFileAndFolder()
+        val fileAndFolder = parentFileSimpleInfo.path.getFileAndFolder()
         if (fileAndFolder.isFailure) {
             val exceptionOrNull = fileAndFolder.exceptionOrNull() ?: EmptyDataException()
             return WebSocketResult(
@@ -136,7 +136,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
 
 
                     val simpleInfo = fileSimpleInfo.apply {
-                        this.path = this.path.replace(fileSimpleInfo.path, "")
+                        this.path = this.path.replace(parentFileSimpleInfo.path, "")
                         this.protocol = FileProtocol.Local
                         this.protocolId = ""
                     }
@@ -168,22 +168,22 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
             val fileSimpleInfoList = validationResult.second
                 .filter { file -> if (validationResult.first) true else !file.isHidden }
 
-            val parentFileSimpleInfo = fileSimpleInfoList.find { path.indexOf("/${it.name}") == 0 }
-            if (parentFileSimpleInfo == null) {
+            val rootFileSimpleInfo = fileSimpleInfoList.find { path.indexOf("/${it.name}") == 0 }
+            if (rootFileSimpleInfo == null) {
                 send(ParameterErrorException().toSocketResult())
                 return@channelFlow
             }
 
             // 检查路径中的每个段落，判断是否包含隐藏文件
-            val fileSimpleInfo: FileSimpleInfo
+            val parentFileSimpleInfo: FileSimpleInfo
             try {
-                fileSimpleInfo = validatePathAndCheckHiddenFileAccess(path, parentFileSimpleInfo, validationResult)
+                parentFileSimpleInfo = validatePathAndCheckHiddenFileAccess(path, rootFileSimpleInfo, validationResult)
             } catch (e: Exception) {
                 send(e.toSocketResult())
                 return@channelFlow
             }
 
-            PathUtils.traverse(fileSimpleInfo.path) { fileAndFolder ->
+            PathUtils.traverse(parentFileSimpleInfo.path) { fileAndFolder ->
                 try {
                     val result = if (fileAndFolder.isFailure) {
                         val exceptionOrNull = fileAndFolder.exceptionOrNull() ?: EmptyDataException()
@@ -197,7 +197,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
                             val files: MutableList<FileSimpleInfo> = mutableListOf()
                             files.addAll(fileAndFolder.getOrDefault(listOf()))
                             if (!isFirst) {
-                                files.add(FileUtils.getFile(fileSimpleInfo.path).getOrNull()!!)
+                                files.add(FileUtils.getFile(parentFileSimpleInfo.path).getOrNull()!!)
                                 isFirst = true
                             }
                             files.forEach { fileSimpleInfo ->
@@ -208,13 +208,13 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
 
                                 if (!containsKey(key)) {
                                     put(key, mutableListOf(fileSimpleInfo.apply {
-                                        this.path = this.path.replace(fileSimpleInfo.path, "")
+                                        this.path = this.path.replace(parentFileSimpleInfo.path, "")
                                         this.protocol = FileProtocol.Local
                                         this.protocolId = ""
                                     }))
                                 } else {
                                     get(key)?.add(fileSimpleInfo.apply {
-                                        this.path = this.path.replace(fileSimpleInfo.path, "")
+                                        this.path = this.path.replace(parentFileSimpleInfo.path, "")
                                         this.protocol = FileProtocol.Local
                                         this.protocolId = ""
                                     })
@@ -238,10 +238,11 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
     ): Flow<WebSocketResult<Pair<Long, ByteArray>>> {
         return channelFlow {
 
-            val validationResult: Pair<Boolean, List<FileSimpleInfo>>;
+            val validationResult: Pair<Boolean, List<FileSimpleInfo>>
             try {
                 validationResult = validateShareAndGetFiles(token, path)
             } catch (e: Exception) {
+                println("$e, $path")
                 send(e.toSocketResult())
                 return@channelFlow
             }
@@ -249,8 +250,8 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
             val fileSimpleInfoList = validationResult.second
                 .filter { file -> if (validationResult.first) true else !file.isHidden }
 
-            val parentFileSimpleInfo = fileSimpleInfoList.find { path.indexOf("/${it.name}") == 0 }
-            if (parentFileSimpleInfo == null) {
+            val rootFileSimpleInfo = fileSimpleInfoList.find { path.indexOf("/${it.name}") == 0 }
+            if (rootFileSimpleInfo == null) {
                 send(ParameterErrorException().toSocketResult())
                 return@channelFlow
             }
@@ -258,7 +259,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
             // 检查路径中的每个段落，判断是否包含隐藏文件
             val fileSimpleInfo: FileSimpleInfo
             try {
-                fileSimpleInfo = validatePathAndCheckHiddenFileAccess(path, parentFileSimpleInfo, validationResult)
+                fileSimpleInfo = validatePathAndCheckHiddenFileAccess(path, rootFileSimpleInfo, validationResult)
             } catch (e: Exception) {
                 send(e.toSocketResult())
                 return@channelFlow
