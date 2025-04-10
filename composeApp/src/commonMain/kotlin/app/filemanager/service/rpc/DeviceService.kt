@@ -31,7 +31,7 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
 
     override suspend fun connect(device: SocketDevice): Pair<DeviceConnectType, String> {
         val queriedDevice =
-            database.deviceQueries.queryById(device.id, DeviceCategory.SERVER).executeAsOneOrNull()
+            database.deviceConnectQueries.queryById(device.id, DeviceCategory.SERVER).executeAsOneOrNull()
 
         val randomString = 32.randomString()
         if (queriedDevice != null) {
@@ -45,7 +45,7 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
                         deviceCertificateState.permissions[randomString] = queriedDevice.roleId
                         return Pair(APPROVED, randomString)
                     }
-                    database.deviceQueries.updateConnectionTypeByIdAndCategory(
+                    database.deviceConnectQueries.updateConnectionTypeByIdAndCategory(
                         connectionType = queriedDevice.connectionType,
                         id = device.id,
                         category = DeviceCategory.SERVER
@@ -83,7 +83,7 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
 
                 else -> {}
             }
-            database.deviceQueries.updateLastConnectionByCategoryAndId(device.id, DeviceCategory.SERVER)
+            database.deviceConnectQueries.updateLastConnectionByCategoryAndId(device.id, DeviceCategory.SERVER)
         } else {
             deviceState.connectionRequest[device.id] = Pair(WAITING, Clock.System.now().toEpochMilliseconds())
             if (deviceState.socketDevices.firstOrNull { it.id == device.id } == null) {
@@ -98,7 +98,7 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
                     while (deviceState.connectionRequest[device.id]!!.first == WAITING) {
                         delay(300L)
                     }
-                    database.deviceQueries.insert(
+                    database.deviceConnectQueries.insert(
                         id = device.id,
                         name = device.name,
                         type = device.type,

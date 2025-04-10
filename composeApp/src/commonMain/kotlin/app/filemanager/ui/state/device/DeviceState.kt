@@ -64,7 +64,7 @@ class DeviceSettingsState(private val database: FileManagerDatabase) {
         devices.apply {
             clear()
             addAll(
-                database.deviceQueries.queryByNameLikeAndCategory(
+                database.deviceConnectQueries.queryByNameLikeAndCategory(
                     "%${_deviceName.value}%",
                     _category.value
                 ).executeAsList().map {
@@ -91,7 +91,7 @@ class DeviceSettingsState(private val database: FileManagerDatabase) {
      * @param category 设备分类
      */
     fun updateDeviceCategory(connectionType: DeviceConnectType, deviceId: String, category: DeviceCategory) {
-        database.deviceQueries.updateConnectionTypeByIdAndCategory(
+        database.deviceConnectQueries.updateConnectionTypeByIdAndCategory(
             connectionType,
             deviceId,
             category
@@ -106,7 +106,7 @@ class DeviceSettingsState(private val database: FileManagerDatabase) {
      * @param device 包含更新后信息的设备对象
      */
     fun updateDevice(index: Int, device: DeviceJoinDeviceRole) {
-        database.deviceQueries.updateNameConnectTypeRoleIdByIdAndCategory(
+        database.deviceConnectQueries.updateNameConnectTypeRoleIdByIdAndCategory(
             device.name,
             device.connectionType,
             device.roleId,
@@ -114,7 +114,7 @@ class DeviceSettingsState(private val database: FileManagerDatabase) {
             device.category
         )
 
-        database.deviceQueries.queryById(device.id, device.category).executeAsOneOrNull()?.let {
+        database.deviceConnectQueries.queryById(device.id, device.category).executeAsOneOrNull()?.let {
             devices[index] = DeviceJoinDeviceRole(
                 id = it.id,
                 name = it.name,

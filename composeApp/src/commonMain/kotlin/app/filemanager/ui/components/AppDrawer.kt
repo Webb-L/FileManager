@@ -635,7 +635,7 @@ fun DeviceConnectNewDialog(
     val deviceState = koinInject<DeviceState>()
 
     val onConnect: (Boolean) -> Unit = { isAuto ->
-        database.deviceQueries.insert(
+        database.deviceConnectQueries.insert(
             id = socketDevice.id,
             name = socketDevice.name,
             type = socketDevice.type,

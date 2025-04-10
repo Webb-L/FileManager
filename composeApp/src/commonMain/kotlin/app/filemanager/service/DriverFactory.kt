@@ -54,6 +54,9 @@ fun createDatabase(driverFactory: DriverFactory): FileManagerDatabase {
         driver = driverFactory.createDriver(),
         DeviceAdapter = Device.Adapter(
             typeAdapter = driverAdapter,
+        ),
+        DeviceConnectAdapter = DeviceConnect.Adapter(
+            typeAdapter = driverAdapter,
             connectionTypeAdapter = driverConnectTypeAdapter,
             categoryAdapter = driverCategoryAdapter,
         ),
@@ -69,7 +72,7 @@ fun createDatabase(driverFactory: DriverFactory): FileManagerDatabase {
         DeviceReceiveShareAdapter = DeviceReceiveShare.Adapter(
             typeAdapter = driverAdapter,
             connectionTypeAdapter = driverConnectTypeAdapter,
-        )
+        ),
     )
 
     // Do more work with the database (see below).
