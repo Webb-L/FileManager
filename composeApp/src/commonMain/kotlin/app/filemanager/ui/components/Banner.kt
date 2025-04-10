@@ -83,7 +83,7 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
                         socketDevice.id,
                         socketDevice.name,
                         socketDevice.type,
-                        AUTO_CONNECT,
+                        PERMANENTLY_BANNED,
                         ""
                     )
                 }
