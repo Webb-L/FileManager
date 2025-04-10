@@ -1,63 +1,35 @@
 import app.filemanager.data.main.DeviceType;
-import app.filemanager.data.main.DeviceConnectType;
-import app.filemanager.data.main.DeviceCategory;
 
 CREATE TABLE Device (
-    id              TEXT               NOT NULL,
-    name            TEXT               NOT NULL,
-    type            TEXT AS DeviceType NOT NULL,
-    connectionType  TEXT AS DeviceConnectType NOT NULL,
-    firstConnection INTEGER          NOT NULL,
-    lastConnection  INTEGER          NOT NULL,
-    category        TEXT AS DeviceCategory NOT NULL,
-    roleId          INTEGER           NOT NULL DEFAULT -1,
-    CONSTRAINT unique_id_category UNIQUE (id, category)
+    id      TEXT               NOT NULL,
+    name    TEXT               NOT NULL,
+    host    TEXT               DEFAULT '',
+    port    INTEGER            DEFAULT 0,
+    type    TEXT AS DeviceType NOT NULL,
+    CONSTRAINT pk_device PRIMARY KEY (id)
 );
 
+-- 插入新设备
 insert:
-INSERT INTO Device (id, name, type, connectionType, firstConnection, lastConnection, category, roleId)
-VALUES (?, ?, ?, ?, strftime('%s', 'now'), strftime('%s', 'now'), ?, COALESCE(?, -1));
+INSERT INTO Device (id, name, host, port, type)
+VALUES (?, ?, ?, ?, ?);
 
-updateNameById:
-UPDATE Device
-SET name = ?
-WHERE id = ?;
-
-updateConnectionTypeByIdAndCategory:
-UPDATE Device
-SET connectionType = ?
-WHERE id = ? AND category = ?;
-
-queryAll:
-SELECT *
-FROM Device;
-
+-- 根据ID查询设备
 queryById:
 SELECT *
 FROM Device
-WHERE id = ? AND category = ?;
+WHERE id = ?;
 
-queryByCategory:
-SELECT *
-FROM Device
-WHERE category = ?;
-
-updateLastConnectionByCategoryAndId:
+-- 更新设备信息
+updateById:
 UPDATE Device
-SET lastConnection = strftime('%s', 'now')
-WHERE id = ? AND category = ?;
+SET name = ?,
+    host = ?,
+    port = ?,
+    type = ?
+WHERE id = ?;
 
-updateNameConnectTypeRoleIdByIdAndCategory:
-UPDATE Device
-SET name = ?, 
-    connectionType = ?, 
-    roleId = COALESCE(?, -1)
-WHERE id = ? AND category = ?;
-
-queryByNameLikeAndCategory:
-SELECT d.*,
-       dr.name    AS roleName
-FROM Device d
-LEFT JOIN DeviceRole dr
-       ON d.roleId = dr.id
-       WHERE d.name LIKE ? AND d.category = ?;
+-- 删除设备
+deleteById:
+DELETE FROM Device
+WHERE id = ?;
