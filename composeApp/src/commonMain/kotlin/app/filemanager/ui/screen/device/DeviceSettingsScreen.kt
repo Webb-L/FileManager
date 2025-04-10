@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.MaterialTheme.colorScheme
@@ -82,6 +83,11 @@ class DeviceSettingsScreen() : Screen {
                         }
                     },
                     actions = {
+                        IconButton({
+                            navigator.push(DeviceScreen())
+                        }) {
+                            Icon(Icons.AutoMirrored.Default.List, null)
+                        }
                         IconButton({
                             scope.launch {
                                 isShowSearch = !isShowSearch

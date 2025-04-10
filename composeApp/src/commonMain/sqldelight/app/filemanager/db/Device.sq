@@ -15,6 +15,11 @@ insert:
 INSERT INTO Device (id, name, host, port, type)
 VALUES (?, ?, ?, ?, ?);
 
+-- 查询所有设备
+queryAll:
+SELECT *
+FROM Device;
+
 -- 根据ID查询设备
 queryById:
 SELECT *
@@ -22,11 +27,9 @@ FROM Device
 WHERE id = ?;
 
 -- 更新设备信息
-updateById:
+updateNameTypeById:
 UPDATE Device
 SET name = ?,
-    host = ?,
-    port = ?,
     type = ?
 WHERE id = ?;
 
