@@ -1,11 +1,8 @@
-import app.filemanager.data.main.DeviceType;
 import app.filemanager.data.main.DeviceConnectType;
 import app.filemanager.data.main.DeviceCategory;
 
 CREATE TABLE DeviceConnect (
     id              TEXT                NOT NULL,
-    name            TEXT                NOT NULL,
-    type            TEXT AS DeviceType  NOT NULL,
     connectionType  TEXT AS DeviceConnectType NOT NULL,
     firstConnection INTEGER             NOT NULL,
     lastConnection  INTEGER             NOT NULL,
@@ -15,13 +12,8 @@ CREATE TABLE DeviceConnect (
 );
 
 insert:
-INSERT INTO DeviceConnect (id, name, type, connectionType, firstConnection, lastConnection, category, roleId)
-VALUES (?, ?, ?, ?, strftime('%s', 'now'), strftime('%s', 'now'), ?, COALESCE(?, -1));
-
-updateNameById:
-UPDATE DeviceConnect
-SET name = ?
-WHERE id = ?;
+INSERT INTO DeviceConnect (id, connectionType, firstConnection, lastConnection, category, roleId)
+VALUES (?, ?, strftime('%s', 'now'), strftime('%s', 'now'), ?, COALESCE(?, -1));
 
 updateConnectionTypeByIdAndCategory:
 UPDATE DeviceConnect
@@ -33,9 +25,14 @@ SELECT *
 FROM DeviceConnect;
 
 queryById:
-SELECT *
-FROM DeviceConnect
-WHERE id = ? AND category = ?;
+SELECT
+    dc.*,
+    d.name AS deviceName,
+    d.type AS deviceType
+FROM DeviceConnect dc
+LEFT JOIN Device d ON dc.id = d.id
+WHERE d.name LIKE ? AND dc.category = ?;
+
 
 queryByCategory:
 SELECT *
@@ -50,16 +47,17 @@ WHERE id = ? AND category = ?;
 updateNameConnectTypeRoleIdByIdAndCategory:
 UPDATE DeviceConnect
 SET 
-    name = ?, 
     connectionType = ?, 
     roleId = COALESCE(?, -1)
 WHERE id = ? AND category = ?;
 
 queryByNameLikeAndCategory:
 SELECT 
-    d.*, 
-    dr.name AS roleName
-FROM DeviceConnect d
-LEFT JOIN DeviceRole dr
-ON d.roleId = dr.id
-WHERE d.name LIKE ? AND d.category = ?;
+    dc.*,
+    dr.name AS roleName,
+    d.name AS deviceName,
+    d.type AS deviceType
+FROM DeviceConnect dc
+LEFT JOIN DeviceRole dr ON dc.roleId = dr.id
+LEFT JOIN Device d ON dc.id = d.id
+WHERE d.name LIKE ? AND dc.category = ?;

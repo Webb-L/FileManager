@@ -1,5 +1,6 @@
 import app.filemanager.data.main.DeviceType;
 
+-- 创建设备表
 CREATE TABLE Device (
     id      TEXT               NOT NULL,
     name    TEXT               NOT NULL,
@@ -26,6 +27,13 @@ UPDATE Device
 SET name = ?,
     host = ?,
     port = ?,
+    type = ?
+WHERE id = ?;
+
+-- 根据ID更新设备名称和类型
+updateNameAndTypeById:
+UPDATE Device
+SET name = ?,
     type = ?
 WHERE id = ?;
 

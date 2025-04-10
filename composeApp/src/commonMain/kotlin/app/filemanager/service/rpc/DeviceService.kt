@@ -98,10 +98,9 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
                     while (deviceState.connectionRequest[device.id]!!.first == WAITING) {
                         delay(300L)
                     }
+                    // TODO 往Device添加数据
                     database.deviceConnectQueries.insert(
                         id = device.id,
-                        name = device.name,
-                        type = device.type,
                         connectionType = deviceState.connectionRequest[device.id]?.first ?: WAITING,
                         category = DeviceCategory.SERVER,
                         -1

@@ -637,8 +637,6 @@ fun DeviceConnectNewDialog(
     val onConnect: (Boolean) -> Unit = { isAuto ->
         database.deviceConnectQueries.insert(
             id = socketDevice.id,
-            name = socketDevice.name,
-            type = socketDevice.type,
             connectionType = if (isAuto) DeviceConnectType.AUTO_CONNECT else DeviceConnectType.WAITING,
             category = DeviceCategory.CLIENT,
             -1

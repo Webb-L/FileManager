@@ -4,19 +4,20 @@ import androidx.compose.runtime.mutableStateListOf
 import app.filemanager.data.device.DeviceJoinDeviceRole
 import app.filemanager.data.main.DeviceCategory
 import app.filemanager.data.main.DeviceConnectType
+import app.filemanager.data.main.DeviceType
 import app.filemanager.db.FileManagerDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
  * 设备设置状态管理类
- * 
+ *
  * 负责管理设备相关的状态和数据操作，包括:
  * - 设备列表的维护
  * - 设备分类的更新
  * - 设备名称的更新
  * - 设备信息的刷新
- * 
+ *
  * @property database 文件管理数据库实例
  */
 class DeviceSettingsState(private val database: FileManagerDatabase) {
@@ -27,6 +28,7 @@ class DeviceSettingsState(private val database: FileManagerDatabase) {
     val devices = mutableStateListOf<DeviceJoinDeviceRole>()
 
     private val _category: MutableStateFlow<DeviceCategory> = MutableStateFlow(DeviceCategory.SERVER)
+
     /**
      * 当前设备分类的状态流
      * 默认为SERVER类型
@@ -42,6 +44,7 @@ class DeviceSettingsState(private val database: FileManagerDatabase) {
     }
 
     private val _deviceName: MutableStateFlow<String> = MutableStateFlow("")
+
     /**
      * 设备名称的状态流
      * 用于设备搜索过滤
@@ -70,8 +73,8 @@ class DeviceSettingsState(private val database: FileManagerDatabase) {
                 ).executeAsList().map {
                     DeviceJoinDeviceRole(
                         id = it.id,
-                        name = it.name,
-                        type = it.type,
+                        name = it.deviceName ?: "",
+                        type = it.deviceType ?: DeviceType.JVM,
                         connectionType = it.connectionType,
                         firstConnection = it.firstConnection,
                         lastConnection = it.lastConnection,
@@ -107,7 +110,6 @@ class DeviceSettingsState(private val database: FileManagerDatabase) {
      */
     fun updateDevice(index: Int, device: DeviceJoinDeviceRole) {
         database.deviceConnectQueries.updateNameConnectTypeRoleIdByIdAndCategory(
-            device.name,
             device.connectionType,
             device.roleId,
             device.id,
@@ -117,8 +119,8 @@ class DeviceSettingsState(private val database: FileManagerDatabase) {
         database.deviceConnectQueries.queryById(device.id, device.category).executeAsOneOrNull()?.let {
             devices[index] = DeviceJoinDeviceRole(
                 id = it.id,
-                name = it.name,
-                type = it.type,
+                name = it.deviceName ?: "",
+                type = it.deviceType ?: DeviceType.JVM,
                 connectionType = it.connectionType,
                 firstConnection = it.firstConnection,
                 lastConnection = it.lastConnection,

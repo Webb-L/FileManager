@@ -132,6 +132,21 @@ class DeviceState : KoinComponent {
         socketDevice?.let { device ->
             device.host = ip
 
+            val deviceData = database.deviceQueries.queryById(device.id).executeAsOneOrNull()
+            if (deviceData == null) {
+                database.deviceQueries.insert(
+                    id = device.id,
+                    name = device.name,
+                    host = device.host,
+                    port = device.port.toLong(),
+                    type = device.type
+                )
+            } else {
+                if (deviceData.name != device.name || deviceData.type != device.type) {
+                    database.deviceQueries.updateNameAndTypeById(device.name, device.type, device.id)
+                }
+            }
+
             // 自动连接
             database.deviceConnectQueries.queryById(device.id, DeviceCategory.CLIENT).executeAsOneOrNull().let {
                 if (it == null) {
