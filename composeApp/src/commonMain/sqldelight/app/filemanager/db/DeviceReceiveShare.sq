@@ -28,7 +28,7 @@ SET connectionType = ?, path = ?
 WHERE id = ?;
 
 -- 删除指定设备
-delete:
+deleteById:
 DELETE FROM DeviceReceiveShare 
 WHERE id = ?;
 

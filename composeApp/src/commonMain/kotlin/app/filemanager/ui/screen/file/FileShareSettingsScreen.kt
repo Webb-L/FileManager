@@ -3,6 +3,7 @@ package app.filemanager.ui.screen.file
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -15,9 +16,12 @@ import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceType
 import app.filemanager.db.DeviceReceiveShare
 import app.filemanager.db.FileManagerDatabase
+import app.filemanager.exception.EmptyDataException
+import app.filemanager.ui.components.GridList
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 class FileShareSettings() : Screen {
@@ -36,6 +40,10 @@ class FileShareSettings() : Screen {
         var showEditDialog by remember { mutableStateOf(false) }
         // 当前选择编辑的设备
         var selectedDevice by remember { mutableStateOf<DeviceReceiveShare?>(null) }
+
+        val snackbarHostState = remember { SnackbarHostState() }
+
+        val scope = rememberCoroutineScope()
 
         // 加载所有设备数据
         LaunchedEffect(Unit) {
@@ -61,16 +69,31 @@ class FileShareSettings() : Screen {
                         }
                     }
                 )
-            }
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { padding ->
             // 列表展示所有设备
-            LazyColumn(
+            GridList(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
+                exception = if (devices.isEmpty()) EmptyDataException() else null
             ) {
                 items(devices) { device ->
-                    DeviceListItem(device) { // 点击某个设备，显示编辑对话框
+                    DeviceListItem(device, onDelete = {
+                        scope.launch {
+                            when (snackbarHostState.showSnackbar(
+                                "确认删除${device.name}吗？",
+                                actionLabel = "删除",
+                            )) {
+                                SnackbarResult.Dismissed -> {}
+                                SnackbarResult.ActionPerformed -> {
+                                    database.deviceReceiveShareQueries.deleteById(device.id)
+                                    devices = database.deviceReceiveShareQueries.selectAll().executeAsList()
+                                }
+                            }
+                        }
+                    }) { // 点击某个设备，显示编辑对话框
                         selectedDevice = device
                         showEditDialog = true
                     }
@@ -96,35 +119,44 @@ class FileShareSettings() : Screen {
     @Composable
     private fun DeviceListItem(
         device: DeviceReceiveShare,
+        onDelete: () -> Unit,
         onClick: () -> Unit = {}
     ) {
         ListItem(
-            modifier = Modifier.clickable(onClick = onClick), // 点击事件
-            overlineContent = { // 上方小标签
+            modifier = Modifier.clickable(onClick = onClick),
+            overlineContent = {
                 when (device.connectionType) {
                     DeviceConnectType.AUTO_CONNECT -> Badge(
                         containerColor = MaterialTheme.colorScheme.secondary
-                    ) { Text("自动连接") } // 自动连接标签
+                    ) { Text("自动连接") }
 
                     DeviceConnectType.PERMANENTLY_BANNED -> Badge(
                         containerColor = MaterialTheme.colorScheme.error
-                    ) { Text("自动拒绝") } // 自动拒绝标签
+                    ) { Text("自动拒绝") }
 
                     else -> {}
                 }
             },
-            headlineContent = { Text(device.name) }, // 设备名称
+            headlineContent = { Text(device.name) },
             supportingContent = {
                 if (device.path.isNotEmpty()) {
-                    Text(device.path) // 显示路径信息
+                    Text(device.path)
                 }
             },
-            leadingContent = { // 设备图标
+            leadingContent = {
                 when (device.type) {
                     DeviceType.Android -> Icon(Icons.Default.PhoneAndroid, null)
                     DeviceType.IOS -> Icon(Icons.Default.PhoneIphone, null)
                     DeviceType.JVM -> Icon(Icons.Default.Devices, null)
                     DeviceType.JS -> Icon(Icons.Default.Javascript, null)
+                }
+            },
+            trailingContent = {
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.padding(start = 8.dp)
+                ) {
+                    Icon(Icons.Default.Delete, "删除设备")
                 }
             }
         )
@@ -143,7 +175,7 @@ class FileShareSettings() : Screen {
 
         AlertDialog(
             onDismissRequest = onDismiss, // 对话框关闭事件
-            title = { Text("编辑设备设置") },
+            title = { Text("编辑设备") },
             text = {
                 Column {
                     Text("连接类型:", style = MaterialTheme.typography.labelLarge)
