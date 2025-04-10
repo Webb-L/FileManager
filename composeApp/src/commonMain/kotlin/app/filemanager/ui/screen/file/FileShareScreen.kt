@@ -153,6 +153,11 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                         }
                     },
                     actions = {
+                        IconButton({
+                            navigator.push(FileShareSettings())
+                        }) {
+                            Icon(Icons.Default.Settings, null)
+                        }
                         BadgedBox({
                             if (showBottomSheet) return@BadgedBox
                             Badge { Text("${if (files.size > 100) "99+" else files.size}") }

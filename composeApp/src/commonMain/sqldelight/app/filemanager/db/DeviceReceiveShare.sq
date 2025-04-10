@@ -21,6 +21,12 @@ UPDATE DeviceReceiveShare
 SET name = ?, type = ?, connectionType = ?, path = ? 
 WHERE id = ?;
 
+-- 根据ID更新设备的连接类型
+updateConnectionTypeAndPathById:
+UPDATE DeviceReceiveShare 
+SET connectionType = ?, path = ?
+WHERE id = ?;
+
 -- 删除指定设备
 delete:
 DELETE FROM DeviceReceiveShare 
