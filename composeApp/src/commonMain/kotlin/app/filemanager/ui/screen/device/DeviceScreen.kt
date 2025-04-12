@@ -18,33 +18,63 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import app.filemanager.data.file.FileProtocol
+import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceType
-import app.filemanager.db.Device
+import app.filemanager.data.main.Share
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.ui.components.GridList
+import app.filemanager.ui.state.file.FileState
+import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.MainState
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import org.koin.compose.koinInject
+import app.filemanager.db.Device as DbDevice
 
 class DeviceScreen : Screen {
+    /**
+     * 这是一个用于显示和管理设备列表的可组合函数。它包括设备的展示、搜索功能、
+     * 设备编辑功能以及过滤设备类型等多种交互功能。
+     *
+     * 功能包括：
+     * - 显示设备列表：通过从数据库查询设备信息展示设备列表。
+     * - 搜索功能：能够根据用户输入的搜索查询更新设备列表。
+     * - 过滤功能：按设备类型筛选设备列表（例如 PC、IOS、安卓、浏览器等）。
+     * - 编辑设备：可以更新设备的名称，包括同步名称更新到相关的设备共享和桌面状态。
+     * - 导航：提供返回按钮以返回到上一屏幕。
+     *
+     * 本方法使用了 Material3 设计的组件，包括 TopAppBar、Scaffold 等。
+     *
+     * 内部使用：
+     * - `LaunchedEffect`：初始化时加载设备列表。
+     * - 状态变量：使用 `remember` 和 `mutableStateOf` 来管理本地状态，如显示对话框、查询条件等。
+     * - 依赖注入：通过 `koinInject` 注入必要的状态和数据库实例。
+     *
+     * 注意：
+     * - 该方法包含了对设备进行编辑时的相关逻辑，并确保设备相关数据之间的同步。
+     * - 在筛选*/
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val mainState = koinInject<MainState>()
+        val deviceState = koinInject<DeviceState>()
+        val fileState = koinInject<FileState>()
         val database = koinInject<FileManagerDatabase>()
+
+        val deskType by fileState.deskType.collectAsState()
 
         // 在DeviceScreen类中添加状态变量
         var showSearchDialog by remember { mutableStateOf(false) }
         var searchQuery by remember { mutableStateOf("") }
 
 
-        var devices by remember { mutableStateOf(emptyList<Device>()) }
+        var devices by remember { mutableStateOf(emptyList<DbDevice>()) }
         var showEditDialog by remember { mutableStateOf(false) }
-        var selectedDevice by remember { mutableStateOf<Device?>(null) }
+        var selectedDevice by remember { mutableStateOf<DbDevice?>(null) }
         var editedName by remember { mutableStateOf("") }
         val deviceTypes = listOf(
             null to "全部",
@@ -56,7 +86,6 @@ class DeviceScreen : Screen {
         var deviceType by remember { mutableStateOf<DeviceType?>(null) }
 
         // 刷新设备列表
-
         fun refreshDevices() {
             val typesToQuery = if (deviceType == null) {
                 listOf(DeviceType.JVM, DeviceType.IOS, DeviceType.Android, DeviceType.JS)
@@ -84,10 +113,54 @@ class DeviceScreen : Screen {
                 onEditedNameChange = { editedName = it },
                 onDismiss = { showEditDialog = false },
                 onConfirm = { device ->
+                    // 更新数据库中设备的名称和备注启用状态
                     database.deviceQueries.updateNameAndEnableRemarksById(
                         name = editedName,
                         id = device.id
                     )
+
+                    // 更新socketDevices列表中对应设备的名称（如果存在）
+                    val indexSocket = deviceState.socketDevices.indexOfFirst { it.id == device.id }
+                    if (indexSocket != -1) {
+                        // 使用copy方法创建新实例以保持不可变性，同时更新名称
+                        deviceState.socketDevices[indexSocket] =
+                            deviceState.socketDevices[indexSocket].copy(name = editedName)
+                    }
+
+                    // 更新devices列表中对应设备的名称（如果存在）
+                    val indexDevice = deviceState.devices.indexOfFirst { it.id == device.id }
+                    if (indexDevice != -1) {
+                        deviceState.devices[indexDevice] = deviceState.devices[indexDevice].copy(name = editedName)
+                    }
+
+                    // 检查当前桌面类型是否为Device类型，如果是且ID匹配，则更新桌面显示
+                    if (deskType is Device) {
+                        val currentDevice = deskType as Device
+                        if (currentDevice.id == device.id) {
+                            // 通过FileState更新桌面显示，传递新的设备实例（带有更新后的名称）
+                            fileState.updateDesk(
+                                FileProtocol.Device, currentDevice.copy(name = editedName)
+                            )
+                        }
+                    }
+
+                    // 更新shares列表中对应设备的名称（如果存在）
+                    val indexShare = deviceState.shares.indexOfFirst { it.id == device.id }
+                    if (indexShare != -1) {
+                        deviceState.shares[indexShare] = deviceState.shares[indexShare].copy(name = editedName)
+                    }
+
+                    // 检查当前桌面类型是否为Share类型，如果是且ID匹配，则更新桌面显示
+                    if (deskType is Share) {
+                        val currentShare = deskType as Share
+                        if (currentShare.id == device.id) {
+                            // 通过FileState更新桌面显示，传递新的共享实例（带有更新后的名称）
+                            fileState.updateDesk(
+                                FileProtocol.Share, currentShare.copy(name = editedName)
+                            )
+                        }
+                    }
+
                     refreshDevices()
                     showEditDialog = false
                 }
@@ -110,7 +183,7 @@ class DeviceScreen : Screen {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("设备列表") },
+                    title = { Text("设备") },
                     navigationIcon = {
                         IconButton({
                             mainState.updateScreen(null)
@@ -235,7 +308,7 @@ class DeviceScreen : Screen {
      */
     @Composable
     private fun DeviceListItem(
-        device: Device,
+        device: DbDevice,
         onEditClick: () -> Unit
     ) {
         ListItem(
@@ -273,11 +346,11 @@ class DeviceScreen : Screen {
      */
     @Composable
     private fun DeviceEditDialog(
-        selectedDevice: Device,
+        selectedDevice: DbDevice,
         editedName: String,
         onEditedNameChange: (String) -> Unit,
         onDismiss: () -> Unit,
-        onConfirm: (Device) -> Unit
+        onConfirm: (DbDevice) -> Unit
     ) {
         var isNameError by remember { mutableStateOf(editedName.isBlank()) }
 
@@ -313,7 +386,7 @@ class DeviceScreen : Screen {
             },
             confirmButton = {
                 TextButton(
-                    enabled = editedName.isNotEmpty(),
+                    enabled = editedName.isNotEmpty() && selectedDevice.name != editedName,
                     onClick = { onConfirm(selectedDevice) }
                 ) {
                     Text("确定")
