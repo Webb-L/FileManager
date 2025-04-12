@@ -148,7 +148,7 @@ class DeviceState : KoinComponent {
             }
 
             // 自动连接
-            database.deviceConnectQueries.queryById(device.id, DeviceCategory.CLIENT).executeAsOneOrNull().let {
+            database.deviceConnectQueries.queryByIdAndCategory(device.id, DeviceCategory.CLIENT).executeAsOneOrNull().let {
                 if (it == null) {
                     device.connectType = ConnectType.New
                 }

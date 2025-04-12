@@ -31,7 +31,7 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
 
     override suspend fun connect(device: SocketDevice): Pair<DeviceConnectType, String> {
         val queriedDevice =
-            database.deviceConnectQueries.queryById(device.id, DeviceCategory.SERVER).executeAsOneOrNull()
+            database.deviceConnectQueries.queryByIdAndCategory(device.id, DeviceCategory.SERVER).executeAsOneOrNull()
 
         val randomString = 32.randomString()
         if (queriedDevice != null) {

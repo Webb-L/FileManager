@@ -166,7 +166,7 @@ fun PathSwitch(
         if (fileAndFolder.isSuccess) {
             fileInfos = (fileAndFolder.getOrNull() ?: emptyList())
                 .filter { it.isDirectory }
-                .filter { it.isHidden != fileFilterState.isHideFile.value }
+                .filter { it.isHidden == fileFilterState.isHideFile.value }
                 .sortedWith(NaturalOrderComparator())
         }
     }

@@ -3,7 +3,6 @@ package app.filemanager.ui.state.file
 import androidx.compose.runtime.mutableStateListOf
 import app.filemanager.data.file.FileFilterSort
 import app.filemanager.data.file.FileFilterType
-import app.filemanager.data.file.FileInfo
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.db.FileFilter
 import app.filemanager.db.FileManagerDatabase
@@ -52,7 +51,7 @@ class FileFilterState : KoinComponent {
     val filterFileExtensions = mutableStateListOf<FileFilterType>()
 
     // 是否显示隐藏文件
-    private val _isHideFile: MutableStateFlow<Boolean> = MutableStateFlow(true)
+    private val _isHideFile: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isHideFile: StateFlow<Boolean> = _isHideFile
     fun updateHideFile(value: Boolean) {
         _isHideFile.value = value
@@ -61,7 +60,7 @@ class FileFilterState : KoinComponent {
 
     fun filter(fileInfos: List<FileSimpleInfo>, updateKey: Int): List<FileSimpleInfo> {
         var files = fileInfos
-        if (_isHideFile.value) {
+        if (!_isHideFile.value) {
             files = files.filter { !it.isHidden }
         }
 

@@ -1,62 +1,66 @@
 import app.filemanager.data.main.DeviceConnectType;
 import app.filemanager.data.main.DeviceCategory;
 
+-- 创建表 DeviceConnect，包含字段约束和类型映射
 CREATE TABLE DeviceConnect (
-    id              TEXT                NOT NULL,
-    connectionType  TEXT AS DeviceConnectType NOT NULL,
-    firstConnection INTEGER             NOT NULL,
-    lastConnection  INTEGER             NOT NULL,
-    category        TEXT AS DeviceCategory NOT NULL,
-    roleId          INTEGER             NOT NULL DEFAULT -1,
-    CONSTRAINT unique_id_category UNIQUE (id, category)
+    id              TEXT                NOT NULL, -- 设备唯一标识符
+    connectionType  TEXT AS DeviceConnectType NOT NULL, -- 连接类型 (映射到 DeviceConnectType)
+    firstConnection INTEGER             NOT NULL, -- 第一次设备连接的时间戳
+    lastConnection  INTEGER             NOT NULL, -- 最近一次设备连接的时间戳
+    category        TEXT AS DeviceCategory NOT NULL, -- 设备类别 (映射到 DeviceCategory)
+    roleId          INTEGER             NOT NULL DEFAULT -1, -- 角色ID，默认值为-1
+    CONSTRAINT unique_id_category UNIQUE (id, category) -- id 和 category 的组合需要唯一
 );
 
-insert:
+-- 插入一条新的记录到 DeviceConnect 表中
 INSERT INTO DeviceConnect (id, connectionType, firstConnection, lastConnection, category, roleId)
 VALUES (?, ?, strftime('%s', 'now'), strftime('%s', 'now'), ?, COALESCE(?, -1));
 
-updateConnectionTypeByIdAndCategory:
+-- 根据设备ID和类别更新连接类型
 UPDATE DeviceConnect
 SET connectionType = ?
 WHERE id = ? AND category = ?;
 
-queryAll:
+-- 查询 DeviceConnect 表中的所有记录
 SELECT *
 FROM DeviceConnect;
 
-queryById:
+-- 根据设备ID和类别查询指定的设备，包括关联的设备数据
 SELECT
     dc.*,
-    d.name AS deviceName,
-    d.type AS deviceType
+    d.name AS deviceName, -- 从关联表中获取的设备名称
+    d.type AS deviceType -- 从关联表中获取的设备类型
 FROM DeviceConnect dc
 LEFT JOIN Device d ON dc.id = d.id
-WHERE d.name LIKE ? AND dc.category = ?;
+WHERE dc.id = ? AND dc.category = ?;
 
+-- 根据设备ID和类别查询指定设备
+SELECT * FROM DeviceConnect
+WHERE id = ? AND category = ?;
 
-queryByCategory:
+-- 根据类别查询所有设备
 SELECT *
 FROM DeviceConnect
 WHERE category = ?;
 
-updateLastConnectionByCategoryAndId:
+-- 根据类别和设备ID更新最后一次连接时间戳
 UPDATE DeviceConnect
 SET lastConnection = strftime('%s', 'now')
 WHERE id = ? AND category = ?;
 
-updateNameConnectTypeRoleIdByIdAndCategory:
+-- 根据设备ID和类别更新连接类型和角色ID
 UPDATE DeviceConnect
 SET 
     connectionType = ?, 
-    roleId = COALESCE(?, -1)
+    roleId = COALESCE(?, -1) -- 如果值为null，默认使用-1
 WHERE id = ? AND category = ?;
 
-queryByNameLikeAndCategory:
+-- 根据名称模式和类别查询设备列表，包括关联的角色和设备数据
 SELECT 
     dc.*,
-    dr.name AS roleName,
-    d.name AS deviceName,
-    d.type AS deviceType
+    dr.name AS roleName, -- 从关联表中获取的角色名称
+    d.name AS deviceName, -- 从关联表中获取的设备名称
+    d.type AS deviceType -- 从关联表中获取的设备类型
 FROM DeviceConnect dc
 LEFT JOIN DeviceRole dr ON dc.roleId = dr.id
 LEFT JOIN Device d ON dc.id = d.id

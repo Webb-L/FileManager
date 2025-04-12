@@ -43,7 +43,7 @@ class DeviceHandle(private val rpc: RpcClientManager) : KoinComponent {
 
             if (socketDevice.connectType == ConnectType.Connect) {
                 deviceState.devices.add(socketDevice.toDevice())
-                if (database.deviceConnectQueries.queryById(socketDevice.id, DeviceCategory.CLIENT)
+                if (database.deviceConnectQueries.queryByIdAndCategory(socketDevice.id, DeviceCategory.CLIENT)
                         .executeAsOneOrNull() != null
                 ) {
                     return connectType.second
