@@ -30,6 +30,7 @@ import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
 import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
+import app.filemanager.ui.screen.device.DeviceScreen
 import app.filemanager.ui.screen.device.DeviceSettingsScreen
 import app.filemanager.ui.screen.file.FavoriteScreen
 import app.filemanager.ui.screen.main.NotificationScreen
@@ -73,9 +74,9 @@ fun AppDrawer() {
                         Icon(Icons.Default.Notifications, null)
                     }
                 }
-                IconButton({}) {
-                    Icon(Icons.Default.Settings, null)
-                }
+
+                MoreOptionsDropdown(mainState)
+
             }
         )
         HorizontalDivider()
@@ -188,6 +189,38 @@ fun AppDrawer() {
                 } catch (e: Exception) {
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun MoreOptionsDropdown(mainState: MainState) {
+    Box {
+        var showDropdownMenu by remember { mutableStateOf(false) }
+
+        IconButton(onClick = { showDropdownMenu = true }) {
+            Icon(Icons.Default.MoreVert, contentDescription = "更多选项")
+        }
+
+        DropdownMenu(
+            expanded = showDropdownMenu,
+            onDismissRequest = { showDropdownMenu = false }
+        ) {
+            DropdownMenuItem(
+                leadingIcon = { Icon(Icons.Default.Devices, null) },
+                text = { Text("设备") },
+                onClick = {
+                    mainState.updateScreen(DeviceScreen())
+                    showDropdownMenu = false
+                }
+            )
+            DropdownMenuItem(
+                leadingIcon = { Icon(Icons.Default.Settings, null) },
+                text = { Text("设置") },
+                onClick = {
+                    showDropdownMenu = false
+                }
+            )
         }
     }
 }

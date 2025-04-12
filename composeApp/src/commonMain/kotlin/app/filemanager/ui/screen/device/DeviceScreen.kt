@@ -15,6 +15,7 @@ import app.filemanager.db.Device
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.ui.components.GridList
+import app.filemanager.ui.state.main.MainState
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -25,6 +26,7 @@ class DeviceScreen : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val mainState = koinInject<MainState>()
         val database = koinInject<FileManagerDatabase>()
 
         var devices by remember { mutableStateOf(emptyList<Device>()) }
@@ -65,6 +67,7 @@ class DeviceScreen : Screen {
                     title = { Text("设备列表") },
                     navigationIcon = {
                         IconButton({
+                            mainState.updateScreen(null)
                             navigator.pop()
                         }) {
                             Icon(Icons.AutoMirrored.Default.ArrowBack, null)
