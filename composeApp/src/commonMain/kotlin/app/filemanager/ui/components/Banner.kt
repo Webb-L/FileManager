@@ -56,12 +56,7 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
         if (minutes == 0) "${seconds}秒" else "${minutes}分${seconds}秒"
     }
 
-    // TODO 自动同意
-    val deviceReceiveShare = database.deviceReceiveShareQueries.selectById(socketDevice.id).executeAsOneOrNull()
-    println(deviceReceiveShare)
-
     fun updateShareRequest(deviceType: DeviceConnectType) {
-        // TODO 保存到数据库
         when (deviceType) {
             AUTO_CONNECT, APPROVED -> {
                 deviceState.connectShare(socketDevice)
