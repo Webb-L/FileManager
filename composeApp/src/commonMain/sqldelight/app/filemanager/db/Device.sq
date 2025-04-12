@@ -28,6 +28,14 @@ SELECT *
 FROM Device
 WHERE id = ?;
 
+-- 按名称和类型搜索设备并分页
+queryByNameAndDeviceTypePaginated:
+SELECT *
+FROM Device
+WHERE name LIKE '%' || ? || '%'
+AND type IN ?
+LIMIT ? OFFSET ?;
+
 -- 更新设备的名称和类型信息
 updateNameTypeById:
 UPDATE Device

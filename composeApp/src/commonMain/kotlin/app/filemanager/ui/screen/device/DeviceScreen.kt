@@ -1,15 +1,23 @@
 package app.filemanager.ui.screen.device
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
 import app.filemanager.data.main.DeviceType
 import app.filemanager.db.Device
 import app.filemanager.db.FileManagerDatabase
@@ -29,14 +37,39 @@ class DeviceScreen : Screen {
         val mainState = koinInject<MainState>()
         val database = koinInject<FileManagerDatabase>()
 
+        // 在DeviceScreen类中添加状态变量
+        var showSearchDialog by remember { mutableStateOf(false) }
+        var searchQuery by remember { mutableStateOf("") }
+
+
         var devices by remember { mutableStateOf(emptyList<Device>()) }
         var showEditDialog by remember { mutableStateOf(false) }
         var selectedDevice by remember { mutableStateOf<Device?>(null) }
         var editedName by remember { mutableStateOf("") }
+        val deviceTypes = listOf(
+            null to "全部",
+            DeviceType.JVM to "PC",
+            DeviceType.IOS to "IOS",
+            DeviceType.Android to "安卓",
+            DeviceType.JS to "浏览器",
+        )
+        var deviceType by remember { mutableStateOf<DeviceType?>(null) }
 
         // 刷新设备列表
+
         fun refreshDevices() {
-            devices = database.deviceQueries.queryAll().executeAsList()
+            val typesToQuery = if (deviceType == null) {
+                listOf(DeviceType.JVM, DeviceType.IOS, DeviceType.Android, DeviceType.JS)
+            } else {
+                listOf(deviceType!!)
+            }
+
+            devices = database.deviceQueries.queryByNameAndDeviceTypePaginated(
+                searchQuery,
+                typesToQuery,
+                100L,
+                0L
+            ).executeAsList()
         }
 
         LaunchedEffect(Unit) {
@@ -61,6 +94,19 @@ class DeviceScreen : Screen {
             )
         }
 
+        // 在Content函数中添加对话框显示逻辑
+        if (showSearchDialog) {
+            SearchDialog(
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
+                onDismiss = { showSearchDialog = false },
+                onSearch = {
+                    refreshDevices()
+                    showSearchDialog = false
+                }
+            )
+        }
+
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -72,28 +118,113 @@ class DeviceScreen : Screen {
                         }) {
                             Icon(Icons.AutoMirrored.Default.ArrowBack, null)
                         }
+                    },
+                    actions = {
+                        IconToggleButton(
+                            checked = searchQuery.isNotBlank(),
+                            onCheckedChange = {
+                                showSearchDialog = true
+                            }
+                        ) {
+                            Icon(Icons.Default.Search, contentDescription = "搜索设备")
+                        }
                     }
                 )
             }
         ) { padding ->
-            GridList(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                exception = if (devices.isEmpty()) EmptyDataException() else null
             ) {
-                items(devices) { device ->
-                    DeviceListItem(
-                        device = device,
-                        onEditClick = {
-                            selectedDevice = device
-                            editedName = device.name
-                            showEditDialog = true
-                        }
-                    )
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                ) {
+                    deviceTypes.forEachIndexed { index, (type, label) ->
+                        SegmentedButton(
+                            selected = deviceType == type,
+                            onClick = {
+                                deviceType = type
+                                refreshDevices()
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = index, count = deviceTypes.size),
+                        ) { Text(label) }
+                    }
+                }
+
+                GridList(
+                    exception = if (devices.isEmpty()) EmptyDataException() else null
+                ) {
+                    items(devices) { device ->
+                        DeviceListItem(
+                            device = device,
+                            onEditClick = {
+                                selectedDevice = device
+                                editedName = device.name
+                                showEditDialog = true
+                            }
+                        )
+                    }
                 }
             }
         }
+    }
+
+    // 添加搜索对话框组件
+    @Composable
+    private fun SearchDialog(
+        searchQuery: String,
+        onSearchQueryChange: (String) -> Unit,
+        onDismiss: () -> Unit,
+        onSearch: () -> Unit
+    ) {
+        val focusRequester = remember { FocusRequester() }
+
+        LaunchedEffect(Unit) {
+            focusRequester.requestFocus()
+            onSearchQueryChange(searchQuery) // 这会触发光标移动到末尾
+        }
+
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("搜索设备") },
+            text = {
+                TextField(
+                    value = searchQuery,
+                    onValueChange = onSearchQueryChange,
+                    label = { Text("输入设备名称") },
+                    singleLine = true,
+                    modifier = Modifier
+                        .focusRequester(focusRequester),
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        imeAction = ImeAction.Search
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onSearch = { onSearch() }
+                    ),
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { onSearchQueryChange("") }) {
+                                Icon(
+                                    imageVector = Icons.Default.Clear,
+                                    contentDescription = "清空"
+                                )
+                            }
+                        }
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = onSearch) {
+                    Text("搜索")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("取消")
+                }
+            }
+        )
     }
 
     /**
@@ -181,7 +312,7 @@ class DeviceScreen : Screen {
                 )
             },
             confirmButton = {
-                Button(
+                TextButton(
                     enabled = editedName.isNotEmpty(),
                     onClick = { onConfirm(selectedDevice) }
                 ) {
