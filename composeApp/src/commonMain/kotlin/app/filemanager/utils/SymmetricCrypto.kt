@@ -71,9 +71,37 @@ interface SymmetricCryptoInterface {
     fun decrypt(data: ByteArray): ByteArray
 }
 
+/**
+ * SymmetricCrypto 是一个多平台的对称加密工具类，提供加密和解密功能。
+ * 它支持对字符串及字节数组数据的加密与解密，具体算法由不同平台进行实现。
+ */
 expect object SymmetricCrypto : SymmetricCryptoInterface {
+    /**
+     * 对输入的文本进行加密处理。
+     *
+     * @param text 要加密的字符串文本。
+     * @return 返回加密后的字符串结果。
+     */
     override fun encrypt(text: String): String
+    /**
+     * 解密指定的字符串内容。
+     *
+     * @param text 需要解密的字符串。
+     * @return 解密后的字符串内容。
+     */
     override fun decrypt(text: String): String
+    /**
+     * 对输入的字节数组数据进行加密操作。
+     *
+     * @param data 要加密的字节数组。
+     * @return 返回加密后的字节数组。
+     */
     override fun encrypt(data: ByteArray): ByteArray
+    /**
+     * 解密输入的字节数组数据。
+     *
+     * @param data 需要解密的字节数组。
+     * @return 解密后的字节数组。
+     */
     override fun decrypt(data: ByteArray): ByteArray
 }
