@@ -33,6 +33,7 @@ import app.filemanager.service.rpc.getAllIPAddresses
 import app.filemanager.ui.screen.device.DeviceScreen
 import app.filemanager.ui.screen.device.DeviceSettingsScreen
 import app.filemanager.ui.screen.file.FavoriteScreen
+import app.filemanager.ui.screen.file.FileShareSettings
 import app.filemanager.ui.screen.main.NotificationScreen
 import app.filemanager.ui.screen.task.TaskResultScreen
 import app.filemanager.ui.state.file.FileState
@@ -76,7 +77,6 @@ fun AppDrawer() {
                 }
 
                 MoreOptionsDropdown(mainState)
-
             }
         )
         HorizontalDivider()
@@ -199,7 +199,7 @@ private fun MoreOptionsDropdown(mainState: MainState) {
         var showDropdownMenu by remember { mutableStateOf(false) }
 
         IconButton(onClick = { showDropdownMenu = true }) {
-            Icon(Icons.Default.MoreVert, contentDescription = "更多选项")
+            Icon(Icons.Default.Settings, contentDescription = "更多选项")
         }
 
         DropdownMenu(
@@ -211,6 +211,14 @@ private fun MoreOptionsDropdown(mainState: MainState) {
                 text = { Text("设备") },
                 onClick = {
                     mainState.updateScreen(DeviceScreen())
+                    showDropdownMenu = false
+                }
+            )
+            DropdownMenuItem(
+                leadingIcon = { Icon(Icons.Default.Share, null) },
+                text = { Text("分享") },
+                onClick = {
+                    mainState.updateScreen(FileShareSettings())
                     showDropdownMenu = false
                 }
             )

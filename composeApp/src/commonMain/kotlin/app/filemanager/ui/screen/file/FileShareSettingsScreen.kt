@@ -16,6 +16,7 @@ import app.filemanager.db.FileManagerDatabase
 import app.filemanager.db.deviceReceiveShare.SelectAll
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.ui.components.GridList
+import app.filemanager.ui.state.main.MainState
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -26,6 +27,7 @@ class FileShareSettings() : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
+        val mainState = koinInject<MainState>()
         // 获取导航器实例
         val navigator = LocalNavigator.currentOrThrow
 
@@ -51,10 +53,11 @@ class FileShareSettings() : Screen {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("设备分享管理") },
+                    title = { Text("分享管理") },
                     navigationIcon = {
                         IconButton({
-                            navigator.pop() // 返回上一级
+                            mainState.updateScreen(null)
+                            navigator.pop()
                         }) {
                             Icon(Icons.AutoMirrored.Default.ArrowBack, null)
                         }
