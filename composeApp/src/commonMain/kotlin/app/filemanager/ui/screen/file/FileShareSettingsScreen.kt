@@ -2,9 +2,7 @@ package app.filemanager.ui.screen.file
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -14,8 +12,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceType
-import app.filemanager.db.DeviceReceiveShare
 import app.filemanager.db.FileManagerDatabase
+import app.filemanager.db.deviceReceiveShare.SelectAll
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.ui.components.GridList
 import cafe.adriel.voyager.core.screen.Screen
@@ -35,11 +33,11 @@ class FileShareSettings() : Screen {
         val database = koinInject<FileManagerDatabase>()
 
         // 设备列表状态
-        var devices by remember { mutableStateOf(emptyList<DeviceReceiveShare>()) }
+        var devices by remember { mutableStateOf(emptyList<SelectAll>()) }
         // 是否显示编辑对话框
         var showEditDialog by remember { mutableStateOf(false) }
         // 当前选择编辑的设备
-        var selectedDevice by remember { mutableStateOf<DeviceReceiveShare?>(null) }
+        var selectedDevice by remember { mutableStateOf<SelectAll?>(null) }
 
         val snackbarHostState = remember { SnackbarHostState() }
 
@@ -118,7 +116,7 @@ class FileShareSettings() : Screen {
     // 设备列表中的单条设备项
     @Composable
     private fun DeviceListItem(
-        device: DeviceReceiveShare,
+        device: SelectAll,
         onDelete: () -> Unit,
         onClick: () -> Unit = {}
     ) {
@@ -165,9 +163,9 @@ class FileShareSettings() : Screen {
     // 编辑设备信息的对话框
     @Composable
     fun EditDeviceDialog(
-        device: DeviceReceiveShare,
+        device: SelectAll,
         onDismiss: () -> Unit,
-        onConfirm: (DeviceReceiveShare) -> Unit,
+        onConfirm: (SelectAll) -> Unit,
         database: FileManagerDatabase
     ) {
         // 记录编辑后的设备信息

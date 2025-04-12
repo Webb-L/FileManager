@@ -67,10 +67,9 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
                 deviceState.connectShare(socketDevice)
                 deviceState.shareConnectionStates[socketDevice.id] = FileShareStatus.COMPLETED
                 if (deviceType == AUTO_CONNECT) {
+                    // TODO 选择目录
                     database.deviceReceiveShareQueries.insert(
                         socketDevice.id,
-                        socketDevice.name,
-                        socketDevice.type,
                         AUTO_CONNECT,
                         "/home/webb/下载"
                     )
@@ -81,8 +80,6 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
                 if (deviceType == PERMANENTLY_BANNED) {
                     database.deviceReceiveShareQueries.insert(
                         socketDevice.id,
-                        socketDevice.name,
-                        socketDevice.type,
                         PERMANENTLY_BANNED,
                         ""
                     )
