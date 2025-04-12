@@ -145,7 +145,7 @@ fun FileFilterButtons(fileAndFolder: List<FileSimpleInfo>, onToFilterScreen: () 
         fileAndFolder
             .filter { !it.isDirectory }
             .filter {
-                if (fileFilterState.isHideFile.value) {
+                if (!fileFilterState.isHideFile.value) {
                     !it.isHidden
                 } else {
                     true
@@ -157,7 +157,7 @@ fun FileFilterButtons(fileAndFolder: List<FileSimpleInfo>, onToFilterScreen: () 
     val folderCount = fileAndFolder
         .filter { it.isDirectory }
         .count {
-            if (fileFilterState.isHideFile.value) {
+            if (!fileFilterState.isHideFile.value) {
                 !it.isHidden
             } else {
                 true
