@@ -142,21 +142,24 @@ class DeviceState : KoinComponent {
                     type = device.type
                 )
             } else {
-                if (deviceData.name != device.name || deviceData.type != device.type) {
+                if ((deviceData.name != device.name && deviceData.hasRemarks == false) || deviceData.type != device.type) {
                     database.deviceQueries.updateNameAndTypeById(device.name, device.type, device.id)
+                }else {
+                    device.name = deviceData.name
                 }
             }
 
             // 自动连接
-            database.deviceConnectQueries.queryByIdAndCategory(device.id, DeviceCategory.CLIENT).executeAsOneOrNull().let {
-                if (it == null) {
-                    device.connectType = ConnectType.New
+            database.deviceConnectQueries.queryByIdAndCategory(device.id, DeviceCategory.CLIENT).executeAsOneOrNull()
+                .let {
+                    if (it == null) {
+                        device.connectType = ConnectType.New
+                    }
+                    if (it?.connectionType == DeviceConnectType.AUTO_CONNECT) {
+                        device.connectType = ConnectType.Loading
+                        connect(device)
+                    }
                 }
-                if (it?.connectionType == DeviceConnectType.AUTO_CONNECT) {
-                    device.connectType = ConnectType.Loading
-                    connect(device)
-                }
-            }
 
             if (socketDevices.firstOrNull { it.id == device.id } == null) {
                 socketDevices.add(device)

@@ -24,7 +24,7 @@ enum class ConnectType(type: String) {
 @Serializable(with = SocketDeviceSerializer::class)
 data class SocketDevice(
     val id: String,
-    val name: String,
+    var name: String,
     var host: String = "",
     var port: Int = PORT,
     val type: DeviceType,
@@ -51,7 +51,6 @@ data class SocketDevice(
             name = name,
             type = type,
             rpcClientManager = client,
-            token = "TODO()"
         )
     }
 

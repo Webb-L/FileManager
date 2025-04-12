@@ -19,6 +19,7 @@ import org.koin.compose.koinInject
 internal fun App() = KoinApplication(application = {
     modules(appModule())
 }) {
+    Boolean
     val deviceState = koinInject<DeviceState>()
     val mainState = koinInject<MainState>()
 

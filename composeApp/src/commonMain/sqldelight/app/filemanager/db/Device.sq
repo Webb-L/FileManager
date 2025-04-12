@@ -1,32 +1,34 @@
+import kotlin.Boolean;
 import app.filemanager.data.main.DeviceType;
 
 -- 创建设备表
 CREATE TABLE Device (
-    id      TEXT               NOT NULL,
-    name    TEXT               NOT NULL,
-    host    TEXT               DEFAULT '',
-    port    INTEGER            DEFAULT 0,
-    type    TEXT AS DeviceType NOT NULL,
-    CONSTRAINT pk_device PRIMARY KEY (id)
+    id             TEXT               NOT NULL,        -- 设备唯一标识符
+    name           TEXT               NOT NULL,        -- 设备名称
+    host           TEXT               DEFAULT '',      -- 设备主机地址
+    port           INTEGER            DEFAULT 0,       -- 设备端口号
+    type           TEXT AS DeviceType NOT NULL,        -- 设备类型，使用DeviceType枚举
+    hasRemarks    INTEGER AS Boolean DEFAULT 0,       -- 是否有备注，布尔值字段(0=false, 1=true)
+    CONSTRAINT pk_device PRIMARY KEY (id)              -- 设置主键约束
 );
 
--- 插入新设备
+-- 插入新设备记录
 insert:
 INSERT INTO Device (id, name, host, port, type)
 VALUES (?, ?, ?, ?, ?);
 
--- 查询所有设备
+-- 查询所有设备信息
 queryAll:
 SELECT *
 FROM Device;
 
--- 根据ID查询设备
+-- 根据ID查询特定设备
 queryById:
 SELECT *
 FROM Device
 WHERE id = ?;
 
--- 更新设备信息
+-- 更新设备的名称和类型信息
 updateNameTypeById:
 UPDATE Device
 SET name = ?,
@@ -40,7 +42,20 @@ SET name = ?,
     type = ?
 WHERE id = ?;
 
--- 删除设备
+-- 更新设备的备注状态标志
+updateHasRemarksById:
+UPDATE Device
+SET hasRemarks = ?
+WHERE id = ?;
+
+-- 根据ID删除设备记录
 deleteById:
 DELETE FROM Device
+WHERE id = ?;
+
+-- 根据ID更新设备名称并将hasRemarks设置为true
+updateNameAndEnableRemarksById:
+UPDATE Device
+SET name = ?,
+    hasRemarks = 1
 WHERE id = ?;

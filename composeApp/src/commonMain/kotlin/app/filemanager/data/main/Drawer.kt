@@ -246,7 +246,7 @@ data class Share(
     override val name: String,
     val rpcClientManager: RpcShareClientManager,
     val type: DeviceType,
-    val token: String
+    val token: String = ""
 ) : DiskBase(), KoinComponent {
     private val fileState: FileState by inject()
     private val deviceState: DeviceState by inject()
