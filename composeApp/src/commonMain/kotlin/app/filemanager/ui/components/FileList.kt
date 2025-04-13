@@ -16,9 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import app.filemanager.data.file.FileFilterSort
-import app.filemanager.data.file.FileSimpleInfo
-import app.filemanager.data.file.PathInfo
+import app.filemanager.data.file.*
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.filter
 import app.filemanager.extensions.getFileAndFolder
@@ -130,6 +128,75 @@ fun FileListComponent(
         }
 
         Row {
+            val filterExtensions = fileFilterState.filterFileTypes
+                .filter { filterFileType -> filterFileType.extensions.any { it in extensions.keys } }
+
+            LazyRow(Modifier.weight(1f)) {
+                item {
+                    if (folderCount < 1) return@item
+
+                    val isSelected = fileFilterState.filterFileExtensions.contains(FileFilterType.Folder)
+
+                    FilterChip(
+                        selected = isSelected,
+                        label = { Text("文件夹($folderCount)") },
+                        leadingIcon = { getFileFilterType(FileFilterType.Folder) },
+                        shape = RoundedCornerShape(25.dp),
+                        onClick = {
+                            if (isSelected) {
+                                fileFilterState.filterFileExtensions.remove(FileFilterType.Folder)
+                            } else {
+                                fileFilterState.filterFileExtensions.add(FileFilterType.Folder)
+                            }
+                            fileFilterState.updateFilerKey()
+                        })
+                    Spacer(Modifier.width(8.dp))
+                }
+
+                itemsIndexed(filterExtensions) { index, fileFilter ->
+                    val isSelected = fileFilterState.filterFileExtensions.contains(fileFilter.type)
+                    val fileCount = fileFilter.extensions.intersect(extensions.keys).sumOf { key ->
+                        extensions.filterKeys { it == key }.values.sum()
+                    }
+
+                    FilterChip(
+                        selected = isSelected,
+                        label = { Text("${fileFilter.name}($fileCount)") },
+                        leadingIcon = { getFileFilterType(fileFilter.type) },
+                        shape = RoundedCornerShape(25.dp),
+                        onClick = {
+                            if (isSelected) {
+                                fileFilterState.filterFileExtensions.remove(fileFilter.type)
+                            } else {
+                                fileFilterState.filterFileExtensions.add(fileFilter.type)
+                            }
+                            fileFilterState.updateFilerKey()
+                        })
+                    Spacer(Modifier.width(8.dp))
+                }
+
+                item {
+                    val fileCount = extensions[""] ?: return@item
+
+                    val isSelected = fileFilterState.filterFileExtensions.contains(FileFilterType.File)
+
+                    FilterChip(
+                        selected = isSelected,
+                        label = { Text("文件($fileCount)") },
+                        leadingIcon = { getFileFilterType(FileFilterType.File) },
+                        shape = RoundedCornerShape(25.dp),
+                        onClick = {
+                            if (isSelected) {
+                                fileFilterState.filterFileExtensions.remove(FileFilterType.File)
+                            } else {
+                                fileFilterState.filterFileExtensions.add(FileFilterType.File)
+                            }
+                            fileFilterState.updateFilerKey()
+                        })
+                    Spacer(Modifier.width(8.dp))
+                }
+            }
+
             Row(Modifier.padding(start = 16.dp, end = 12.dp)) {
                 FilterChip(
                     selected = isHideFile,
