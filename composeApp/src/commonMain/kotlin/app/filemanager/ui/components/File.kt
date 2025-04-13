@@ -25,6 +25,7 @@ import app.filemanager.data.file.toIcon
 import app.filemanager.db.FileFavorite
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.extensions.formatFileSize
+import app.filemanager.extensions.getFilterByExtension
 import app.filemanager.extensions.timestampToSyncDate
 import app.filemanager.ui.screen.file.FileShareScreen
 import app.filemanager.ui.state.file.FileFilterState
@@ -169,7 +170,7 @@ fun FileIcon(file: FileSimpleInfo) {
         return
     }
 
-    val fileFilter = fileFilterState.getFilterFileByFileExtension(file.mineType)
+    val fileFilter = fileFilterState.filterFileTypes.getFilterByExtension(file.mineType)
     if (fileFilter == null) {
         Icon(
             Icons.AutoMirrored.Default.Note,

@@ -6,7 +6,7 @@ import app.filemanager.data.file.FileFilterType
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.db.FileFilter
 import app.filemanager.db.FileManagerDatabase
-import app.filemanager.utils.NaturalOrderComparator
+import app.filemanager.extensions.filter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.koin.core.component.KoinComponent
@@ -59,79 +59,19 @@ class FileFilterState : KoinComponent {
     }
 
     fun filter(fileInfos: List<FileSimpleInfo>, updateKey: Int): List<FileSimpleInfo> {
-        var files = fileInfos
-        if (!_isHideFile.value) {
-            files = files.filter { !it.isHidden }
-        }
-
-        for (type in filterFileExtensions) {
-            files = when (type) {
-                FileFilterType.Folder -> files.filter { it.isDirectory }
-
-                FileFilterType.File -> files.filter { !it.isDirectory && getFilterFileByFileExtension(it.mineType) == null }
-
-                else -> files.filter { getExtensions(type).contains(it.mineType) }
-            }
-        }
-
-        val searchText = searchText.value
-        if (searchText.isNotEmpty()) {
-            files = files.filter { it.name.contains(searchText) }
-        }
-
-        return when (_sortType.value) {
-            FileFilterSort.NameAsc -> files
-                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.then(NaturalOrderComparator()))
-
-            FileFilterSort.NameDesc -> files
-                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.thenDescending(NaturalOrderComparator()))
-
-            FileFilterSort.SizeAsc -> files
-                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.thenBy { it.size })
-
-            FileFilterSort.SizeDesc -> files
-                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.thenByDescending { it.size })
-
-            FileFilterSort.TypeAsc -> files
-                .sortedWith(compareBy<FileSimpleInfo> { it.isDirectory }.then(NaturalOrderComparator()))
-
-            FileFilterSort.TypeDesc -> files
-                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.then(NaturalOrderComparator()))
-
-            FileFilterSort.CreatedDateAsc -> files
-                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.thenBy { it.createdDate })
-
-            FileFilterSort.CreatedDateDesc -> files
-                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.thenByDescending { it.createdDate })
-
-            FileFilterSort.UpdatedDateAsc -> files
-                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.thenBy { it.updatedDate })
-
-            FileFilterSort.UpdatedDateDesc -> files
-                .sortedWith(compareByDescending<FileSimpleInfo> { it.isDirectory }.thenByDescending { it.updatedDate })
-        }
+        return fileInfos.filter(
+            isHidden = _isHideFile.value,
+            filterFileExtensions = filterFileExtensions,
+            searchText = searchText.value,
+            sortType = _sortType.value,
+            filterFileTypes = filterFileTypes
+        )
     }
 
     private val _isCreateDialog: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val isCreateDialog: StateFlow<Boolean> = _isCreateDialog
     fun updateCreateDialog(value: Boolean) {
         _isCreateDialog.value = value
-    }
-
-    fun getExtensions(type: FileFilterType): List<String> {
-        val filter = filterFileTypes.filter { it.type == type }
-        if (filter.isNotEmpty()) {
-            return filter.last().extensions
-        }
-        return emptyList()
-    }
-
-    fun getFilterFileByFileExtension(type: String): FileFilter? {
-        val filter = filterFileTypes.filter { it.extensions.contains(type) }
-        if (filter.isEmpty()) {
-            return null
-        }
-        return filter.first()
     }
 
     fun getFileFilter(filterId: Long) = database.fileFilterQueries.queryById(filterId).executeAsOne()

@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.getFileFilterType
+import app.filemanager.extensions.getExtensions
 import app.filemanager.ui.components.GridList
 import app.filemanager.ui.components.TextFieldDialog
 import app.filemanager.ui.state.file.FileFilterState
@@ -63,7 +64,7 @@ class FileFilterScreen : Screen {
                 modifier = Modifier.padding(it)
             ) {
                 items(filterFileTypes) { fileFilter ->
-                    val extensions = fileFilterState.getExtensions(fileFilter.type)
+                    val extensions = filterFileTypes.getExtensions(fileFilter.type)
                     ListItem(
                         headlineContent = { Text(fileFilter.name) },
                         supportingContent = if (extensions.isNotEmpty()) {

@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.extensions.formatFileSize
+import app.filemanager.extensions.getFilterByExtension
 import app.filemanager.extensions.timestampToSyncDate
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
@@ -146,7 +147,7 @@ fun FileInfoDialog(fileInfo: FileSimpleInfo, onCancel: () -> Unit) {
                             if (fileInfo.isDirectory) {
                                 Text("文件夹", Modifier.weight(0.7f))
                             } else {
-                                val fileFilter = fileFilterState.getFilterFileByFileExtension(fileInfo.mineType)
+                                val fileFilter = fileFilterState.filterFileTypes.getFilterByExtension(fileInfo.mineType)
                                 Text(
                                     "文件${if (fileFilter != null) "(${fileFilter.name})" else ""}",
                                     Modifier.weight(0.7f)
@@ -254,7 +255,6 @@ fun FileRenameDialog(
                 Text("取消")
             }
         }
-
     )
 }
 
