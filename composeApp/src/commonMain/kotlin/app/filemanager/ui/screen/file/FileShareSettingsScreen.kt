@@ -62,13 +62,6 @@ class FileShareSettings() : Screen {
                             Icon(Icons.AutoMirrored.Default.ArrowBack, null)
                         }
                     },
-                    actions = {
-                        IconButton({
-                            navigator.push(FileShareSettings()) // 打开历史记录界面
-                        }) {
-                            Icon(Icons.Default.History, null)
-                        }
-                    }
                 )
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
