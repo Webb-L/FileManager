@@ -20,15 +20,18 @@ import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileFilterSort
 import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
-import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.main.DeviceState
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
+/**
+ * 一个用于显示排序选项的组合按钮组件。
+ *
+ * @param sortType 当前选择的文件排序类型。
+ * @param onUpdateSort 当排序类型发生变化时触发的回调函数。
+ */
 @Composable
-fun SortButton() {
-    val fileFilterState = koinInject<FileFilterState>()
-    val sortType by fileFilterState.sortType.collectAsState()
+fun SortButton(sortType: FileFilterSort, onUpdateSort: (FileFilterSort) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
@@ -43,9 +46,9 @@ fun SortButton() {
                 text = { Text("文件名称") },
                 onClick = {
                     if (sortType == FileFilterSort.NameAsc) {
-                        fileFilterState.updateSortType(FileFilterSort.NameDesc)
+                        onUpdateSort(FileFilterSort.NameDesc)
                     } else {
-                        fileFilterState.updateSortType(FileFilterSort.NameAsc)
+                        onUpdateSort(FileFilterSort.NameAsc)
                     }
                 },
                 trailingIcon = {
@@ -67,9 +70,9 @@ fun SortButton() {
                 text = { Text("文件大小") },
                 onClick = {
                     if (sortType == FileFilterSort.SizeAsc) {
-                        fileFilterState.updateSortType(FileFilterSort.SizeDesc)
+                        onUpdateSort(FileFilterSort.SizeDesc)
                     } else {
-                        fileFilterState.updateSortType(FileFilterSort.SizeAsc)
+                        onUpdateSort(FileFilterSort.SizeAsc)
                     }
                 },
                 trailingIcon = {
@@ -91,9 +94,9 @@ fun SortButton() {
                 text = { Text("文件类型") },
                 onClick = {
                     if (sortType == FileFilterSort.TypeAsc) {
-                        fileFilterState.updateSortType(FileFilterSort.TypeDesc)
+                        onUpdateSort(FileFilterSort.TypeDesc)
                     } else {
-                        fileFilterState.updateSortType(FileFilterSort.TypeAsc)
+                        onUpdateSort(FileFilterSort.TypeAsc)
                     }
                 },
                 trailingIcon = {
@@ -115,9 +118,9 @@ fun SortButton() {
                 text = { Text("文件创建时间") },
                 onClick = {
                     if (sortType == FileFilterSort.CreatedDateAsc) {
-                        fileFilterState.updateSortType(FileFilterSort.CreatedDateDesc)
+                        onUpdateSort(FileFilterSort.CreatedDateDesc)
                     } else {
-                        fileFilterState.updateSortType(FileFilterSort.CreatedDateAsc)
+                        onUpdateSort(FileFilterSort.CreatedDateAsc)
                     }
                 },
                 trailingIcon = {
@@ -139,9 +142,9 @@ fun SortButton() {
                 text = { Text("文件修改时间") },
                 onClick = {
                     if (sortType == FileFilterSort.UpdatedDateAsc) {
-                        fileFilterState.updateSortType(FileFilterSort.UpdatedDateDesc)
+                        onUpdateSort(FileFilterSort.UpdatedDateDesc)
                     } else {
-                        fileFilterState.updateSortType(FileFilterSort.UpdatedDateAsc)
+                        onUpdateSort(FileFilterSort.UpdatedDateAsc)
                     }
                 },
                 trailingIcon = {

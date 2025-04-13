@@ -1,9 +1,7 @@
 package app.filemanager.ui.components
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -18,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import app.filemanager.data.file.FileFilterSort
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.PathInfo
 import app.filemanager.exception.EmptyDataException
@@ -52,7 +51,10 @@ fun FileListComponent(
     val paths = mutableStateListOf<String>()
     paths.addAll(path.parsePath())
 
-    LaunchedEffect(path) {
+    var isHideFile by remember { mutableStateOf(false) }
+    var fileFilterSortType by remember { mutableStateOf<FileFilterSort>(FileFilterSort.NameAsc) }
+
+    fun loadFilesFromPath() {
         paths.clear()
         paths.addAll(path.parsePath())
 
@@ -60,13 +62,17 @@ fun FileListComponent(
         isLoading = true
         path.getFileAndFolder()
             .onSuccess {
-                files = it.filter()
+                files = it.filter(isHidden = isHideFile, sortType = fileFilterSortType)
                 isLoading = false
             }
             .onFailure {
                 exception = it
                 isLoading = false
             }
+    }
+
+    LaunchedEffect(path) {
+        loadFilesFromPath()
     }
 
     Column {
@@ -119,6 +125,27 @@ fun FileListComponent(
                     nowPath,
                     onClick = { path = nowPath + PathUtils.getPathSeparator() + text },
                     onSelected = { path = it }
+                )
+            }
+        }
+
+        Row {
+            Row(Modifier.padding(start = 16.dp, end = 12.dp)) {
+                FilterChip(
+                    selected = isHideFile,
+                    label = { Text("隐藏文件") },
+                    shape = RoundedCornerShape(25.dp),
+                    onClick = {
+                        isHideFile = !isHideFile
+                        loadFilesFromPath()
+                    })
+
+                SortButton(
+                    sortType = fileFilterSortType,
+                    onUpdateSort = {
+                        fileFilterSortType = it
+                        loadFilesFromPath()
+                    }
                 )
             }
         }

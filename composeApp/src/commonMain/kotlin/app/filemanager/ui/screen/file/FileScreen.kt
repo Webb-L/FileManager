@@ -141,6 +141,8 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
 @Composable
 fun FileFilterButtons(fileAndFolder: List<FileSimpleInfo>, onToFilterScreen: () -> Unit) {
     val fileFilterState = koinInject<FileFilterState>()
+    val fileFilterSortType by fileFilterState.sortType.collectAsState()
+
     val extensions =
         fileAndFolder
             .filter { !it.isDirectory }
@@ -172,7 +174,6 @@ fun FileFilterButtons(fileAndFolder: List<FileSimpleInfo>, onToFilterScreen: () 
 
         val filterExtensions = fileFilterState.filterFileTypes
             .filter { filterFileType -> filterFileType.extensions.any { it in extensions.keys } }
-
 
         LazyRow(Modifier.weight(1f)) {
             item {
@@ -240,8 +241,6 @@ fun FileFilterButtons(fileAndFolder: List<FileSimpleInfo>, onToFilterScreen: () 
             }
         }
 
-
-
         Row(Modifier.padding(start = 16.dp, end = 12.dp)) {
             val isHideFile by fileFilterState.isHideFile.collectAsState()
             FilterChip(
@@ -250,7 +249,10 @@ fun FileFilterButtons(fileAndFolder: List<FileSimpleInfo>, onToFilterScreen: () 
                 shape = RoundedCornerShape(25.dp),
                 onClick = { fileFilterState.updateHideFile(!isHideFile) })
 
-            SortButton()
+            SortButton(
+                sortType = fileFilterSortType,
+                onUpdateSort = fileFilterState::updateSortType
+            )
         }
     }
 }
