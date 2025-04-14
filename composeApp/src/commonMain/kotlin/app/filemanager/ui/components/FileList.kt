@@ -17,12 +17,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.*
+import app.filemanager.db.FileFilter
+import app.filemanager.db.FileManagerDatabase
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.filter
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.parsePath
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
+import org.koin.core.component.inject
+import kotlin.getValue
 
 @Composable
 fun FileListComponent(
@@ -33,6 +38,8 @@ fun FileListComponent(
 
     val rootFileInfos = mutableStateListOf<PathInfo>()
     var rootPath by remember { mutableStateOf("") }
+
+    val database = koinInject<FileManagerDatabase>()
 
 
     LaunchedEffect(Unit) {
@@ -51,6 +58,11 @@ fun FileListComponent(
 
     var isHideFile by remember { mutableStateOf(false) }
     var fileFilterSortType by remember { mutableStateOf<FileFilterSort>(FileFilterSort.NameAsc) }
+    val filterFileTypes = mutableStateListOf<FileFilter>()
+    filterFileTypes.addAll(database.fileFilterQueries.queryAllByLimit(0, 100).executeAsList())
+
+    // 过滤的文件类型
+    val filterFileExtensions = mutableStateListOf<FileFilterType>()
 
     fun loadFilesFromPath() {
         paths.clear()
@@ -60,7 +72,8 @@ fun FileListComponent(
         isLoading = true
         path.getFileAndFolder()
             .onSuccess {
-                files = it.filter(isHidden = isHideFile, sortType = fileFilterSortType)
+                files =
+                    it.filter(isHidden = isHideFile, sortType = fileFilterSortType, filterFileTypes = filterFileTypes)
                 isLoading = false
             }
             .onFailure {
@@ -127,15 +140,38 @@ fun FileListComponent(
             }
         }
 
+        val extensions =
+            files
+                .filter { !it.isDirectory }
+                .filter {
+                    if (!isHideFile) {
+                        !it.isHidden
+                    } else {
+                        true
+                    }
+                }
+                .groupBy { it.mineType }
+                .mapValues { (_, value) -> value.size }
+
+        val folderCount = files
+            .filter { it.isDirectory }
+            .count {
+                if (!isHideFile) {
+                    !it.isHidden
+                } else {
+                    true
+                }
+            }
+
         Row {
-            val filterExtensions = fileFilterState.filterFileTypes
+            val filterExtensions = filterFileTypes
                 .filter { filterFileType -> filterFileType.extensions.any { it in extensions.keys } }
 
             LazyRow(Modifier.weight(1f)) {
                 item {
                     if (folderCount < 1) return@item
 
-                    val isSelected = fileFilterState.filterFileExtensions.contains(FileFilterType.Folder)
+                    val isSelected = filterFileExtensions.contains(FileFilterType.Folder)
 
                     FilterChip(
                         selected = isSelected,
@@ -154,7 +190,7 @@ fun FileListComponent(
                 }
 
                 itemsIndexed(filterExtensions) { index, fileFilter ->
-                    val isSelected = fileFilterState.filterFileExtensions.contains(fileFilter.type)
+                    val isSelected = filterFileExtensions.contains(fileFilter.type)
                     val fileCount = fileFilter.extensions.intersect(extensions.keys).sumOf { key ->
                         extensions.filterKeys { it == key }.values.sum()
                     }
@@ -178,7 +214,7 @@ fun FileListComponent(
                 item {
                     val fileCount = extensions[""] ?: return@item
 
-                    val isSelected = fileFilterState.filterFileExtensions.contains(FileFilterType.File)
+                    val isSelected = filterFileExtensions.contains(FileFilterType.File)
 
                     FilterChip(
                         selected = isSelected,
@@ -187,9 +223,9 @@ fun FileListComponent(
                         shape = RoundedCornerShape(25.dp),
                         onClick = {
                             if (isSelected) {
-                                fileFilterState.filterFileExtensions.remove(FileFilterType.File)
+                                filterFileExtensions.remove(FileFilterType.File)
                             } else {
-                                fileFilterState.filterFileExtensions.add(FileFilterType.File)
+                                filterFileExtensions.add(FileFilterType.File)
                             }
                             fileFilterState.updateFilerKey()
                         })
