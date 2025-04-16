@@ -30,11 +30,24 @@ import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
-@Composable
-fun FileListComponent(
+/**
+ * 文件选择器组件，用于浏览和选择文件/文件夹
+ *
+ * @param openPath 初始打开的路径
+ * @param defaultCheckedFiles 默认选中的文件列表
+ * @param onFilesSelected 文件选择回调函数，返回当前选中的文件列表
+ * @param fileFilterType 可选的文件过滤类型，用于只显示特定类型的文件
+ * @param isSingleSelection 是否为单选模式，true表示只能选择一个文件/文件夹
+ */
+@Composable 
+fun FileSelector(
     openPath: String,
+    defaultCheckedFiles: List<FileSimpleInfo> = listOf(),
     onFilesSelected: (List<FileSimpleInfo>) -> Unit = {},
+    fileFilterType: FileFilterType? = null,
+    isSingleSelection: Boolean = false,
 ) {
+    // 协程作用域
     val scope = rememberCoroutineScope()
 
     val fileFilterState = koinInject<FileFilterState>()
@@ -48,44 +61,60 @@ fun FileListComponent(
         rootPath = rootFileInfos.first().path
     }
 
+    // 当前路径
     var path by remember { mutableStateOf(openPath) }
+    // 当前路径下的文件列表
     var files by remember { mutableStateOf<List<FileSimpleInfo>>(emptyList()) }
+    // 加载状态
     var isLoading by remember { mutableStateOf(false) }
+    // 异常信息
     var exception by remember { mutableStateOf<Throwable?>(null) }
+    // 已选中的文件列表
     val checkedFiles = mutableStateListOf<FileSimpleInfo>()
+    checkedFiles.addAll(defaultCheckedFiles)
+    // 路径分解后的分段列表
     val paths = mutableStateListOf<String>()
     paths.addAll(path.parsePath())
 
+    // 是否隐藏文件
     var isHideFile by remember { mutableStateOf(false) }
+    // 文件排序类型
     var fileFilterSortType by remember { mutableStateOf(FileFilterSort.NameAsc) }
 
     // 过滤的文件类型
-    val filterFileExtensions = mutableStateListOf<FileFilterType>()
+    var filterFileExtensions by remember { mutableStateOf<List<FileFilterType>>(listOf()) }
 
+    /**
+     * 从当前路径加载文件列表
+     * 1. 清空并更新路径分段
+     * 2. 重置异常状态
+     * 3. 设置加载状态
+     * 4. 异步获取文件列表
+     * 5. 根据结果更新状态
+     */
     fun loadFilesFromPath() {
+        // 更新路径分段
         paths.clear()
         paths.addAll(path.parsePath())
 
+        // 重置状态
         exception = null
         isLoading = true
+
+        // 异步加载文件
         path.getFileAndFolder()
-            .onSuccess {
-                files =
-                    it.filter(
-                        isHidden = isHideFile,
-                        sortType = fileFilterSortType,
-                        filterFileTypes = fileFilterState.filterFileTypes,
-                        filterFileExtensions = filterFileExtensions,
-                    )
+            .onSuccess { fileList ->
+                // 应用文件类型过滤
+                files = fileList.filter(
+                    filterFileExtensions = fileFilterType?.let { listOf(it) } ?: emptyList()
+                )
                 isLoading = false
             }
-            .onFailure {
-                exception = it
+            .onFailure { error ->
+                exception = error
                 isLoading = false
             }
     }
-
-    println(1111)
 
     LaunchedEffect(path) {
         loadFilesFromPath()
@@ -152,10 +181,10 @@ fun FileListComponent(
                 filterFileExtensions = filterFileExtensions,
                 isHide = isHideFile,
                 onCheckedFileFilterTypeChange = { isSelected, fileFilterType ->
-                    if (isSelected) {
-                        filterFileExtensions.remove(fileFilterType)
+                    filterFileExtensions = if (isSelected) {
+                        filterFileExtensions - fileFilterType
                     } else {
-                        filterFileExtensions.add(fileFilterType)
+                        filterFileExtensions + fileFilterType
                     }
                     loadFilesFromPath()
                 },
@@ -186,14 +215,26 @@ fun FileListComponent(
             listState.scrollToItem(paths.size)
         }
 
-        GridList(isLoading = isLoading, exception = if (files.isEmpty()) EmptyDataException() else exception) {
-            items(files, key = { it.path }) { file ->
+        val filterFiles = files.filter(
+            isHidden = isHideFile,
+            sortType = fileFilterSortType,
+            filterFileTypes = fileFilterState.filterFileTypes,
+            filterFileExtensions = filterFileExtensions,
+        )
+
+        GridList(isLoading = isLoading, exception = if (filterFiles.isEmpty()) EmptyDataException() else exception) {
+            items(filterFiles, key = { it.path }) { file ->
                 FileCard(
                     file = file,
                     checkedState = checkedFiles.contains(file),
                     onStateChange = { status ->
                         if (status) {
-                            checkedFiles.add(file)
+                            if (isSingleSelection) {
+                                checkedFiles.clear()
+                                checkedFiles.add(file)
+                            } else {
+                                checkedFiles.add(file)
+                            }
                         } else {
                             checkedFiles.remove(file)
                         }

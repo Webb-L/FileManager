@@ -20,7 +20,7 @@ import app.filemanager.db.FileFilter
  *
  * 用于显示一组文件过滤器按钮，包括文件夹和不同类型的文件过滤器，每个过滤器显示对应类型的文件数量
  *
- * @param fileAndFolder 要显示的文件和文件夹列表
+ * @param fileAndFolder 要显示的文件和文件夹列表（需要一个完成的列表）
  * @param filterFileTypes 可用于过滤的文件类型列表
  * @param filterFileExtensions 当前已选择的文件过滤类型列表
  * @param isHide 是否显示隐藏文件，默认为false
