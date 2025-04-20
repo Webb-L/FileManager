@@ -10,6 +10,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.filemanager.data.file.FileFilterType
+import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceConnectType.*
 import app.filemanager.db.FileManagerDatabase
@@ -17,6 +19,7 @@ import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
 import app.filemanager.ui.state.file.FileShareStatus
 import app.filemanager.ui.state.main.DeviceState
+import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock
 import org.koin.compose.koinInject
@@ -56,17 +59,18 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
         if (minutes == 0) "${seconds}秒" else "${minutes}分${seconds}秒"
     }
 
-    fun updateShareRequest(deviceType: DeviceConnectType) {
+    var isSelectPathDialog by remember { mutableStateOf(false) }
+
+    fun updateShareRequest(deviceType: DeviceConnectType, path: String? = null) {
         when (deviceType) {
             AUTO_CONNECT, APPROVED -> {
                 deviceState.connectShare(socketDevice)
                 deviceState.shareConnectionStates[socketDevice.id] = FileShareStatus.COMPLETED
                 if (deviceType == AUTO_CONNECT) {
-                    // TODO 选择目录
                     database.deviceReceiveShareQueries.insert(
                         socketDevice.id,
                         AUTO_CONNECT,
-                        "/home/webb/下载"
+                        path ?: PathUtils.getHomePath()
                     )
                 }
             }
@@ -107,25 +111,58 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
                     DropdownMenuItem(
                         text = { Text("自动同意") },
                         onClick = {
-                            updateShareRequest(AUTO_CONNECT)
+                            isSelectPathDialog = true
+                            expanded = false
                         }
                     )
                     DropdownMenuItem(
                         text = { Text("自动拒绝") },
-                        onClick = {
-                            updateShareRequest(PERMANENTLY_BANNED)
-                        }
+                        onClick = { updateShareRequest(PERMANENTLY_BANNED) }
                     )
                     DropdownMenuItem(
                         text = { Text("拒绝") },
-                        onClick = {
-                            updateShareRequest(REJECTED)
-                        }
+                        onClick = { updateShareRequest(REJECTED) }
                     )
                 }
             }
         }
     )
+
+
+
+    if (isSelectPathDialog) {
+        var fileSimpleInfo by remember { mutableStateOf<FileSimpleInfo?>(null) }
+
+        AlertDialog(
+            title = { Text("请选择要保存的目录") },
+            text = {
+                FileSelector(
+                    PathUtils.getHomePath(),
+                    isSingleSelection = true,
+                    fileFilterType = FileFilterType.Folder,
+                    onFilesSelected = {
+                        fileSimpleInfo = null
+                        if (it.isNotEmpty()) {
+                            fileSimpleInfo = it.first()
+                        }
+                    }
+                )
+            },
+            onDismissRequest = {},
+            confirmButton = {
+                TextButton({
+                    updateShareRequest(AUTO_CONNECT, fileSimpleInfo?.path)
+                }, enabled = fileSimpleInfo != null) {
+                    Text("确认")
+                }
+            },
+            dismissButton = {
+                TextButton({ isSelectPathDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
 }
 
 /**

@@ -39,7 +39,7 @@ import org.koin.compose.koinInject
  * @param fileFilterType 可选的文件过滤类型，用于只显示特定类型的文件
  * @param isSingleSelection 是否为单选模式，true表示只能选择一个文件/文件夹
  */
-@Composable 
+@Composable
 fun FileSelector(
     openPath: String,
     defaultCheckedFiles: List<FileSimpleInfo> = listOf(),
@@ -70,8 +70,9 @@ fun FileSelector(
     // 异常信息
     var exception by remember { mutableStateOf<Throwable?>(null) }
     // 已选中的文件列表
-    val checkedFiles = mutableStateListOf<FileSimpleInfo>()
-    checkedFiles.addAll(defaultCheckedFiles)
+    val checkedFiles = mutableStateListOf<FileSimpleInfo>().apply {
+        addAll(defaultCheckedFiles)
+    }
     // 路径分解后的分段列表
     val paths = mutableStateListOf<String>()
     paths.addAll(path.parsePath())
@@ -238,7 +239,7 @@ fun FileSelector(
                         } else {
                             checkedFiles.remove(file)
                         }
-                        onFilesSelected(checkedFiles.toList())
+                        onFilesSelected(checkedFiles)
                     },
                     onClick = {
                         if (checkedFiles.contains(file)) {

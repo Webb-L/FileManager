@@ -10,13 +10,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.filemanager.data.file.FileFilterType
 import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceType
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.db.deviceReceiveShare.SelectAll
 import app.filemanager.exception.EmptyDataException
+import app.filemanager.ui.components.FileSelector
 import app.filemanager.ui.components.GridList
 import app.filemanager.ui.state.main.MainState
+import app.filemanager.utils.FileUtils
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -167,6 +170,8 @@ class FileShareSettings() : Screen {
         // 记录编辑后的设备信息
         var editedDevice by remember { mutableStateOf(device) }
 
+        var fileSimpleInfo by remember { mutableStateOf(FileUtils.getFile(device.path).getOrNull()) }
+
         AlertDialog(
             onDismissRequest = onDismiss, // 对话框关闭事件
             title = { Text("编辑设备") },
@@ -197,13 +202,36 @@ class FileShareSettings() : Screen {
                     // 编辑路径的文本框
                     TextField(
                         value = editedDevice.path,
+                        enabled = editedDevice.connectionType == DeviceConnectType.AUTO_CONNECT,
                         onValueChange = { editedDevice = editedDevice.copy(path = it) },
                         label = { Text("路径") },
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    if (fileSimpleInfo != null && editedDevice.connectionType == DeviceConnectType.AUTO_CONNECT) {
+                        FileSelector(
+                            editedDevice.path,
+                            isSingleSelection = true,
+                            defaultCheckedFiles = listOf(fileSimpleInfo!!),
+                            fileFilterType = FileFilterType.Folder,
+                            onFilesSelected = {
+                                if (it.isNotEmpty()) {
+                                    editedDevice = editedDevice.copy(path = it.first().path)
+                                    fileSimpleInfo = it.first()
+                                }
+                            }
+                        )
+                    }
                 }
             },
             confirmButton = {
+                var isEnabled = false
+                if (editedDevice.connectionType == DeviceConnectType.AUTO_CONNECT) {
+                    isEnabled = editedDevice.path.isNotEmpty()
+                }
+                if (editedDevice.connectionType == DeviceConnectType.PERMANENTLY_BANNED) {
+                    isEnabled = true
+                }
                 TextButton(
                     onClick = {
                         // 更新设备的连接类型和路径信息
@@ -213,7 +241,8 @@ class FileShareSettings() : Screen {
                             id = editedDevice.id
                         )
                         onConfirm(editedDevice) // 确认操作
-                    }
+                    },
+                    enabled = isEnabled
                 ) {
                     Text("确认") // 确认按钮
                 }
