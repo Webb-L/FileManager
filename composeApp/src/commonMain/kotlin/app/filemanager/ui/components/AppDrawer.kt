@@ -33,7 +33,7 @@ import app.filemanager.service.rpc.getAllIPAddresses
 import app.filemanager.ui.screen.device.DeviceScreen
 import app.filemanager.ui.screen.device.DeviceSettingsScreen
 import app.filemanager.ui.screen.file.FavoriteScreen
-import app.filemanager.ui.screen.file.FileShareSettings
+import app.filemanager.ui.screen.file.FileShareSettingsScreen
 import app.filemanager.ui.screen.main.NotificationScreen
 import app.filemanager.ui.screen.task.TaskResultScreen
 import app.filemanager.ui.state.file.FileState
@@ -218,7 +218,7 @@ private fun MoreOptionsDropdown(mainState: MainState) {
                 leadingIcon = { Icon(Icons.Default.Share, null) },
                 text = { Text("分享") },
                 onClick = {
-                    mainState.updateScreen(FileShareSettings())
+                    mainState.updateScreen(FileShareSettingsScreen())
                     showDropdownMenu = false
                 }
             )

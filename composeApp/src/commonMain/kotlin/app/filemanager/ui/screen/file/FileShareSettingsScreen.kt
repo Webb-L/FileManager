@@ -26,7 +26,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
-class FileShareSettings() : Screen {
+class FileShareSettingsScreen() : Screen {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {

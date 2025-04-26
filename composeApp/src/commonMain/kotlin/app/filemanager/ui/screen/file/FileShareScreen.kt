@@ -330,7 +330,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                         Icons.Default.Settings,
                                         null,
                                         Modifier.clickable {
-                                            navigator.push(FileShareSettings())
+                                            navigator.push(FileShareSettingsScreen())
                                         }
                                     )
                                     Spacer(Modifier.width(8.dp))
@@ -338,7 +338,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                         Icons.Default.History,
                                         null,
                                         Modifier.clickable {
-                                            navigator.push(FileShareSettings())
+                                            navigator.push(FileShareHistoryScreen())
                                         }
                                     )
                                 }

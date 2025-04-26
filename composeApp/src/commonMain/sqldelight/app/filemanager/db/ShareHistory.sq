@@ -1,0 +1,160 @@
+import kotlin.Boolean;
+import app.filemanager.ui.state.file.FileShareStatus;
+
+-- ShareHistory: 记录文件或文件夹分享和接收的历史记录
+CREATE TABLE ShareHistory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,      -- 历史记录唯一标识符(自动递增)
+    fileName TEXT NOT NULL,                    -- 文件或文件夹名称
+    filePath TEXT NOT NULL,                    -- 文件或文件夹路径
+    fileSize INTEGER NOT NULL,                 -- 文件或文件夹大小(字节)
+    isDirectory INTEGER AS Boolean NOT NULL,   -- 是否为文件夹
+    sourceDeviceId TEXT NOT NULL,              -- 源设备ID
+    targetDeviceId TEXT NOT NULL,              -- 目标设备ID
+    isOutgoing INTEGER AS Boolean NOT NULL,    -- 是否为发送(true)或接收(false)
+    timestamp INTEGER NOT NULL,                -- 时间戳
+    status TEXT AS FileShareStatus NOT NULL,   -- 状态
+    errorMessage TEXT,                         -- 错误信息(如果有)
+    savePath TEXT                              -- 保存路径
+);
+
+-- 添加新的分享历史记录
+insert:
+INSERT INTO ShareHistory (fileName, filePath, fileSize, isDirectory, sourceDeviceId, targetDeviceId, isOutgoing, timestamp, status, errorMessage, savePath)
+VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%s', 'now') * 1000, ?, ?, ?);
+
+-- 更新分享历史记录状态
+updateStatus:
+UPDATE ShareHistory 
+SET status = ?, errorMessage = ? 
+WHERE id = ?;
+
+-- 更新保存路径
+updateSavePath:
+UPDATE ShareHistory
+SET savePath = ?
+WHERE id = ?;
+
+-- 删除指定历史记录
+deleteById:
+DELETE FROM ShareHistory 
+WHERE id = ?;
+
+-- 删除所有历史记录
+deleteAll:
+DELETE FROM ShareHistory;
+
+-- 查询所有历史记录(按时间戳倒序)
+selectAll:
+SELECT h.*, 
+       sdev.name AS sourceDeviceName,
+       sdev.type AS sourceDeviceType,
+       tdev.name AS targetDeviceName,
+       tdev.type AS targetDeviceType
+FROM ShareHistory h
+JOIN Device sdev ON h.sourceDeviceId = sdev.id
+JOIN Device tdev ON h.targetDeviceId = tdev.id
+ORDER BY h.timestamp DESC;
+
+-- 查询发送历史记录
+selectOutgoing:
+SELECT h.*, 
+       sdev.name AS sourceDeviceName,
+       sdev.type AS sourceDeviceType,
+       tdev.name AS targetDeviceName,
+       tdev.type AS targetDeviceType
+FROM ShareHistory h
+JOIN Device sdev ON h.sourceDeviceId = sdev.id
+JOIN Device tdev ON h.targetDeviceId = tdev.id
+WHERE h.isOutgoing = 1
+ORDER BY h.timestamp DESC;
+
+-- 查询接收历史记录
+selectIncoming:
+SELECT h.*, 
+       sdev.name AS sourceDeviceName,
+       sdev.type AS sourceDeviceType,
+       tdev.name AS targetDeviceName,
+       tdev.type AS targetDeviceType
+FROM ShareHistory h
+JOIN Device sdev ON h.sourceDeviceId = sdev.id
+JOIN Device tdev ON h.targetDeviceId = tdev.id
+WHERE h.isOutgoing = 0
+ORDER BY h.timestamp DESC;
+
+-- 根据状态查询历史记录
+selectByStatus:
+SELECT h.*, 
+       sdev.name AS sourceDeviceName,
+       sdev.type AS sourceDeviceType,
+       tdev.name AS targetDeviceName,
+       tdev.type AS targetDeviceType
+FROM ShareHistory h
+JOIN Device sdev ON h.sourceDeviceId = sdev.id
+JOIN Device tdev ON h.targetDeviceId = tdev.id
+WHERE h.status = :status
+ORDER BY h.timestamp DESC;
+
+-- 根据状态查询发送历史记录
+selectOutgoingByStatus:
+SELECT h.*, 
+       sdev.name AS sourceDeviceName,
+       sdev.type AS sourceDeviceType,
+       tdev.name AS targetDeviceName,
+       tdev.type AS targetDeviceType
+FROM ShareHistory h
+JOIN Device sdev ON h.sourceDeviceId = sdev.id
+JOIN Device tdev ON h.targetDeviceId = tdev.id
+WHERE h.isOutgoing = 1 AND h.status = :status
+ORDER BY h.timestamp DESC;
+
+-- 根据状态查询接收历史记录
+selectIncomingByStatus:
+SELECT h.*, 
+       sdev.name AS sourceDeviceName,
+       sdev.type AS sourceDeviceType,
+       tdev.name AS targetDeviceName,
+       tdev.type AS targetDeviceType
+FROM ShareHistory h
+JOIN Device sdev ON h.sourceDeviceId = sdev.id
+JOIN Device tdev ON h.targetDeviceId = tdev.id
+WHERE h.isOutgoing = 0 AND h.status = :status
+ORDER BY h.timestamp DESC;
+
+-- 根据设备ID查询历史记录
+selectByDeviceId:
+SELECT h.*, 
+       sdev.name AS sourceDeviceName,
+       sdev.type AS sourceDeviceType,
+       tdev.name AS targetDeviceName,
+       tdev.type AS targetDeviceType
+FROM ShareHistory h
+JOIN Device sdev ON h.sourceDeviceId = sdev.id
+JOIN Device tdev ON h.targetDeviceId = tdev.id
+WHERE h.sourceDeviceId = ? OR h.targetDeviceId = ?
+ORDER BY h.timestamp DESC;
+
+-- 根据文件名模糊查询
+selectByFileNameLike:
+SELECT h.*, 
+       sdev.name AS sourceDeviceName,
+       sdev.type AS sourceDeviceType,
+       tdev.name AS targetDeviceName,
+       tdev.type AS targetDeviceType
+FROM ShareHistory h
+JOIN Device sdev ON h.sourceDeviceId = sdev.id
+JOIN Device tdev ON h.targetDeviceId = tdev.id
+WHERE h.fileName LIKE '%' || ? || '%'
+ORDER BY h.timestamp DESC;
+
+-- 获取指定时间范围内的历史记录
+selectByTimeRange:
+SELECT h.*, 
+       sdev.name AS sourceDeviceName,
+       sdev.type AS sourceDeviceType,
+       tdev.name AS targetDeviceName,
+       tdev.type AS targetDeviceType
+FROM ShareHistory h
+JOIN Device sdev ON h.sourceDeviceId = sdev.id
+JOIN Device tdev ON h.targetDeviceId = tdev.id
+WHERE h.timestamp BETWEEN ? AND ?
+ORDER BY h.timestamp DESC;

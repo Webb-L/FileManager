@@ -8,6 +8,7 @@ import app.filemanager.extensions.pathLevel
 import app.filemanager.getSocketDevice
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
+import app.filemanager.ui.state.file.FileShareStatus
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.FileUtils
@@ -146,6 +147,18 @@ class RpcShareClientManager : KoinComponent {
                 destFileSimpleInfo,
                 srcFileSimpleInfo
             ) {
+                database.shareHistoryQueries.insert(
+                    fileName = srcFileSimpleInfo.name,
+                    filePath = srcFileSimpleInfo.path,
+                    fileSize = srcFileSimpleInfo.size,
+                    isDirectory = srcFileSimpleInfo.isDirectory,
+                    sourceDeviceId = srcFileSimpleInfo.protocolId,
+                    targetDeviceId = getSocketDevice().id,
+                    isOutgoing = false,
+                    status = if (it.isSuccess) FileShareStatus.COMPLETED else FileShareStatus.ERROR,
+                    errorMessage = "",
+                    savePath = destFileSimpleInfo.path
+                )
                 replyCallback(it)
             }
             return
@@ -208,7 +221,22 @@ class RpcShareClientManager : KoinComponent {
             delay(100L)
         }
 
-        replyCallback(Result.success(successCount + failureCount == list.size))
+        val isSuccess = successCount + failureCount == list.size
+
+        database.shareHistoryQueries.insert(
+            fileName = srcFileSimpleInfo.name,
+            filePath = srcFileSimpleInfo.path,
+            fileSize = srcFileSimpleInfo.size,
+            isDirectory = srcFileSimpleInfo.isDirectory,
+            sourceDeviceId = srcFileSimpleInfo.protocolId,
+            targetDeviceId = getSocketDevice().id,
+            isOutgoing = false,
+            status = if (isSuccess) FileShareStatus.COMPLETED else FileShareStatus.ERROR,
+            errorMessage = "",
+            savePath = destFileSimpleInfo.path
+        )
+
+        replyCallback(Result.success(isSuccess))
     }
 
     suspend fun writeBytes(

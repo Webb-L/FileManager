@@ -144,7 +144,7 @@ class DeviceState : KoinComponent {
             } else {
                 if ((deviceData.name != device.name && deviceData.hasRemarks == false) || deviceData.type != device.type) {
                     database.deviceQueries.updateNameAndTypeById(device.name, device.type, device.id)
-                }else {
+                } else {
                     device.name = deviceData.name
                 }
             }
@@ -212,6 +212,20 @@ class DeviceState : KoinComponent {
 
                                 FileShareStatus.WAITING -> {
                                     allowDeviceShareConnection.add(device.id)
+                                    fileShareState.value.shareToDevices[device.id]?.second?.forEach { fileSimpleInfo ->
+                                        database.shareHistoryQueries.insert(
+                                            fileName = fileSimpleInfo.name,
+                                            filePath = fileSimpleInfo.path,
+                                            fileSize = fileSimpleInfo.size,
+                                            isDirectory = fileSimpleInfo.isDirectory,
+                                            sourceDeviceId = getSocketDevice().id,
+                                            targetDeviceId = device.id,
+                                            isOutgoing = true,
+                                            status = fileShareStatus,
+                                            errorMessage = "",
+                                            savePath = ""
+                                        )
+                                    }
                                 }
                             }
                             fileShareState.value.sendFile[device.id] = fileShareStatus

@@ -9,6 +9,7 @@ import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceType
 import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.db.*
+import app.filemanager.ui.state.file.FileShareStatus
 
 val driverAdapter = object : ColumnAdapter<DeviceType, String> {
     override fun decode(databaseValue: String): DeviceType = DeviceType.valueOf(databaseValue)
@@ -44,6 +45,10 @@ val listOfStringsAdapter = object : ColumnAdapter<List<String>, String> {
 
     override fun encode(value: List<String>) = value.joinToString(separator = ",")
 }
+val fileShareStatusAdapter = object : ColumnAdapter<FileShareStatus, String> {
+    override fun decode(databaseValue: String): FileShareStatus = FileShareStatus.valueOf(databaseValue)
+    override fun encode(value: FileShareStatus): String = value.name
+}
 
 expect class DriverFactory() {
     fun createDriver(): SqlDriver
@@ -70,6 +75,9 @@ fun createDatabase(driverFactory: DriverFactory): FileManagerDatabase {
         ),
         DeviceReceiveShareAdapter = DeviceReceiveShare.Adapter(
             connectionTypeAdapter = driverConnectTypeAdapter,
+        ),
+        ShareHistoryAdapter = ShareHistory.Adapter(
+            statusAdapter = fileShareStatusAdapter,
         ),
     )
 

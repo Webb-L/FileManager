@@ -25,6 +25,16 @@ fun Long.timestampToHourMinute(): String {
     return "${localDateTime.hour}:${localDateTime.minute}"
 }
 
+fun Long.timestampToYMDHM(): String {
+    val instant = Instant.fromEpochMilliseconds(this)
+    val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
+    return "${localDateTime.year.toString().padStart(2, '0')}-${
+        localDateTime.monthNumber.toString().padStart(2, '0')
+    }-${localDateTime.dayOfMonth.toString().padStart(2, '0')} ${
+        localDateTime.hour.toString().padStart(2, '0')
+    }:${localDateTime.minute.toString().padStart(2, '0')}"
+}
+
 fun Long.timestampToSyncDate(): String {
     val instant = Instant.fromEpochMilliseconds(this)
     val localDateTime = instant.toLocalDateTime(TimeZone.currentSystemDefault())
