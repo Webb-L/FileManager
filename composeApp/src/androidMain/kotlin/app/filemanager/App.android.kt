@@ -3,13 +3,17 @@ package app.filemanager
 import android.app.Application
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
 import app.filemanager.service.rpc.startRpcServer
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -42,10 +46,13 @@ class AppActivity : ComponentActivity() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         activity = this@AppActivity
-//        startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+        if (!Environment.isExternalStorageManager()) {
+            startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+        }
         onBackPressedDispatcher.addCallback(this, backPressedCallback)
         enableEdgeToEdge()
         setContent {

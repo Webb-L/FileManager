@@ -22,8 +22,12 @@ internal actual object PathUtils {
         val listFiles = file.listFiles() ?: return Result.failure(EmptyDataException())
         if (listFiles.isEmpty()) return Result.failure(EmptyDataException())
 
-        return Result.success(listFiles.map { file ->
-            file.toFileSimpleInfo().getOrNull()!!
+        return Result.success(listFiles.mapNotNull { file ->
+            try {
+                file.toFileSimpleInfo().getOrNull()
+            } catch (e: Exception) {
+                null
+            }
         })
     }
 
