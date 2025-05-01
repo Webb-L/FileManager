@@ -63,11 +63,41 @@ object CryptoParameters {
     val charset = Charsets.UTF_8
 }
 
+/**
+ * 对称加密接口，定义加密与解密的基本操作。
+ *
+ * 此接口提供了基于字符串和字节数组的加密与解密功能，支持灵活的对称加密操作。
+ * 具体实现可能依赖不同的加密算法，如AES、DES等。
+ */
 interface SymmetricCryptoInterface {
+    /**
+     * 使用对称加密算法对给定的文本进行加密。
+     *
+     * @param text 要加密的字符串文本。
+     * @return 加密后的字符串结果。
+     */
     fun encrypt(text: String): String
+    /**
+     * 使用对称加密算法对加密的文本进行解密。
+     *
+     * @param text 要解密的字符串文本。
+     * @return 解密后的字符串结果。
+     */
     fun decrypt(text: String): String
 
+    /**
+     * 使用对称加密算法对输入的字节数组进行加密操作。
+     *
+     * @param data 要加密的字节数组。
+     * @return 加密后的字节数组。
+     */
     fun encrypt(data: ByteArray): ByteArray
+    /**
+     * 使用对称加密算法对输入的字节数组进行解密操作。
+     *
+     * @param data 加密的字节数组，需要解密的数据。
+     * @return 解密后的字节数组。
+     */
     fun decrypt(data: ByteArray): ByteArray
 }
 
