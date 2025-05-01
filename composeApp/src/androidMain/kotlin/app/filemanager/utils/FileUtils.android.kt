@@ -8,7 +8,13 @@ import java.io.File
 import java.io.RandomAccessFile
 
 internal actual object FileUtils {
-    actual fun getFile(path: String): Result<FileSimpleInfo> = File(path).toFileSimpleInfo()
+    actual fun getFile(path: String): Result<FileSimpleInfo> {
+        val file = File(path)
+        if (file.exists()) {
+            return File(path).toFileSimpleInfo()
+        }
+        return Result.failure(Exception("找不到文件"))
+    }
     actual fun getFile(path: String, fileName: String): Result<FileSimpleInfo> = File(path, fileName).toFileSimpleInfo()
     actual fun openFile(file: String) {
         AppActivity.openFile(file)

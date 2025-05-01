@@ -60,6 +60,8 @@ kotlin {
 
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.websockets)
+            implementation(libs.ktor.server.html.builder)
+            implementation(libs.ktor.http)
 
             implementation(libs.kotlinx.rpc.core)
             implementation(libs.kotlinx.rpc.krpc.client)
@@ -68,9 +70,6 @@ kotlin {
 
             implementation(libs.qrcoder)
 
-            implementation(libs.uap.java)
-
-            @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
             implementation(compose.components.resources)
 
             // UI
@@ -101,10 +100,9 @@ kotlin {
             implementation(libs.ktor.server.cors)
             implementation(libs.ktor.server.websockets)
             implementation(libs.ktor.server.host.common)
-            implementation(libs.ktor.server.freemarker)
             implementation(libs.ktor.server.compression)
             implementation(libs.ktor.server.call.logging)
-//            implementation(libs.logback.classic)
+            implementation(libs.ktor.server.html.builder)
 
             implementation(libs.kotlinx.rpc.krpc.server)
             implementation(libs.kotlinx.rpc.krpc.ktor.server)
@@ -128,6 +126,7 @@ kotlin {
             implementation(libs.ktor.server.compression)
             implementation(libs.ktor.server.call.logging)
             implementation(libs.logback.classic)
+            implementation(libs.ktor.server.html.builder)
 
             implementation(libs.kotlinx.rpc.krpc.server)
             implementation(libs.kotlinx.rpc.krpc.ktor.server)
@@ -198,11 +197,6 @@ libres {
 tasks.getByPath("jvmProcessResources").dependsOn("libresGenerateResources")
 tasks.getByPath("jvmSourcesJar").dependsOn("libresGenerateResources")
 tasks.getByPath("jsProcessResources").dependsOn("libresGenerateResources")
-dependencies {
-    implementation("io.ktor:ktor-server-core:3.1.1")
-    implementation("io.ktor:ktor-server-sse:3.1.1")
-    implementation("io.ktor:ktor-server-core:3.1.1")
-}
 
 buildConfig {
     // BuildConfig configuration here.
