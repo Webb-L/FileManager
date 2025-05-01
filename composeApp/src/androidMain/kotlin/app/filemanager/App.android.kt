@@ -17,7 +17,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.InputStream
 
 
 class AndroidApp : Application() {
@@ -82,10 +81,4 @@ internal actual fun openUrl(url: String?) {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     AndroidApp.INSTANCE.startActivity(intent)
-}
-
-actual fun readResourceFile(path: String): ByteArray {
-    val inputStream: InputStream = object {}.javaClass.classLoader.getResourceAsStream(path)
-        ?: throw IllegalArgumentException("Resource not found: $path")
-    return inputStream.readBytes()
 }
