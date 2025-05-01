@@ -1,0 +1,42 @@
+### 检查是否开启链接方式分享文件
+GET http://127.0.0.1:12040/
+X-API-Request: true
+User-Agent: Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36
+
+### 访问文件夹
+GET http://127.0.0.1:12040/Download
+X-API-Request: true
+User-Agent: Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36
+
+### 访问文件夹并搜索
+GET http://127.0.0.1:12040/Download?search=test
+X-API-Request: true
+User-Agent: Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36
+
+### 下载完整文件
+GET http://127.0.0.1:12040/Download/test
+X-API-Request: true
+User-Agent: Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36
+
+### 下载部分文件（指定开始和结束位置）
+GET http://127.0.0.1:12040/Download/test
+X-API-Request: true
+User-Agent: Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36
+Range: bytes=0-1024
+
+### 从特定位置下载到文件结尾
+GET http://127.0.0.1:12040/Download/test
+X-API-Request: true
+User-Agent: Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36
+Range: bytes=1024-
+
+### 请求不存在的文件
+GET http://127.0.0.1:12040/Download/nonexistent_file
+X-API-Request: true
+User-Agent: Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36
+
+### 无效范围请求
+GET http://127.0.0.1:12040/Download/test
+X-API-Request: true
+User-Agent: Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36
+Range: bytes=invalid-range
