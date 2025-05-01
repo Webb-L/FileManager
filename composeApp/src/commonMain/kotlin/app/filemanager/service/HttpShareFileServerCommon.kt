@@ -1,11 +1,11 @@
 package app.filemanager.service
 
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.extensions.getClientDeviceInfo
 import app.filemanager.extensions.parsePath
 import app.filemanager.extensions.replaceLast
 import app.filemanager.service.templates.HtmlTemplates
 import app.filemanager.ui.state.file.FileShareState
-import app.filemanager.extensions.getClientDeviceInfo
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.NaturalOrderComparator
 import app.filemanager.utils.PathUtils
@@ -178,52 +178,8 @@ abstract class HttpShareFileServerCommon(protected val fileShareState: FileShare
 
                     // 下载文件
                     if (!fileSimpleInfoResult.isDirectory) {
-                        val fileInfo = FileUtils.getFile(path)
-                        if (fileInfo.isFailure) {
-                            return@get call.respondRedirect("/", permanent = false)
-                        }
-
-                        val file = fileInfo.getOrThrow()
-
-                        call.response.header(HttpHeaders.ContentLength, file.size.toString())
-                        val rangeHeader = call.request.header(HttpHeaders.Range)
-                        if (rangeHeader == null) {
-                            val readFile = FileUtils.readFile(file.path)
-                            if (readFile.isFailure) {
-                                return@get call.respondRedirect("/", permanent = false)
-                            }
-
-                            return@get call.respondBytes(
-                                readFile.getOrDefault(byteArrayOf()),
-                                ContentType.Application.OctetStream
-                            )
-                        }
-                        // 解析 Range 请求头
-                        val range = rangeHeader.removePrefix("bytes=").split("-")
-                        val start = range[0].toLongOrNull() ?: 0
-                        val end = range[1].toLongOrNull() ?: (file.size - 1)
-
-                        // 读取指定范围的数据
-                        val length = end - start + 1
-
-                        call.response.header(HttpHeaders.AcceptRanges, "bytes")
-                        call.response.header(
-                            HttpHeaders.ContentRange,
-                            "bytes $start-$end/${file.size}"
-                        )
-                        call.response.header(HttpHeaders.ContentLength, length.toString())
-
-                        call.response.status(HttpStatusCode.PartialContent)
-
-                        val readFileRange = FileUtils.readFileRange(file.path, start, 8192)
-                        if (readFileRange.isFailure) {
-                            return@get call.respond(HttpStatusCode.InternalServerError, "读取文件失败！")
-                        }
-
-                        return@get call.respondBytes(
-                            readFileRange.getOrDefault(byteArrayOf()),
-                            ContentType.Application.OctetStream
-                        )
+                        call.downloadFile(fileSimpleInfoResult.path)
+                        return@get
                     }
 
                     val fileSimpleInfos = PathUtils.getFileAndFolder(path).getOrDefault(listOf())
@@ -246,6 +202,13 @@ abstract class HttpShareFileServerCommon(protected val fileShareState: FileShare
             }
         }
     }
+
+    /**
+     * 处理文件下载请求。
+     *
+     * @param filePath 文件的完整路径，用于指定需要下载的文件。
+     */
+    protected abstract suspend fun ApplicationCall.downloadFile(filePath: String)
 
     /**
      * 根据请求类型响应数据。
@@ -319,4 +282,4 @@ abstract class HttpShareFileServerCommon(protected val fileShareState: FileShare
         // 重新组合路径
         return encodedSegments.joinToString("/")
     }
-} 
+}

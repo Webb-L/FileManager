@@ -1,13 +1,22 @@
 package app.filemanager.service
 
 import app.filemanager.ui.state.file.FileShareState
+import io.ktor.http.ContentDisposition
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
 import io.ktor.server.plugins.compression.*
+import io.ktor.server.request.header
+import io.ktor.server.response.header
+import io.ktor.server.response.respond
+import io.ktor.server.response.respondOutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
+import java.io.File
 
 /**
  * HttpShareFileServer的Android平台实现类
@@ -84,6 +93,113 @@ actual class HttpShareFileServer actual constructor(fileShareState: FileShareSta
      */
     actual override fun isRunning(): Boolean {
         return server != null
+    }
+
+    /**
+     * 处理文件下载请求，根据文件路径提供文件内容。
+     * 支持范围请求以实现分块文件下载。
+     *
+     * @param filePath 要下载的文件的路径
+     */
+    override suspend fun ApplicationCall.downloadFile(filePath: String) {
+        val file = File(filePath)
+        if (!file.exists()) {
+            respond(HttpStatusCode.NotFound,"$filePath 不存在")
+            return
+        }
+        val fileSize = file.length()
+
+        // 添加文件名
+        response.header(
+            HttpHeaders.ContentDisposition,
+            ContentDisposition.Attachment.withParameter(
+                ContentDisposition.Parameters.FileName, file.name
+            ).toString()
+        )
+
+        // 添加缓存控制，避免不必要的缓存
+        response.header(HttpHeaders.CacheControl, "no-cache, no-store, must-revalidate")
+
+        // 添加接受范围请求的头信息，允许多线程下载
+        response.header(HttpHeaders.AcceptRanges, "bytes")
+
+        // 检查请求是否包含Range头
+        val rangeHeader = request.header(HttpHeaders.Range)
+
+        if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
+            // 解析范围请求
+            val rangeValue = rangeHeader.substring(6)
+            val rangeParts = rangeValue.split("-")
+
+            if (rangeParts.size == 2) {
+                try {
+                    val start = rangeParts[0].toLong()
+                    // 如果没有指定结束位置，则默认到文件末尾
+                    val end = if (rangeParts[1].isNotEmpty()) rangeParts[1].toLong() else fileSize - 1
+
+                    if (start < 0 || end >= fileSize || start > end) {
+                        // 范围无效，返回完整文件
+                        response.header(HttpHeaders.ContentLength, fileSize.toString())
+                        respondOutputStream(contentType = ContentType.Application.OctetStream) {
+                            file.inputStream().use { it.copyTo(this) }
+                        }
+                        return@downloadFile
+                    }
+
+                    // 计算此范围的大小
+                    val rangeSize = end - start + 1
+
+                    // 返回部分内容状态码
+                    response.status(HttpStatusCode.PartialContent)
+
+                    // 设置Content-Range头
+                    response.header(HttpHeaders.ContentRange, "bytes $start-$end/$fileSize")
+
+                    // 设置Content-Length为请求范围的大小
+                    response.header(HttpHeaders.ContentLength, rangeSize.toString())
+
+                    // 发送部分内容
+                    respondOutputStream(contentType = ContentType.Application.OctetStream) {
+                        file.inputStream().use { input ->
+                            // 跳过到开始位置
+                            input.skip(start)
+
+                            // 指定复制的大小
+                            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                            var bytesRemaining = rangeSize
+
+                            while (bytesRemaining > 0) {
+                                val bytesToRead = minOf(buffer.size.toLong(), bytesRemaining).toInt()
+                                val bytesRead = input.read(buffer, 0, bytesToRead)
+
+                                if (bytesRead <= 0) break
+
+                                write(buffer, 0, bytesRead)
+                                bytesRemaining -= bytesRead
+                            }
+                        }
+                    }
+                } catch (e: NumberFormatException) {
+                    // 范围格式无效，发送完整文件
+                    response.header(HttpHeaders.ContentLength, fileSize.toString())
+                    respondOutputStream(contentType = ContentType.Application.OctetStream) {
+                        file.inputStream().use { it.copyTo(this) }
+                    }
+                }
+            } else {
+                // 不支持的范围格式，发送完整文件
+                response.header(HttpHeaders.ContentLength, fileSize.toString())
+                respondOutputStream(contentType = ContentType.Application.OctetStream) {
+                    file.inputStream().use { it.copyTo(this) }
+                }
+            }
+        } else {
+            // 没有范围请求，发送完整文件
+            response.header(HttpHeaders.ContentLength, fileSize.toString())
+            respondOutputStream(contentType = ContentType.Application.OctetStream) {
+                file.inputStream().use { it.copyTo(this) }
+            }
+        }
     }
 
     /**
