@@ -160,7 +160,11 @@ abstract class HttpShareFileServerCommon(protected val fileShareState: FileShare
 
                     // 如果文件信息结果为空，则重定向到根目录
                     if (fileSimpleInfoResult == null) {
-                        return@get call.respondRedirect("/", permanent = false)
+                        if (call.isApiRequest()) {
+                            return@get call.respond(HttpStatusCode.NotFound, "文件不存在")
+                        } else {
+                            return@get call.respondRedirect("/", permanent = false)
+                        }
                     }
 
                     // 检查路径中的每个段落，判断是否包含隐藏文件
@@ -173,7 +177,11 @@ abstract class HttpShareFileServerCommon(protected val fileShareState: FileShare
                             val fileSimpleInfo = FileUtils.getFile(newPath).getOrNull()
                             fileSimpleInfo != null && files.first == false && fileSimpleInfo.isHidden == true
                         }) {
-                        return@get call.respondRedirect("/", permanent = false)
+                        if (call.isApiRequest()) {
+                            return@get call.respond(HttpStatusCode.Forbidden, "无权访问隐藏文件")
+                        } else {
+                            return@get call.respondRedirect("/", permanent = false)
+                        }
                     }
 
                     // 下载文件
