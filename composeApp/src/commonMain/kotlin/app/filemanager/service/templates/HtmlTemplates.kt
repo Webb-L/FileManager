@@ -1,7 +1,6 @@
-package app.filemanager.service
+package app.filemanager.service.templates
 
 import app.filemanager.data.file.FileSimpleInfo
-import app.filemanager.service.templates.TemplateFactory
 import kotlinx.html.HTML
 
 /**
@@ -29,4 +28,4 @@ object HtmlTemplates {
      * 生成等待页面
      */
     fun waitingPage(): HTML.() -> Unit = TemplateFactory.waitingTemplate.render()
-} 
+}
