@@ -80,7 +80,7 @@ class DeviceState : KoinComponent {
                 addAll(readFile.getOrDefault(byteArrayOf()).decodeToString(0, fileContent.size).split(","))
             }
             for (host in address) {
-                addAll(host.getSubnetIps()/*.filter { it != host }*/)
+                addAll(host.getSubnetIps().filter { it != host })
             }
         }
 
@@ -247,8 +247,10 @@ class DeviceState : KoinComponent {
     fun connectShare(device: SocketDevice) {
         mainScope.launch {
             try {
-                val rpcClientManager = RpcShareClientManager()
-                rpcClientManager.share(device)
+                withContext(Dispatchers.Default) {
+                    val rpcClientManager = RpcShareClientManager()
+                    rpcClientManager.share(device)
+                }
             } catch (e: Exception) {
                 println(e)
             }
