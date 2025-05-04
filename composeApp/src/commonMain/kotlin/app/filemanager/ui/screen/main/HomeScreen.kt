@@ -120,7 +120,7 @@ object HomeScreen : Screen {
             ) {
                 fileState.updateCreateFolder(false)
                 if (it.isEmpty()) return@TextFieldDialog
-                scope.launch {
+                scope.launch(Dispatchers.Default) {
                     val result = fileState.createFolder(path, it)
                     if (result.isFailure) {
                         snackbarHostState.showSnackbar(
@@ -138,7 +138,7 @@ object HomeScreen : Screen {
                 mainState.updateEditPath(false)
                 if (it.isEmpty()) return@TextFieldDialog
                 if (it.parsePath().isNotEmpty()) {
-                    scope.launch {
+                    scope.launch(Dispatchers.Default) {
                         fileState.updatePath(it)
                     }
                 }
@@ -215,7 +215,7 @@ object HomeScreen : Screen {
                     floatingActionButton = {
                         FloatingActionButton(
                             onClick = {
-                                scope.launch {
+                                scope.launch(Dispatchers.Default) {
                                     fileState.pasteCopyFile(path, fileOperationState)
                                 }
                             },
@@ -293,7 +293,7 @@ object HomeScreen : Screen {
 
                     if (isPasteCopyFile || isPasteMoveFile) {
                         IconButton({
-                            scope.launch {
+                            scope.launch(Dispatchers.Default) {
                                 withContext(Dispatchers.Default) {
                                     if (isPasteCopyFile) {
                                         fileState.pasteCopyFile(path, fileOperationState)
@@ -320,7 +320,7 @@ object HomeScreen : Screen {
 
                     FileBottomAppMenu(
                         onRemove = { paths ->
-                            scope.launch {
+                            scope.launch(Dispatchers.Default) {
                                 when (snackbarHostState.showSnackbar(
                                     message = "确认要删除选择文件或文件夹吗？",
                                     actionLabel = "删除",
@@ -329,7 +329,7 @@ object HomeScreen : Screen {
                                 )) {
                                     SnackbarResult.Dismissed -> {}
                                     SnackbarResult.ActionPerformed -> {
-                                        scope.launch {
+                                        scope.launch(Dispatchers.Default) {
                                             for (it in paths) {
                                                 fileState.deleteFile(
                                                     Task(

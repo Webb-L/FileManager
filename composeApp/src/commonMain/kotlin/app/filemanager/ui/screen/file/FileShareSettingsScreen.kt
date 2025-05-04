@@ -23,6 +23,7 @@ import app.filemanager.utils.FileUtils
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -78,7 +79,7 @@ class FileShareSettingsScreen() : Screen {
             ) {
                 items(devices) { device ->
                     DeviceListItem(device, onDelete = {
-                        scope.launch {
+                        scope.launch(Dispatchers.Default) {
                             when (snackbarHostState.showSnackbar(
                                 "确认删除${device.name}吗？",
                                 actionLabel = "删除",

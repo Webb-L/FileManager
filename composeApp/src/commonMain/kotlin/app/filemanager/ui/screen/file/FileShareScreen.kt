@@ -56,6 +56,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.seiko.imageloader.component.fetcher.ByteArrayFetcher
 import com.seiko.imageloader.model.ImageRequest
 import com.seiko.imageloader.rememberImagePainter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import qrcode.QRCode
@@ -132,7 +133,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                     navigationIcon = {
                         IconButton({
                             if (httpShareFileServer.isRunning()) {
-                                scope.launch {
+                                scope.launch(Dispatchers.Default) {
                                     when (snackbarHostState.showSnackbar(
                                         message = "链接方式分享文件服务仍在运行，是否继续？",
                                         actionLabel = "确认",
@@ -318,7 +319,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                             .alpha(if (loadingDevices) 0.5f else 1f)
                                             .clickable {
                                                 if (loadingDevices) return@clickable
-                                                scope.launch {
+                                                scope.launch(Dispatchers.Default) {
                                                     deviceState.scanner(getAllIPAddresses(type = SocketClientIPEnum.IPV4_UP))
                                                 }
                                             }
@@ -754,7 +755,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                 Row(Modifier.padding(8.dp)) {
                     OutlinedButton(
                         onClick = {
-                            scope.launch {
+                            scope.launch(Dispatchers.Default) {
                                 if (isRunning) {
                                     isClosing = true // 设置关闭中状态
                                     httpShareFileServer.stop()

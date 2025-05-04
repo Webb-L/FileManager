@@ -11,6 +11,7 @@ import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -170,7 +171,7 @@ class FileHandle(private val rpc: RpcClientManager) : KoinComponent {
             FileUtils.readFileChunks(srcFileSimpleInfoPath, MAX_LENGTH.toLong()) {
                 if (it.isSuccess) {
                     val result = it.getOrNull() ?: Pair(0L, byteArrayOf())
-                    mainScope.launch {
+                    mainScope.launch(Dispatchers.Default) {
                         val resultWrite = rpc.fileService.writeBytes(
                             rpc.token,
                             fileSize = fileSimpleInfo.size,

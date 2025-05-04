@@ -18,11 +18,13 @@ import app.filemanager.ui.state.main.Task
 import app.filemanager.ui.state.main.TaskState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -31,6 +33,7 @@ class FileState : KoinComponent {
     val fileOperationState: FileOperationState by inject()
     val drawerState: DrawerState by inject()
     val deviceState: DeviceState by inject()
+    val mainScope = MainScope()
 
 
     val fileAndFolder = mutableStateListOf<FileSimpleInfo>()
@@ -62,23 +65,25 @@ class FileState : KoinComponent {
         if (_deskType.value == type) return
         _deskType.value = type
         if (!isRefresh) return
-        MainScope().launch {
-            drawerState.getBookmarks(type)
-            val rootPaths = getRootPaths()
-            if (rootPaths.isNotEmpty()) {
-                _rootPath.value = rootPaths.first()
-            }
+        mainScope.launch {
+            withContext(Dispatchers.Default){
+                drawerState.getBookmarks(type)
+                val rootPaths = getRootPaths()
+                if (rootPaths.isNotEmpty()) {
+                    _rootPath.value = rootPaths.first()
+                }
 
-            if (type is Share) {
-                updatePath("/")
-                return@launch
-            }
+                if (type is Share) {
+                    updatePath("/")
+                    return@withContext
+                }
 
-            val homeBookmark = drawerState.bookmarks.firstOrNull { it.iconType == DrawerBookmarkType.Home }
-            if (homeBookmark != null) {
-                updatePath(homeBookmark.path)
-            } else {
-                updateFileAndFolder()
+                val homeBookmark = drawerState.bookmarks.firstOrNull { it.iconType == DrawerBookmarkType.Home }
+                if (homeBookmark != null) {
+                    updatePath(homeBookmark.path)
+                } else {
+                    updateFileAndFolder()
+                }
             }
         }
     }
@@ -252,7 +257,6 @@ class FileState : KoinComponent {
         val fileInfos = mutableListOf<FileSimpleInfo>()
         var successCount = 0
         var failureCount = 0
-        val mainScope = MainScope()
 
         taskState.tasks.add(task)
         if (_deskType.value is Local) {
@@ -286,7 +290,7 @@ class FileState : KoinComponent {
 
             groupBy.forEach { (isDir, fileList) ->
                 for (filesChunk in fileList.chunked(30)) {
-                    mainScope.launch {
+                    withContext(Dispatchers.Default) {
                         for (file in filesChunk) {
                             val deleteFile = FileUtils.deleteFile(file.path)
                             if (deleteFile.isSuccess && deleteFile.getOrNull() == true) {
@@ -377,8 +381,10 @@ class FileState : KoinComponent {
     }
 
     init {
-        MainScope().launch {
-            updateFileAndFolder()
+        mainScope.launch {
+            withContext(Dispatchers.Default){
+                updateFileAndFolder()
+            }
         }
     }
 
@@ -556,7 +562,7 @@ class FileState : KoinComponent {
         var executeCount = 0
 
         for (fileOperationPath in fileOperationPaths) {
-            mainScope.launch {
+            mainScope.launch(Dispatchers.Default) {
                 copyFile(fileOperationPath.first, fileOperationPath.second)
                 executeCount++
             }

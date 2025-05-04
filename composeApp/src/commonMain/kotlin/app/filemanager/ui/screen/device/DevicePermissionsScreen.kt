@@ -22,6 +22,7 @@ import app.filemanager.ui.state.main.MainState
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -79,7 +80,7 @@ class DevicePermissionScreen : Screen {
                             openDialog = true
                         },
                         onDelete = {
-                            scope.launch {
+                            scope.launch(Dispatchers.Default) {
                                 when (snackbarHostState.showSnackbar(
                                     message = permission.path,
                                     actionLabel = "删除",

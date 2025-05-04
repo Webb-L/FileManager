@@ -10,6 +10,7 @@ import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -253,7 +254,7 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
                     }
                 } else {
                     for (files in fileSimpleInfos.chunked(maxOf(30, fileSimpleInfos.size / 30))) {
-                        mainScope.launch {
+                        mainScope.launch(Dispatchers.Default) {
                             for (file in files) {
                                 rpc.fileHandle.writeBytes(
                                     remoteId,

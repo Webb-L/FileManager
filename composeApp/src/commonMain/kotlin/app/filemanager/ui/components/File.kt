@@ -32,6 +32,7 @@ import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.MainState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -347,7 +348,7 @@ fun FileMenu(
                     text = { Text("粘贴") },
                     onClick = {
                         expanded = false
-                        scope.launch { onPaste() }
+                        scope.launch(Dispatchers.Default) { onPaste() }
                     },
                     leadingIcon = {
                         Icon(Icons.Outlined.ContentPaste, null)
@@ -360,7 +361,7 @@ fun FileMenu(
                     text = { Text("复制") },
                     onClick = {
                         expanded = false
-                        scope.launch { onCopy() }
+                        scope.launch(Dispatchers.Default) { onCopy() }
                     },
                     leadingIcon = {
                         Icon(Icons.Outlined.FileCopy, null)
@@ -372,7 +373,7 @@ fun FileMenu(
                     text = { Text("移动") },
                     onClick = {
                         expanded = false
-                        scope.launch { onMove() }
+                        scope.launch(Dispatchers.Default) { onMove() }
                     },
                     leadingIcon = {
                         Icon(Icons.Outlined.ContentCut, null)
@@ -384,7 +385,7 @@ fun FileMenu(
                     text = { Text("删除") },
                     onClick = {
                         expanded = false
-                        scope.launch { onDelete() }
+                        scope.launch(Dispatchers.Default) { onDelete() }
                     },
                     leadingIcon = {
                         Icon(Icons.Outlined.Delete, null)
@@ -400,7 +401,7 @@ fun FileMenu(
                     text = { Text("重命名") },
                     onClick = {
                         expanded = false
-                        scope.launch { onRename() }
+                        scope.launch(Dispatchers.Default) { onRename() }
                     },
                     leadingIcon = {
                         Icon(Icons.Outlined.Edit, null)
@@ -412,7 +413,7 @@ fun FileMenu(
                     text = { Text("设置") },
                     onClick = {
                         expanded = false
-                        scope.launch { onSetting() }
+                        scope.launch(Dispatchers.Default) { onSetting() }
                     },
                     leadingIcon = {
                         Icon(Icons.Outlined.Settings, null)
@@ -428,7 +429,7 @@ fun FileMenu(
                     text = { Text("收藏") },
                     onClick = {
                         expanded = false
-                        scope.launch { onFavorite() }
+                        scope.launch(Dispatchers.Default) { onFavorite() }
                     },
                     leadingIcon = {
                         Icon(
@@ -446,7 +447,7 @@ fun FileMenu(
                     text = { Text("分享") },
                     onClick = {
                         expanded = false
-                        scope.launch { onShare() }
+                        scope.launch(Dispatchers.Default) { onShare() }
                     },
                     leadingIcon = {
                         Icon(Icons.Outlined.Share, null)
@@ -462,7 +463,7 @@ fun FileMenu(
                     text = { Text("属性") },
                     onClick = {
                         expanded = false
-                        scope.launch { onInfo() }
+                        scope.launch(Dispatchers.Default) { onInfo() }
                     },
                     leadingIcon = {
                         Icon(Icons.Outlined.Info, null)

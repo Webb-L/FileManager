@@ -14,6 +14,7 @@ import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
 import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
@@ -258,7 +259,7 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
                         null
                     )
                 }
-                launch {
+                launch(Dispatchers.Default) {
                     send(sendData)
                 }
             }

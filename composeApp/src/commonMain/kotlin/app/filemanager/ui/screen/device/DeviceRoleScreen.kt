@@ -29,6 +29,7 @@ import app.filemanager.utils.calculateWindowSizeClass
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -95,7 +96,7 @@ class DeviceRoleScreen : Screen {
                                 ))
                         },
                         onDelete = {
-                            scope.launch {
+                            scope.launch(Dispatchers.Default) {
                                 when (snackbarHostState.showSnackbar(
                                     message = role.name,
                                     actionLabel = "删除",
@@ -177,7 +178,7 @@ class EditRoleScreen(
                     navigationIcon = {
                         IconButton(onClick = {
                             if (isNotSave(name, comment)) {
-                                scope.launch {
+                                scope.launch(Dispatchers.Default) {
                                     when (snackbarHostState.showSnackbar(
                                         message = "数据没有保存",
                                         actionLabel = "舍弃",

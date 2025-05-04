@@ -28,6 +28,7 @@ import app.filemanager.utils.FileUtils
 import app.filemanager.utils.VerificationUtils
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -70,7 +71,7 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
                         fileState.checkedFileSimpleInfo.remove(it)
                         return@FileCard
                     }
-                    scope.launch {
+                    scope.launch(Dispatchers.Default) {
                         if (it.isDirectory) {
                             fileState.updatePath(it.path)
                         } else {
@@ -79,7 +80,7 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
                     }
                 },
                 onRemove = { deletePath ->
-                    scope.launch {
+                    scope.launch(Dispatchers.Default) {
                         val showSnackbar = snackbarHostState.showSnackbar(
                             message = it.name,
                             actionLabel = "删除",
@@ -90,7 +91,7 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
                             SnackbarResult.Dismissed -> {}
                             SnackbarResult.ActionPerformed -> {
 //                                fileOperationState.updateOperationDialog(true)
-                                scope.launch {
+                                scope.launch(Dispatchers.Default) {
                                     fileState.deleteFile(
                                         Task(
                                             taskType = TaskType.Delete,
@@ -119,7 +120,7 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
                 fileState.updateFileInfo(null)
                 return@FileRenameDialog
             }
-            scope.launch {
+            scope.launch(Dispatchers.Default) {
                 fileState.rename(path, fileInfo!!.name, it)
                 fileFilterState.updateFilerKey()
                 fileState.updateFileInfo(null)

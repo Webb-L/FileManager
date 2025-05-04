@@ -30,6 +30,7 @@ import app.filemanager.ui.state.main.MainState
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
@@ -83,7 +84,7 @@ class DeviceSettingsScreen() : Screen {
                     },
                     actions = {
                         IconButton({
-                            scope.launch {
+                            scope.launch(Dispatchers.Default) {
                                 isShowSearch = !isShowSearch
                             }
                         }) {

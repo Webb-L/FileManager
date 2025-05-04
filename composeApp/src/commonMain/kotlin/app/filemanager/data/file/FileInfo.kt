@@ -4,9 +4,11 @@ import app.filemanager.extensions.pathLevel
 import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlin.math.ceil
 
@@ -206,15 +208,17 @@ data class FileSimpleInfo(
                 } else {
                     for (files in fileSimpleInfos.chunked(maxOf(30, fileSimpleInfos.size / 30))) {
                         mainScope.launch {
-                            for (file in files) {
-                                file.writeToFile(
-                                    file.path.replaceFirst(
-                                        path,
-                                        destPath
+                            withContext(Dispatchers.Default) {
+                                for (file in files) {
+                                    file.writeToFile(
+                                        file.path.replaceFirst(
+                                            path,
+                                            destPath
+                                        )
                                     )
-                                )
-                                    .onSuccess { successCount++ }
-                                    .onFailure { failureCount++ }
+                                        .onSuccess { successCount++ }
+                                        .onFailure { failureCount++ }
+                                }
                             }
                         }
                     }

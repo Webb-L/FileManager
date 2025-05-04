@@ -14,6 +14,7 @@ import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.FileUtils
 import io.ktor.client.*
 import io.ktor.util.logging.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -195,7 +196,7 @@ class RpcShareClientManager : KoinComponent {
                     }
                 } else {
                     for (files in fileSimpleInfos.chunked(maxOf(30, fileSimpleInfos.size / 30))) {
-                        mainScope.launch {
+                        mainScope.launch(Dispatchers.Default) {
                             for (file in files) {
                                 writeBytes(
                                     srcFileSimpleInfo,

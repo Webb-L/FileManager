@@ -27,6 +27,7 @@ import app.filemanager.extensions.parsePath
 import app.filemanager.ui.components.buttons.FileFilterButtonGroup
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.utils.PathUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -247,7 +248,7 @@ fun FileSelector(
                             onFilesSelected(checkedFiles.toList())
                             return@FileCard
                         }
-                        scope.launch {
+                        scope.launch(Dispatchers.Default) {
                             if (file.isDirectory) {
                                 path = file.path
                             }

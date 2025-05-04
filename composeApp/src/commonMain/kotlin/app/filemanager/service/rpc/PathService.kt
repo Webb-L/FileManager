@@ -14,6 +14,7 @@ import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
@@ -181,7 +182,7 @@ class PathServiceImpl(override val coroutineContext: CoroutineContext) : PathSer
                     })
                 }
 
-                launch {
+                launch(Dispatchers.Default) {
                     send(result)
                 }
             }

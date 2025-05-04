@@ -40,6 +40,7 @@ import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.*
 import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.utils.WindowSizeClass
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -183,7 +184,7 @@ fun AppDrawer() {
 
             deviceState.updateDeviceAdd(false)
 
-            scope.launch {
+            scope.launch(Dispatchers.Default) {
                 try {
                     deviceState.pingDevice(ip, (port ?: PORT).toString().toInt())
                 } catch (e: Exception) {
@@ -401,7 +402,7 @@ private fun AppDrawerBookmark() {
                 label = { Text(bookmark.name) },
                 selected = !isFavorite && path == bookmark.path,
                 onClick = {
-                    scope.launch {
+                    scope.launch(Dispatchers.Default) {
                         fileState.updateDesk(FileProtocol.Local, Local())
                         fileState.updatePath(bookmark.path)
                     }

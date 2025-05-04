@@ -21,6 +21,7 @@ import app.filemanager.data.file.FileFilterSort
 import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
 import app.filemanager.ui.state.main.DeviceState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -194,7 +195,7 @@ fun IpsButton() {
                 DropdownMenuItem(
                     text = { Text(ip) },
                     onClick = {
-                        scope.launch {
+                        scope.launch(Dispatchers.Default) {
                             deviceState.scanner(listOf(ip))
                         }
                         expanded = false

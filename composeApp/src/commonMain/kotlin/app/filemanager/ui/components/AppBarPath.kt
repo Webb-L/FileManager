@@ -24,6 +24,7 @@ import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.utils.NaturalOrderComparator
 import app.filemanager.utils.PathUtils
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -58,14 +59,14 @@ fun AppBarPath() {
                 text,
                 nowPath,
                 onClick = {
-                    scope.launch {
+                    scope.launch(Dispatchers.Default) {
                         val newPath = rootPath.path + paths.subList(0, index + 1)
                             .joinToString(PathUtils.getPathSeparator())
                         fileState.updatePath(newPath)
                     }
                 },
                 onSelected = {
-                    scope.launch {
+                    scope.launch(Dispatchers.Default) {
                         fileState.updatePath(it)
                     }
                 }
@@ -114,7 +115,7 @@ fun RootPathSwitch() {
                 null
             },
             onClick = {
-                scope.launch {
+                scope.launch(Dispatchers.Default) {
                     fileState.updatePath(rootPath.path)
                 }
             }
@@ -128,7 +129,7 @@ fun RootPathSwitch() {
                 DropdownMenuItem(
                     text = { Text(fileInfo.path) },
                     onClick = {
-                        scope.launch {
+                        scope.launch(Dispatchers.Default) {
                             fileState.updateRootPath(rootPath)
                             fileState.updatePath(rootPath.path)
                         }
