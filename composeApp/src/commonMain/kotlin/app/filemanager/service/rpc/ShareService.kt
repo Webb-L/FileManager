@@ -16,6 +16,7 @@ import app.filemanager.extensions.randomString
 import app.filemanager.extensions.replaceLast
 import app.filemanager.service.WebSocketResult
 import app.filemanager.service.data.SocketDevice
+import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
 import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.ui.state.file.FileShareState
 import app.filemanager.ui.state.file.FileState
@@ -30,6 +31,7 @@ import kotlinx.rpc.annotations.Rpc
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import kotlin.coroutines.CoroutineContext
+import kotlin.random.Random
 
 @Rpc
 interface ShareService : RemoteService {
@@ -50,7 +52,7 @@ interface ShareService : RemoteService {
      * @param path 要遍历的起始路径
      * @return Flow流式返回WebSocketResult，包含遍历过程中的文件列表
      */
-    suspend fun traversePath(
+    fun traversePath(
         token: String,
         path: String
     ): Flow<WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>>
@@ -62,7 +64,7 @@ interface ShareService : RemoteService {
      * @param chunkSize 每个数据块的大小(字节)
      * @return Flow流式返回WebSocketResult，包含文件块数据和偏移量
      */
-    suspend fun readFileChunks(
+    fun readFileChunks(
         token: String,
         path: String,
         chunkSize: Long
@@ -74,6 +76,8 @@ interface ShareService : RemoteService {
      * @return Pair包含连接状态和认证令牌(如果连接成功)
      */
     suspend fun connect(device: SocketDevice): Pair<DeviceConnectType, String>
+
+    fun testSpeed(count: Int): Flow<ByteArray>
 }
 
 /**
@@ -196,7 +200,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
      * @param path 要遍历的起始路径
      * @return Flow流式返回遍历结果
      */
-    override suspend fun traversePath(
+    override fun traversePath(
         token: String,
         path: String
     ): Flow<WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>> {
@@ -288,7 +292,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
      * @param chunkSize 每个数据块的大小(字节)
      * @return Flow流式返回文件块数据
      */
-    override suspend fun readFileChunks(
+    override fun readFileChunks(
         token: String,
         path: String,
         chunkSize: Long
@@ -430,5 +434,15 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
         }
 
         return fileInfo
+    }
+
+
+    override fun testSpeed(count: Int): Flow<ByteArray> {
+        return channelFlow {
+            repeat(count) {
+                send(Random.nextBytes(MAX_LENGTH))
+                println("send $it")
+            }
+        }
     }
 }

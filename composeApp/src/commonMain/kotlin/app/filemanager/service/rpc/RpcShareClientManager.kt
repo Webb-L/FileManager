@@ -91,6 +91,10 @@ class RpcShareClientManager : KoinComponent {
                         return
                     }
 
+                    MainScope().launch {
+                        testSpeed()
+                    }
+
                     fileState.updateDesk(FileProtocol.Share, deviceShare)
                 }
 
@@ -98,6 +102,7 @@ class RpcShareClientManager : KoinComponent {
                 DeviceConnectType.WAITING -> {}
             }
         } catch (e: Exception) {
+            println(e)
             println("Exception while connecting device: ${device.id}")
             KtorSimpleLogger(ShareService::class.simpleName!!).error(e.toString())
         }
@@ -287,5 +292,11 @@ class RpcShareClientManager : KoinComponent {
             }
         }
         replyCallback(Result.success(isSuccess))
+    }
+
+    suspend fun testSpeed(){
+        shareService.testSpeed(10000000).collect {
+            println(it)
+        }
     }
 }

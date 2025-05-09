@@ -248,7 +248,9 @@ class DeviceState : KoinComponent {
         mainScope.launch {
             try {
                 val rpcClientManager = RpcShareClientManager()
-                rpcClientManager.share(device)
+                withContext(Dispatchers.Default){
+                    rpcClientManager.share(device)
+                }
             } catch (e: Exception) {
                 println(e)
             }
