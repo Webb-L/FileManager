@@ -80,14 +80,14 @@ class DeviceState : KoinComponent {
                 addAll(readFile.getOrDefault(byteArrayOf()).decodeToString(0, fileContent.size).split(","))
             }
             for (host in address) {
-                addAll(host.getSubnetIps().filter { it != host })
+                addAll(host.getSubnetIps()/*.filter { it != host }*/)
             }
         }
 
         var remainingAddresses = ipAddresses.size
 
         ipAddresses.chunked(51).forEach { chunk ->
-            mainScope.launch(Dispatchers.Default) {
+            mainScope.launch {
                 chunk.forEach { ip ->
                     try {
                         pingDevice(ip, port)
@@ -168,7 +168,7 @@ class DeviceState : KoinComponent {
     }
 
     fun connect(connectDevice: SocketDevice) {
-        mainScope.launch(Dispatchers.Default) {
+        mainScope.launch {
             try {
                 val rpcClientManager = RpcClientManager()
                 rpcClientManager.connect(connectDevice)
@@ -193,7 +193,7 @@ class DeviceState : KoinComponent {
     @OptIn(ExperimentalSerializationApi::class)
     fun share(device: SocketDevice) {
         val scope = MainScope()
-        scope.launch(Dispatchers.Default) {
+        scope.launch {
             try {
                 withContext(Dispatchers.Default) {
                     val socketDevice = ProtoBuf.encodeToHexString(getSocketDevice())
@@ -245,10 +245,10 @@ class DeviceState : KoinComponent {
 
 
     fun connectShare(device: SocketDevice) {
-        mainScope.launch(Dispatchers.Default) {
+        mainScope.launch {
             try {
-                withContext(Dispatchers.Default) {
-                    val rpcClientManager = RpcShareClientManager()
+                val rpcClientManager = RpcShareClientManager()
+                withContext(Dispatchers.Default){
                     rpcClientManager.share(device)
                 }
             } catch (e: Exception) {

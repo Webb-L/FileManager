@@ -62,7 +62,7 @@ interface FileService : RemoteService {
 
     // 读取文件数据
     // TODO 检查权限
-    suspend fun readFileChunks(
+    fun readFileChunks(
         token: String,
         path: String,
         chunkSize: Long
@@ -232,7 +232,7 @@ class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileSer
         return WebSocketResult(value = writeResult.getOrNull() ?: false)
     }
 
-    override suspend fun readFileChunks(
+    override fun readFileChunks(
         token: String,
         path: String,
         chunkSize: Long
