@@ -18,13 +18,9 @@ import app.filemanager.ui.state.main.Task
 import app.filemanager.ui.state.main.TaskState
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -66,7 +62,7 @@ class FileState : KoinComponent {
         _deskType.value = type
         if (!isRefresh) return
         mainScope.launch {
-            withContext(Dispatchers.Default){
+            withContext(Dispatchers.Default) {
                 drawerState.getBookmarks(type)
                 val rootPaths = getRootPaths()
                 if (rootPaths.isNotEmpty()) {
@@ -347,6 +343,11 @@ class FileState : KoinComponent {
                 while (!isReturn) {
                     delay(100L)
                 }
+
+                if (result.isSuccess) {
+                    taskState.tasks.remove(task)
+                }
+
                 return result
             }
 
@@ -374,7 +375,12 @@ class FileState : KoinComponent {
                     delay(100L)
                 }
             }
-            return Result.success(fileInfos.size + 1 == successCount && failureCount == 0)
+
+            val isSuccess = fileInfos.size == successCount && failureCount == 0
+            if (isSuccess) {
+                taskState.tasks.remove(task)
+            }
+            return Result.success(isSuccess)
         }
 
         return Result.failure(Exception("删除失败"))
@@ -382,7 +388,7 @@ class FileState : KoinComponent {
 
     init {
         mainScope.launch {
-            withContext(Dispatchers.Default){
+            withContext(Dispatchers.Default) {
                 updateFileAndFolder()
             }
         }

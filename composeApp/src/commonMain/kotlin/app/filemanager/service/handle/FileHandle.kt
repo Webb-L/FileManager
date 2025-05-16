@@ -15,7 +15,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.rpc.krpc.streamScoped
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import kotlin.math.ceil
@@ -212,25 +211,23 @@ class FileHandle(private val rpc: RpcClientManager) : KoinComponent {
             }
 
             var isSuccess = true
-            streamScoped {
-                rpc.fileService.readFileChunks(
-                    rpc.token,
-                    srcFileSimpleInfoPath,
-                    MAX_LENGTH.toLong()
-                ).collect { result ->
-                    if (result.isSuccess && result.value != null) {
-                        val writeBytes = FileUtils.writeBytes(
-                            path = destFileSimpleInfoPath,
-                            fileSize = fileSimpleInfo.size,
-                            data = result.value.second,
-                            offset = result.value.first * MAX_LENGTH
-                        )
-                        if (writeBytes.isFailure) {
-                            isSuccess = false
-                        }
-                    } else {
+            rpc.fileService.readFileChunks(
+                rpc.token,
+                srcFileSimpleInfoPath,
+                MAX_LENGTH.toLong()
+            ).collect { result ->
+                if (result.isSuccess && result.value != null) {
+                    val writeBytes = FileUtils.writeBytes(
+                        path = destFileSimpleInfoPath,
+                        fileSize = fileSimpleInfo.size,
+                        data = result.value.second,
+                        offset = result.value.first * MAX_LENGTH
+                    )
+                    if (writeBytes.isFailure) {
                         isSuccess = false
                     }
+                } else {
+                    isSuccess = false
                 }
             }
             replyCallback(Result.success(isSuccess))
@@ -268,27 +265,25 @@ class FileHandle(private val rpc: RpcClientManager) : KoinComponent {
 
 
             var isSuccess = true
-            streamScoped {
-                rpc.fileService.readFileChunks(
-                    rpc.token,
-                    srcFileSimpleInfoPath,
-                    MAX_LENGTH.toLong()
-                ).collect { result ->
-                    if (result.isSuccess && result.value != null) {
-                        val writeBytes = destFileService.writeBytes(
-                            token = rpc.token,
-                            fileSize = fileSimpleInfo.size,
-                            blockIndex = result.value.first,
-                            blockLength = length,
-                            path = destFileSimpleInfoPath,
-                            byteArray = result.value.second
-                        )
-                        if (!writeBytes.isSuccess) {
-                            isSuccess = false
-                        }
-                    } else {
+            rpc.fileService.readFileChunks(
+                rpc.token,
+                srcFileSimpleInfoPath,
+                MAX_LENGTH.toLong()
+            ).collect { result ->
+                if (result.isSuccess && result.value != null) {
+                    val writeBytes = destFileService.writeBytes(
+                        token = rpc.token,
+                        fileSize = fileSimpleInfo.size,
+                        blockIndex = result.value.first,
+                        blockLength = length,
+                        path = destFileSimpleInfoPath,
+                        byteArray = result.value.second
+                    )
+                    if (!writeBytes.isSuccess) {
                         isSuccess = false
                     }
+                } else {
+                    isSuccess = false
                 }
             }
             replyCallback(Result.success(isSuccess))

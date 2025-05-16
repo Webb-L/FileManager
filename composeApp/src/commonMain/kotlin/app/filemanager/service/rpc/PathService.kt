@@ -40,7 +40,7 @@ interface PathService : RemoteService {
 
     // 发送遍历的目录
     // TODO 检查权限
-    suspend fun traversePath(
+    fun traversePath(
         token: String,
         path: String
     ): Flow<WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>>
@@ -127,7 +127,7 @@ class PathServiceImpl(override val coroutineContext: CoroutineContext) : PathSer
         return WebSocketResult(value = rootPaths.getOrDefault(listOf()))
     }
 
-    override suspend fun traversePath(
+    override fun traversePath(
         token: String,
         path: String
     ): Flow<WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>> {

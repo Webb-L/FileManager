@@ -23,7 +23,6 @@ import kotlinx.rpc.krpc.ktor.client.installKrpc
 import kotlinx.rpc.krpc.ktor.client.rpc
 import kotlinx.rpc.krpc.ktor.client.rpcConfig
 import kotlinx.rpc.krpc.serialization.protobuf.protobuf
-import kotlinx.rpc.krpc.streamScoped
 import kotlinx.rpc.withService
 import kotlinx.serialization.ExperimentalSerializationApi
 import org.koin.core.component.KoinComponent
@@ -172,12 +171,10 @@ class RpcShareClientManager : KoinComponent {
 
         val list = mutableListOf<FileSimpleInfo>()
 
-        streamScoped {
-            shareService.traversePath(token, srcFileSimpleInfo.path).collect { fileAndFolder ->
-                if (fileAndFolder.isSuccess) {
-                    fileAndFolder.value?.forEach {
-                        list.addAll(it.value)
-                    }
+        shareService.traversePath(token, srcFileSimpleInfo.path).collect { fileAndFolder ->
+            if (fileAndFolder.isSuccess) {
+                fileAndFolder.value?.forEach {
+                    list.addAll(it.value)
                 }
             }
         }
@@ -271,25 +268,23 @@ class RpcShareClientManager : KoinComponent {
         }
 
         var isSuccess = true
-        streamScoped {
-            shareService.readFileChunks(
-                token,
-                srcFileSimpleInfoPath,
-                MAX_LENGTH.toLong()
-            ).collect { result ->
-                if (result.isSuccess && result.value != null) {
-                    val writeBytes = FileUtils.writeBytes(
-                        path = destFileSimpleInfoPath,
-                        fileSize = fileSimpleInfo.size,
-                        data = result.value.second,
-                        offset = result.value.first * MAX_LENGTH
-                    )
-                    if (writeBytes.isFailure) {
-                        isSuccess = false
-                    }
-                } else {
+        shareService.readFileChunks(
+            token,
+            srcFileSimpleInfoPath,
+            MAX_LENGTH.toLong()
+        ).collect { result ->
+            if (result.isSuccess && result.value != null) {
+                val writeBytes = FileUtils.writeBytes(
+                    path = destFileSimpleInfoPath,
+                    fileSize = fileSimpleInfo.size,
+                    data = result.value.second,
+                    offset = result.value.first * MAX_LENGTH
+                )
+                if (writeBytes.isFailure) {
                     isSuccess = false
                 }
+            } else {
+                isSuccess = false
             }
         }
         replyCallback(Result.success(isSuccess))

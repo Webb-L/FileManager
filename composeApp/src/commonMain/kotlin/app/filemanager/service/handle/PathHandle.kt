@@ -14,7 +14,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.rpc.krpc.streamScoped
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -58,24 +57,22 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
     }
 
     suspend fun getTraversePath(path: String, remoteId: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
-        streamScoped {
-            rpc.pathService.traversePath(rpc.token, path).collect { result ->
-                if (!result.isSuccess) {
-                    replyCallback(Result.failure(result.deSerializable()))
-                } else {
-                    val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
-                    result.value?.forEach {
-                        it.value.forEach { fileSimpleInfo ->
-                            fileSimpleInfos.add(fileSimpleInfo.apply {
-                                protocol = it.key.first
-                                protocolId = it.key.second
-                                this.path = path + this.path
-                            })
-                        }
+        rpc.pathService.traversePath(rpc.token, path).collect { result ->
+            if (!result.isSuccess) {
+                replyCallback(Result.failure(result.deSerializable()))
+            } else {
+                val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
+                result.value?.forEach {
+                    it.value.forEach { fileSimpleInfo ->
+                        fileSimpleInfos.add(fileSimpleInfo.apply {
+                            protocol = it.key.first
+                            protocolId = it.key.second
+                            this.path = path + this.path
+                        })
                     }
-
-                    replyCallback(Result.success(fileSimpleInfos))
                 }
+
+                replyCallback(Result.success(fileSimpleInfos))
             }
         }
     }
@@ -169,12 +166,10 @@ class PathHandle(private val rpc: RpcClientManager) : KoinComponent {
                 return
             }
 
-            streamScoped {
-                rpc.pathService.traversePath(rpc.token,srcFileSimpleInfo.path).collect { fileAndFolder ->
-                    if (fileAndFolder.isSuccess) {
-                        fileAndFolder.value?.forEach {
-                            list.addAll(it.value)
-                        }
+            rpc.pathService.traversePath(rpc.token,srcFileSimpleInfo.path).collect { fileAndFolder ->
+                if (fileAndFolder.isSuccess) {
+                    fileAndFolder.value?.forEach {
+                        list.addAll(it.value)
                     }
                 }
             }
