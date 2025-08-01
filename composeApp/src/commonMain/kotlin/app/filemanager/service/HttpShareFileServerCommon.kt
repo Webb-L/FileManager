@@ -86,6 +86,10 @@ abstract class HttpShareFileServerCommon(protected val fileShareState: FileShare
 
                 get("/") {
                     val clientRequest = call.getClientDeviceInfo()!!
+                    if (fileShareState.autoApprove.value) {
+                        fileShareState.authorizedLinkShareDevices[clientRequest] =
+                            Pair(true, fileShareState.files.toList())
+                    }
 
                     if (
                         !fileShareState.pendingLinkShareDevices.contains(clientRequest) &&
