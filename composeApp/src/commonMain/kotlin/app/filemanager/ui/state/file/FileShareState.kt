@@ -39,6 +39,12 @@ class FileShareState {
 
     // Map<token, 设备id>
     val deviceToken = mutableStateMapOf<String, String>()
+
+    private val _autoApprove: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val autoApprove: StateFlow<Boolean> = _autoApprove
+    fun updateAutoApprove(value: Boolean) {
+        _autoApprove.value = value
+    }
 }
 
 

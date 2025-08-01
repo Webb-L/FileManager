@@ -634,6 +634,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
         var showSettings by remember { mutableStateOf(false) }
         var encryption by remember { mutableStateOf(false) }
         var passwordAccess by remember { mutableStateOf(false) }
+        var autoApprove by remember { mutableStateOf(false) }
         val password by fileShareState.connectPassword.collectAsState()
 
         val url by derivedStateOf {
@@ -731,6 +732,23 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
 //                                )
 //                            }
 //                        )
+                        FilterChip(
+                            selected = autoApprove,
+                            onClick = {
+                                autoApprove = !autoApprove
+                                fileShareState.updateAutoApprove(autoApprove)
+                            },
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                                .align(Alignment.CenterVertically),
+                            label = { Text("自动允许") },
+                            leadingIcon = {
+                                if (!autoApprove) return@FilterChip
+                                Icon(
+                                    Icons.Default.Done,
+                                    contentDescription = null
+                                )
+                            }
+                        )
                         FilterChip(
                             selected = passwordAccess,
                             onClick = {
