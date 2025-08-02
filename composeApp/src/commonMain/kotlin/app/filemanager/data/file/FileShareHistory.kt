@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package app.filemanager.data.file
 
 import app.filemanager.data.main.DeviceType

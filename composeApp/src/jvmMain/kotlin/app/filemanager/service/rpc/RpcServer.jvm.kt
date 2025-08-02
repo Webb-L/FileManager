@@ -66,12 +66,12 @@ actual suspend fun startRpcServer() {
                     }
                 }
 
-                registerService<DeviceService> { ctx -> DeviceServiceImpl(ctx) }
-                registerService<BookmarkService> { ctx -> BookmarkServiceImpl(ctx) }
-                registerService<FileService> { ctx -> FileServiceImpl(ctx) }
-                registerService<PathService> { ctx -> PathServiceImpl(ctx) }
+                registerService<DeviceService> { DeviceServiceImpl() }
+                registerService<BookmarkService> { BookmarkServiceImpl() }
+                registerService<FileService> { FileServiceImpl() }
+                registerService<PathService> { PathServiceImpl() }
 
-                registerService<ShareService> { ctx -> ShareServiceImpl(ctx) }
+                registerService<ShareService> { ShareServiceImpl() }
             }
         }
     }.start(wait = true)
@@ -120,7 +120,7 @@ fun Application.configureShareSse() {
                 }
                 println(deviceReceiveShare)
 
-                deviceState.shareRequest[socketDevice.id] = Pair(WAITING, Clock.System.now().toEpochMilliseconds())
+                deviceState.shareRequest[socketDevice.id] = Pair(WAITING, System.currentTimeMillis())
                 // 返回成功响应
                 send(event = FileShareStatus.WAITING.toString(), data = "等待对方同意")
 

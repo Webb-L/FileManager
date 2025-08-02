@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package app.filemanager.ui.screen.device
 
 import androidx.compose.animation.AnimatedVisibility

@@ -6,18 +6,16 @@ import app.filemanager.exception.toSocketResult
 import app.filemanager.service.WebSocketResult
 import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.utils.PathUtils
-import kotlinx.rpc.RemoteService
 import kotlinx.rpc.annotations.Rpc
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import kotlin.coroutines.CoroutineContext
 
 @Rpc
-interface BookmarkService : RemoteService {
+interface BookmarkService {
     suspend fun list(token: String): WebSocketResult<List<DrawerBookmark>>
 }
 
-class BookmarkServiceImpl(override val coroutineContext: CoroutineContext) : BookmarkService, KoinComponent {
+class BookmarkServiceImpl() : BookmarkService, KoinComponent {
     private val deviceCertificateState: DeviceCertificateState by inject()
 
     // TODO 检查权限

@@ -1,3 +1,5 @@
+@file:OptIn(kotlin.time.ExperimentalTime::class)
+
 package app.filemanager.ui.screen.file
 
 import androidx.compose.foundation.layout.Row

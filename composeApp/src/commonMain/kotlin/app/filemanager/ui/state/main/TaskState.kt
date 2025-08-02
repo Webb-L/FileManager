@@ -19,7 +19,7 @@ enum class TaskType {
 @Serializable
 data class Task(
     val taskType: TaskType,
-    val key: Long = Clock.System.now().toEpochMilliseconds() + Random.nextInt(),
+    val key: Long = System.currentTimeMillis() + Random.nextInt(),
     var status: StatusEnum,
     // 任务参数
     val values: MutableMap<String, String> = mutableMapOf(),

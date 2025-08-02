@@ -18,10 +18,11 @@ import app.filemanager.db.FileManagerDatabase
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
 import app.filemanager.ui.state.file.FileShareStatus
+import kotlinx.datetime.Clock
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.delay
-import kotlinx.datetime.Clock
+import kotlinx.datetime.*
 import org.koin.compose.koinInject
 
 
@@ -33,8 +34,7 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
     var expanded by remember { mutableStateOf(false) }
 
     val remainingConnectionTime =
-        (CONNECT_TIMEOUT + ((deviceState.shareRequest[socketDevice.id]!!.second - Clock.System.now()
-            .toEpochMilliseconds()) / 1000L)).toInt()
+        (CONNECT_TIMEOUT + ((deviceState.shareRequest[socketDevice.id]!!.second - System.currentTimeMillis()) / 1000L)).toInt()
     var timeRemaining by remember { mutableStateOf(remainingConnectionTime) } // 10 minutes in seconds
 
 
@@ -42,13 +42,12 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
         while (timeRemaining > 0 && deviceState.shareRequest[socketDevice.id] != null) {
             delay(1000)
             timeRemaining =
-                (CONNECT_TIMEOUT + ((deviceState.shareRequest[socketDevice.id]!!.second - Clock.System.now()
-                    .toEpochMilliseconds()) / 1000L)).toInt()
+                (CONNECT_TIMEOUT + ((deviceState.shareRequest[socketDevice.id]!!.second - System.currentTimeMillis()) / 1000L)).toInt()
         }
         // 等待时间结束
         if (timeRemaining <= 0) {
             deviceState.shareRequest[socketDevice.id] =
-                Pair(REJECTED, Clock.System.now().toEpochMilliseconds())
+                Pair(REJECTED, System.currentTimeMillis())
             deviceState.shareConnectionStates[socketDevice.id] = FileShareStatus.REJECTED
         }
     }
@@ -177,8 +176,7 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
     var expanded by remember { mutableStateOf(false) }
 
     val remainingConnectionTime =
-        (CONNECT_TIMEOUT + ((deviceState.connectionRequest[socketDevice.id]!!.second - Clock.System.now()
-            .toEpochMilliseconds()) / 1000L)).toInt()
+        (CONNECT_TIMEOUT + ((deviceState.connectionRequest[socketDevice.id]!!.second - System.currentTimeMillis()) / 1000L)).toInt()
     var timeRemaining by remember { mutableStateOf(remainingConnectionTime) } // 10 minutes in seconds
 
 
@@ -186,13 +184,12 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
         while (timeRemaining > 0 && deviceState.connectionRequest[socketDevice.id] != null) {
             delay(1000)
             timeRemaining =
-                (CONNECT_TIMEOUT + ((deviceState.connectionRequest[socketDevice.id]!!.second - Clock.System.now()
-                    .toEpochMilliseconds()) / 1000L)).toInt()
+                (CONNECT_TIMEOUT + ((deviceState.connectionRequest[socketDevice.id]!!.second - System.currentTimeMillis()) / 1000L)).toInt()
         }
         // Automatically reject after the countdown ends
         if (timeRemaining <= 0) {
             deviceState.connectionRequest[socketDevice.id] =
-                Pair(REJECTED, Clock.System.now().toEpochMilliseconds())
+                Pair(REJECTED, System.currentTimeMillis())
         }
     }
 

@@ -19,14 +19,12 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.launch
-import kotlinx.rpc.RemoteService
 import kotlinx.rpc.annotations.Rpc
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import kotlin.coroutines.CoroutineContext
 
 @Rpc
-interface PathService : RemoteService {
+interface PathService {
     // 远程设备需要我本地文件
     // TODO 检查权限
     suspend fun list(
@@ -46,7 +44,7 @@ interface PathService : RemoteService {
     ): Flow<WebSocketResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>>
 }
 
-class PathServiceImpl(override val coroutineContext: CoroutineContext) : PathService, KoinComponent {
+class PathServiceImpl() : PathService, KoinComponent {
     private val settings = createSettings()
     private val fileState: FileState by inject()
     private val deviceCertificateState: DeviceCertificateState by inject()

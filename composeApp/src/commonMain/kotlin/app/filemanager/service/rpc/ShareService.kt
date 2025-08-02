@@ -26,15 +26,13 @@ import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.launch
-import kotlinx.rpc.RemoteService
 import kotlinx.rpc.annotations.Rpc
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import kotlin.coroutines.CoroutineContext
 import kotlin.random.Random
 
 @Rpc
-interface ShareService : RemoteService {
+interface ShareService {
     /**
      * 获取指定路径下的文件列表
      * @param token 设备认证令牌
@@ -82,11 +80,10 @@ interface ShareService : RemoteService {
 
 /**
  * ShareService接口的实现类，提供文件共享相关功能
- * 
- * @property coroutineContext 协程上下文
+ *
  * @constructor 创建文件共享服务实例
  */
-class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareService, KoinComponent {
+class ShareServiceImpl() : ShareService, KoinComponent {
     private val settings = createSettings()
     private val fileState: FileState by inject()
     private val deviceState: DeviceState by inject()
@@ -98,7 +95,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
      * 1. 验证token和路径有效性
      * 2. 检查隐藏文件访问权限
      * 3. 返回格式化后的文件列表
-     * 
+     *
      * @param token 设备认证令牌
      * @param path 要列出的文件路径
      * @return WebSocketResult包含文件列表
@@ -195,7 +192,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
      * 1. 验证token和路径有效性
      * 2. 使用PathUtils遍历目录结构
      * 3. 通过Flow流式返回遍历结果
-     * 
+     *
      * @param token 设备认证令牌
      * @param path 要遍历的起始路径
      * @return Flow流式返回遍历结果
@@ -286,7 +283,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
      * 1. 验证token和路径有效性
      * 2. 使用FileUtils分块读取文件
      * 3. 通过Flow流式返回文件块数据
-     * 
+     *
      * @param token 设备认证令牌
      * @param path 要读取的文件路径
      * @param chunkSize 每个数据块的大小(字节)
@@ -349,7 +346,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
      * 1. 检查设备是否在允许连接列表中
      * 2. 生成随机token用于后续认证
      * 3. 返回连接状态和token
-     * 
+     *
      * @param device 要连接的设备信息
      * @return Pair包含连接状态和认证令牌
      */
@@ -401,7 +398,7 @@ class ShareServiceImpl(override val coroutineContext: CoroutineContext) : ShareS
      * 验证文件路径并检查隐藏文件访问权限
      * 1. 检查文件是否存在
      * 2. 验证中间路径中的隐藏文件访问权限
-     * 
+     *
      * @param relativePath 相对路径
      * @param parentFile 父文件信息
      * @param accessPermission 访问权限验证结果

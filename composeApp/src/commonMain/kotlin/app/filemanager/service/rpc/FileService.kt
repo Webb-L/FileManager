@@ -19,14 +19,12 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.launch
-import kotlinx.rpc.RemoteService
 import kotlinx.rpc.annotations.Rpc
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import kotlin.coroutines.CoroutineContext
 
 @Rpc
-interface FileService : RemoteService {
+interface FileService {
     // 重命名文件和文件夹
     // TODO 检查权限
     suspend fun rename(token: String, renameInfos: List<RenameInfo>): WebSocketResult<List<WebSocketResult<Boolean>>>
@@ -81,7 +79,7 @@ interface FileService : RemoteService {
     suspend fun createFile(token: String, paths: List<String>): WebSocketResult<List<WebSocketResult<Boolean>>>
 }
 
-class FileServiceImpl(override val coroutineContext: CoroutineContext) : FileService, KoinComponent {
+class FileServiceImpl() : FileService, KoinComponent {
     private val settings = createSettings()
     private val deviceCertificateState: DeviceCertificateState by inject()
 

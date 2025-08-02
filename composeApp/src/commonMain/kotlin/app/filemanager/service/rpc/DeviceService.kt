@@ -13,18 +13,16 @@ import app.filemanager.ui.state.main.DeviceState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import kotlinx.datetime.Clock
-import kotlinx.rpc.RemoteService
 import kotlinx.rpc.annotations.Rpc
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import kotlin.coroutines.CoroutineContext
 
 @Rpc
-interface DeviceService : RemoteService {
+interface DeviceService {
     suspend fun connect(device: SocketDevice): Pair<DeviceConnectType, String>
 }
 
-class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : DeviceService, KoinComponent {
+class DeviceServiceImpl() : DeviceService, KoinComponent {
     private val database by inject<FileManagerDatabase>()
     private val deviceState by inject<DeviceState>()
     private val deviceCertificateState by inject<DeviceCertificateState>()
@@ -53,7 +51,7 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
                 }
 
                 APPROVED, REJECTED -> {
-                    deviceState.connectionRequest[device.id] = Pair(WAITING, Clock.System.now().toEpochMilliseconds())
+                    deviceState.connectionRequest[device.id] = Pair(WAITING, System.currentTimeMillis())
                     if (deviceState.socketDevices.firstOrNull { it.id == device.id } == null) {
                         deviceState.socketDevices.add(
                             device.withCopy(
@@ -85,7 +83,7 @@ class DeviceServiceImpl(override val coroutineContext: CoroutineContext) : Devic
             }
             database.deviceConnectQueries.updateLastConnectionByCategoryAndId(device.id, DeviceCategory.SERVER)
         } else {
-            deviceState.connectionRequest[device.id] = Pair(WAITING, Clock.System.now().toEpochMilliseconds())
+            deviceState.connectionRequest[device.id] = Pair(WAITING, System.currentTimeMillis())
             if (deviceState.socketDevices.firstOrNull { it.id == device.id } == null) {
                 deviceState.socketDevices.add(
                     device.withCopy(

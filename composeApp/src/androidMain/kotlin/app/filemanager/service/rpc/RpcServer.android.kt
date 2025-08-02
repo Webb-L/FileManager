@@ -17,6 +17,8 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sse.*
 import kotlinx.datetime.Clock
+import kotlin.time.TimeSource
+import kotlinx.html.Entities
 import org.koin.java.KoinJavaComponent.inject
 import kotlinx.rpc.krpc.ktor.server.Krpc
 import kotlinx.rpc.krpc.ktor.server.rpc
@@ -60,12 +62,12 @@ actual suspend fun startRpcServer() {
                     }
                 }
 
-                registerService<DeviceService> { ctx -> DeviceServiceImpl(ctx) }
-                registerService<BookmarkService> { ctx -> BookmarkServiceImpl(ctx) }
-                registerService<FileService> { ctx -> FileServiceImpl(ctx) }
-                registerService<PathService> { ctx -> PathServiceImpl(ctx) }
+                registerService<DeviceService> { DeviceServiceImpl() }
+                registerService<BookmarkService> { BookmarkServiceImpl() }
+                registerService<FileService> { FileServiceImpl() }
+                registerService<PathService> { PathServiceImpl() }
 
-                registerService<ShareService> { ctx -> ShareServiceImpl(ctx) }
+                registerService<ShareService> { ShareServiceImpl() }
             }
         }
     }.start(wait = true)
@@ -111,7 +113,7 @@ fun Application.configureShareSse() {
                     else -> {}
                 }
 
-                deviceState.shareRequest[socketDevice.id] = Pair(DeviceConnectType.WAITING, Clock.System.now().toEpochMilliseconds())
+                deviceState.shareRequest[socketDevice.id] = Pair(DeviceConnectType.WAITING, System.currentTimeMillis())
                 send(event = FileShareStatus.WAITING.toString(), data = "等待对方同意")
 
                 snapshotFlow { deviceState.shareConnectionStates.toMap() }
