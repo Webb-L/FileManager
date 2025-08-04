@@ -9,6 +9,7 @@ import app.filemanager.service.rpc.RpcClientManager
 import app.filemanager.service.rpc.RpcShareClientManager
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DeviceState
+import app.filemanager.ui.state.main.Task
 import kotlinx.serialization.Serializable
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -221,12 +222,13 @@ data class Device(
 //    }
 
     suspend fun copyFile(
+        task: Task,
         srcFileSimpleInfo: FileSimpleInfo,
         destFileSimpleInfo: FileSimpleInfo,
         replyCallback: (Result<Boolean>) -> Unit
     ) {
         try {
-            getConnect().pathHandle.copyFile(id, srcFileSimpleInfo, destFileSimpleInfo, replyCallback)
+            getConnect().pathHandle.copyFile(task,id, srcFileSimpleInfo, destFileSimpleInfo, replyCallback)
         } catch (e: Exception) {
             handleError()
         }

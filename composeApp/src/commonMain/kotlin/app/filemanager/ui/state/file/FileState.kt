@@ -404,10 +404,14 @@ class FileState : KoinComponent {
         _isPasteCopyFile.value = true
     }
 
-    suspend fun copyFile(srcFileSimpleInfo: FileSimpleInfo, destFileSimpleInfo: FileSimpleInfo): Result<Boolean> {
+    suspend fun copyFile(
+        task: Task,
+        srcFileSimpleInfo: FileSimpleInfo,
+        destFileSimpleInfo: FileSimpleInfo
+    ): Result<Boolean> {
         // TODO 创建任务
         if (srcFileSimpleInfo.protocol == FileProtocol.Local && destFileSimpleInfo.protocol == FileProtocol.Local) {
-            return srcFileSimpleInfo.copyToFile(destFileSimpleInfo.path)
+            return srcFileSimpleInfo.copyToFile(task, destFileSimpleInfo.path)
         }
 
         var isReturn = false
@@ -430,7 +434,7 @@ class FileState : KoinComponent {
                 return Result.failure(EmptyDataException())
             }
 
-            device.copyFile(srcFileSimpleInfo, destFileSimpleInfo) {
+            device.copyFile(task,srcFileSimpleInfo, destFileSimpleInfo) {
                 result = it
                 isReturn = true
             }
@@ -460,7 +464,7 @@ class FileState : KoinComponent {
         return Result.failure(Exception("复制失败"))
     }
 
-    suspend fun pasteCopyFile(destPath: String, fileOperationState: FileOperationState) {
+    suspend fun pasteCopyFile(task: Task, destPath: String, fileOperationState: FileOperationState) {
         val destFileInfo = getFile(destPath).getOrNull() ?: return
 
         val fileAndFolders = getFileAndFolder(destFileInfo.path).getOrDefault(listOf())
@@ -567,9 +571,15 @@ class FileState : KoinComponent {
         val mainScope = MainScope()
         var executeCount = 0
 
+        taskState.tasks.add(task)
         for (fileOperationPath in fileOperationPaths) {
             mainScope.launch(Dispatchers.Default) {
-                copyFile(fileOperationPath.first, fileOperationPath.second)
+                val result = copyFile(task, fileOperationPath.first, fileOperationPath.second)
+                if (result.isSuccess) {
+                    taskState.tasks.remove(task)
+                } else {
+                    task.status = StatusEnum.FAILURE
+                }
                 executeCount++
             }
         }

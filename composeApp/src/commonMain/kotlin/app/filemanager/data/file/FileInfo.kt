@@ -2,12 +2,12 @@ package app.filemanager.data.file
 
 import app.filemanager.extensions.pathLevel
 import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
+import app.filemanager.ui.state.main.Task
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlin.math.ceil
@@ -162,18 +162,25 @@ data class FileSimpleInfo(
         return Result.success(isSuccess && length <= 0)
     }
 
-    suspend fun copyToFile(destPath: String): Result<Boolean> {
+    suspend fun copyToFile(
+        task: Task,
+        destPath: String
+    ): Result<Boolean> {
         val mainScope = MainScope()
         var successCount = 0
         var failureCount = 0
 
         // 复制文件
         if (!isDirectory) {
+            task.values["progressMax"] = "1"
             val targetFilePath = path.replaceFirst(path, destPath)
             writeToFile(targetFilePath)
                 .onSuccess { successCount++ }
-                .onFailure { failureCount++ }
-
+                .onFailure {
+                    task.result[targetFilePath] = it.message ?: ""
+                    failureCount++
+                }
+            task.values["progressCur"] = (successCount + failureCount).toString()
             return Result.success(successCount == 1 && failureCount == 0)
         }
 
@@ -185,16 +192,20 @@ data class FileSimpleInfo(
                 list.addAll(fileAndFolder.getOrDefault(listOf()))
             }
         }
+        task.values["progressMax"] = list.size.toString()
 
         val rootFolder = FileUtils.createFolder(destPath)
         if (rootFolder.isFailure) {
+            task.values["progressCur"] = 1.toString()
+            task.result[destPath] = rootFolder.exceptionOrNull()?.message ?: ""
             return rootFolder
         }
 
         list.sortedWith(
             compareBy<FileSimpleInfo> { !it.isDirectory }
                 .thenBy { it.path.pathLevel() })
-            .groupBy { it.isDirectory }.forEach { (isDir, fileSimpleInfos) ->
+            .groupBy { it.isDirectory }
+            .forEach { (isDir, fileSimpleInfos) ->
                 if (isDir) {
                     for (paths in fileSimpleInfos.map { it.path.replaceFirst(path, destPath) }
                         .chunked(30)) {
@@ -204,21 +215,26 @@ data class FileSimpleInfo(
 
                         successCount += count
                         failureCount += paths.size - count
+                        task.values["progressCur"] = (successCount + failureCount).toString()
                     }
                 } else {
                     for (files in fileSimpleInfos.chunked(maxOf(30, fileSimpleInfos.size / 30))) {
-                        mainScope.launch {
-                            withContext(Dispatchers.Default) {
-                                for (file in files) {
-                                    file.writeToFile(
-                                        file.path.replaceFirst(
-                                            path,
-                                            destPath
-                                        )
+                        withContext(Dispatchers.Default) {
+                            for (file in files) {
+                                val write = file.writeToFile(
+                                    file.path.replaceFirst(
+                                        path,
+                                        destPath
                                     )
-                                        .onSuccess { successCount++ }
-                                        .onFailure { failureCount++ }
+                                )
+
+                                if (write.isSuccess) {
+                                    successCount++
+                                } else {
+                                    failureCount++
+                                    task.result[file.path] = write.exceptionOrNull()?.message ?: ""
                                 }
+                                task.values["progressCur"] = (successCount + failureCount).toString()
                             }
                         }
                     }
@@ -228,13 +244,7 @@ data class FileSimpleInfo(
         while (successCount + failureCount < list.size) {
             delay(100L)
         }
-
-
-        val isFinish = list.size == successCount && failureCount == 0
-//            if (isFinish) {
-//                taskState.tasks.remove(task)
-//            }
-        return Result.success(isFinish)
+        return Result.success(list.size == successCount && failureCount == 0)
     }
 }
 

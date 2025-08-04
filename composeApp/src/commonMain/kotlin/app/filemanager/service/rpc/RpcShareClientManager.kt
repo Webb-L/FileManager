@@ -14,11 +14,7 @@ import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.FileUtils
 import io.ktor.client.*
 import io.ktor.util.logging.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.rpc.krpc.ktor.client.installKrpc
 import kotlinx.rpc.krpc.ktor.client.rpc
 import kotlinx.rpc.krpc.ktor.client.rpcConfig
@@ -290,9 +286,20 @@ class RpcShareClientManager : KoinComponent {
         replyCallback(Result.success(isSuccess))
     }
 
-    suspend fun testSpeed(){
-        shareService.testSpeed(10000000).collect {
-            println(it)
+    suspend fun testSpeed() {
+        println("data = data")
+        var index = 0
+        println("data = ${(MAX_LENGTH * 1000000L)}")
+        shareService.testSpeed(1000000).collect {
+           withContext(Dispatchers.Default) {
+               FileUtils.writeBytes(
+                   "/storage/emulated/0/test",
+                   (MAX_LENGTH * 1000000L),
+                   it,
+                   (index * MAX_LENGTH).toLong()
+               )
+           }
+            index++
         }
     }
 }

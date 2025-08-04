@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import app.filemanager.data.StatusEnum
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.getFileFilterType
@@ -32,6 +33,8 @@ import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.MainState
+import app.filemanager.ui.state.main.Task
+import app.filemanager.ui.state.main.TaskType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -204,7 +207,13 @@ fun FileCardMenu(
         paste = (isPasteCopyFile || isPasteMoveFile) && !isFileChecked,
         onPaste = {
             if (isPasteCopyFile) {
-                fileState.pasteCopyFile(file.path, fileOperationState)
+                fileState.pasteCopyFile(
+                    Task(
+                        taskType = TaskType.Copy,
+                        status = StatusEnum.LOADING,
+                        values = mutableMapOf("path" to file.path)
+                    ),
+                    file.path, fileOperationState)
             }
             if (isPasteMoveFile) {
                 fileState.pasteMoveFile(file.path, fileOperationState)

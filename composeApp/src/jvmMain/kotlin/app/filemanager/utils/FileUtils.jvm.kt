@@ -4,7 +4,10 @@ import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.exception.AuthorityException
 import app.filemanager.extensions.toFileSimpleInfo
 import java.awt.Desktop
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.io.RandomAccessFile
 
 internal actual object FileUtils {
@@ -115,11 +118,7 @@ internal actual object FileUtils {
         }
     }
 
-    actual fun readFileChunks(
-        path: String,
-        chunkSize: Long,
-        onChunkRead: (Result<Pair<Long, ByteArray>>) -> Unit
-    ) {
+    actual fun readFileChunks(path: String, chunkSize: Long, onChunkRead: (Result<Pair<Long, ByteArray>>) -> Unit) {
         try {
             val file = File(path)
             if (!file.exists()) {
@@ -140,7 +139,7 @@ internal actual object FileUtils {
                 return
             }
 
-            file.inputStream().use { input ->
+            BufferedInputStream(file.inputStream(), chunkSize.toInt()).use { input ->
                 val buffer = ByteArray(chunkSize.toInt())
                 var currentIndex = 0L
                 do {
@@ -183,13 +182,9 @@ internal actual object FileUtils {
                 return Result.success(true)
             }
 
-            RandomAccessFile(file, "rw").use { raf ->
-                if (raf.length() < fileSize) {
-                    raf.setLength(fileSize)
-                }
-
-                raf.seek(offset)
-                raf.write(data)
+            BufferedOutputStream(FileOutputStream(file, true)).use { output ->
+                output.write(data)
+                output.flush()
             }
 
             return Result.success(true)

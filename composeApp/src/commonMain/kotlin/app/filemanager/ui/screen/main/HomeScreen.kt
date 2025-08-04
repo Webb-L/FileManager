@@ -218,7 +218,13 @@ object HomeScreen : Screen {
                         FloatingActionButton(
                             onClick = {
                                 scope.launch(Dispatchers.Default) {
-                                    fileState.pasteCopyFile(path, fileOperationState)
+                                    fileState.pasteCopyFile(
+                                        Task(
+                                            taskType = TaskType.Move,
+                                            status = StatusEnum.LOADING,
+                                            values = mutableMapOf("path" to path)
+                                        ), path, fileOperationState
+                                    )
                                 }
                             },
                             containerColor = BottomAppBarDefaults.bottomAppBarFabColor,
@@ -298,7 +304,13 @@ object HomeScreen : Screen {
                             scope.launch(Dispatchers.Default) {
                                 withContext(Dispatchers.Default) {
                                     if (isPasteCopyFile) {
-                                        fileState.pasteCopyFile(path, fileOperationState)
+                                        fileState.pasteCopyFile(
+                                            Task(
+                                                taskType = TaskType.Move,
+                                                status = StatusEnum.LOADING,
+                                                values = mutableMapOf("path" to path)
+                                            ), path, fileOperationState
+                                        )
                                     }
                                     if (isPasteMoveFile) {
                                         fileState.pasteMoveFile(path, fileOperationState)
