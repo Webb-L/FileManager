@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -70,7 +71,7 @@ fun AppDrawer() {
                     if (mainState.windowSize == WindowSizeClass.Compact) {
                         mainState.updateExpandDrawer(false)
                     }
-                    mainState.updateScreen(NotificationScreen())
+                    mainState.navigator?.push(NotificationScreen())
                 }) {
                     BadgedBox(badge = { Badge { Text("1") } }) {
                         Icon(Icons.Default.Notifications, null)
@@ -78,7 +79,10 @@ fun AppDrawer() {
                 }
 
                 MoreOptionsDropdown(mainState)
-            }
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent
+            )
         )
         HorizontalDivider()
         LazyColumn {
@@ -211,7 +215,7 @@ private fun MoreOptionsDropdown(mainState: MainState) {
                 leadingIcon = { Icon(Icons.Default.Devices, null) },
                 text = { Text("设备") },
                 onClick = {
-                    mainState.updateScreen(DeviceScreen())
+                    mainState.navigator?.push(DeviceScreen())
                     showDropdownMenu = false
                 }
             )
@@ -219,7 +223,7 @@ private fun MoreOptionsDropdown(mainState: MainState) {
                 leadingIcon = { Icon(Icons.Default.Share, null) },
                 text = { Text("分享") },
                 onClick = {
-                    mainState.updateScreen(FileShareSettingsScreen())
+                    mainState.navigator?.push(FileShareSettingsScreen())
                     showDropdownMenu = false
                 }
             )
@@ -335,7 +339,7 @@ private fun AppDrawerTask() {
                 if (mainState.windowSize == WindowSizeClass.Compact) {
                     mainState.updateExpandDrawer(false)
                 }
-                mainState.updateScreen(TaskResultScreen(checkedTask!!))
+                mainState.navigator?.push(TaskResultScreen(checkedTask!!))
                 checkedTask = null
             }
         )
@@ -381,8 +385,12 @@ private fun AppDrawerBookmark() {
                     mainState.updateExpandDrawer(false)
                 }
                 mainState.updateFavorite(true)
-                mainState.updateScreen(FavoriteScreen())
+                mainState.navigator?.push(FavoriteScreen())
             },
+            colors = NavigationDrawerItemDefaults.colors(
+                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                unselectedContainerColor = Color.Transparent
+            ),
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
         )
         for (bookmark in drawerState.bookmarks) {
@@ -409,7 +417,9 @@ private fun AppDrawerBookmark() {
                     if (mainState.windowSize == WindowSizeClass.Compact) {
                         mainState.updateExpandDrawer(false)
                     }
-                    mainState.updateScreen(null)
+                    if (mainState.navigator?.lastItem is FavoriteScreen) {
+                        mainState.navigator?.pop()
+                    }
                     mainState.updateFavorite(false)
                 },
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
@@ -498,7 +508,7 @@ private fun AppDrawerDevice() {
                             if (mainState.windowSize == WindowSizeClass.Compact) {
                                 mainState.updateExpandDrawer(false)
                             }
-                            mainState.updateScreen(DeviceSettingsScreen())
+                            mainState.navigator?.push(DeviceSettingsScreen())
                         }
                 )
                 Spacer(Modifier.width(8.dp))
