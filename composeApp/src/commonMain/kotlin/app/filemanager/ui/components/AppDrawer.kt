@@ -387,10 +387,6 @@ private fun AppDrawerBookmark() {
                 mainState.updateFavorite(true)
                 mainState.navigator?.push(FavoriteScreen())
             },
-            colors = NavigationDrawerItemDefaults.colors(
-                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                unselectedContainerColor = Color.Transparent
-            ),
             modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
         )
         for (bookmark in drawerState.bookmarks) {
