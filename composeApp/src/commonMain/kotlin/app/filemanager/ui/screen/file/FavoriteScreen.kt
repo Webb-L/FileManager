@@ -44,7 +44,6 @@ class FavoriteScreen : Screen {
                     navigationIcon = {
                         IconButton({
                             mainState.updateFavorite(false)
-                            mainState.updateScreen(null)
                             navigator.pop()
                         }) {
                             Icon(Icons.AutoMirrored.Default.ArrowBack, null)

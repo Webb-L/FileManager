@@ -40,7 +40,6 @@ class NotificationScreen : Screen {
                     title = { Text("通知") },
                     navigationIcon = {
                         IconButton({
-                            mainState.updateScreen(null)
                             navigator.pop()
                         }) {
                             Icon(Icons.AutoMirrored.Default.ArrowBack, null)

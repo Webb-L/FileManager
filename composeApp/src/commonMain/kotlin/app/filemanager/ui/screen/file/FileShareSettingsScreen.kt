@@ -60,7 +60,6 @@ class FileShareSettingsScreen() : Screen {
                     title = { Text("分享管理") },
                     navigationIcon = {
                         IconButton({
-                            mainState.updateScreen(null)
                             navigator.pop()
                         }) {
                             Icon(Icons.AutoMirrored.Default.ArrowBack, null)

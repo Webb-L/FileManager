@@ -76,10 +76,7 @@ class DeviceSettingsScreen() : Screen {
                     title = { Text("设备管理") },
                     navigationIcon = {
                         IconButton(
-                            onClick = {
-                                mainState.updateScreen(null)
-                                navigator.pop()
-                            }
+                            onClick = navigator::pop
                         ) {
                             Icon(Icons.AutoMirrored.Default.ArrowBack, contentDescription = null)
                         }

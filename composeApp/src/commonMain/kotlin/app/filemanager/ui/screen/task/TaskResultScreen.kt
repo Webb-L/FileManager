@@ -76,7 +76,6 @@ class TaskResultScreen(
                     navigationIcon = {
                         IconButton(
                             onClick = {
-                                mainState.updateScreen(null)
                                 navigator.pop()
                             }
                         ) {

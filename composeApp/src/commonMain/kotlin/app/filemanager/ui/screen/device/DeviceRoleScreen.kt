@@ -40,7 +40,6 @@ class DeviceRoleScreen : Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val mainState = koinInject<MainState>()
         val state = koinInject<DeviceRoleState>()
 
         val scope = rememberCoroutineScope()
@@ -51,10 +50,7 @@ class DeviceRoleScreen : Screen {
                     title = { Text("设备角色") },
                     navigationIcon = {
                         IconButton(
-                            onClick = {
-                                mainState.updateScreen(null)
-                                navigator.pop()
-                            }
+                            onClick = navigator::pop
                         ) {
                             Icon(Icons.AutoMirrored.Default.ArrowBack, contentDescription = null)
                         }
@@ -188,7 +184,9 @@ class EditRoleScreen(
                                         duration = SnackbarDuration.Short
                                     )) {
                                         SnackbarResult.Dismissed -> {}
-                                        SnackbarResult.ActionPerformed -> { navigator.pop() }
+                                        SnackbarResult.ActionPerformed -> {
+                                            navigator.pop()
+                                        }
                                     }
                                 }
                                 return@IconButton

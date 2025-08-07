@@ -32,9 +32,10 @@ import app.filemanager.ui.screen.file.FileShareScreen
 import app.filemanager.ui.state.file.FileFilterState
 import app.filemanager.ui.state.file.FileOperationState
 import app.filemanager.ui.state.file.FileState
-import app.filemanager.ui.state.main.MainState
 import app.filemanager.ui.state.main.Task
 import app.filemanager.ui.state.main.TaskType
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -190,7 +191,8 @@ fun FileCardMenu(
     file: FileSimpleInfo,
     onRemove: (String) -> Unit
 ) {
-    val mainState = koinInject<MainState>()
+    val navigator = LocalNavigator.currentOrThrow
+
     val fileState = koinInject<FileState>()
     val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
     val isPasteMoveFile by fileState.isPasteMoveFile.collectAsState()
@@ -257,7 +259,7 @@ fun FileCardMenu(
             }
         },
         onShare = {
-            mainState.updateScreen(FileShareScreen(listOf(file)))
+            navigator.push(FileShareScreen(listOf(file)))
         },
         onInfo = {
             fileState.updateFileInfo(file)
@@ -285,7 +287,7 @@ fun FileShareMenu(
 fun FileBottomAppMenu(
     onRemove: (List<String>) -> Unit,
 ) {
-    val mainState = koinInject<MainState>()
+    val navigator = LocalNavigator.currentOrThrow
 
     val fileState = koinInject<FileState>()
     val isPasteCopyFile by fileState.isPasteCopyFile.collectAsState()
@@ -308,7 +310,7 @@ fun FileBottomAppMenu(
         favorite = false,
         share = true,
         onShare = {
-            mainState.updateScreen(FileShareScreen(fileState.checkedFileSimpleInfo.toList()))
+            navigator.push(FileShareScreen(fileState.checkedFileSimpleInfo.toList()))
         },
         info = true,
         onInfo = { fileState.updateViewFile(true) },

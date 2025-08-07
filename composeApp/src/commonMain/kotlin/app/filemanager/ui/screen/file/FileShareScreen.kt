@@ -140,14 +140,12 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                     )) {
                                         SnackbarResult.Dismissed -> {}
                                         SnackbarResult.ActionPerformed -> {
-                                            mainState.updateScreen(null)
                                             navigator.pop()
                                         }
                                     }
                                 }
                                 return@IconButton
                             }
-                            mainState.updateScreen(null)
                             navigator.pop()
                         }) {
                             Icon(Icons.AutoMirrored.Default.ArrowBack, null)

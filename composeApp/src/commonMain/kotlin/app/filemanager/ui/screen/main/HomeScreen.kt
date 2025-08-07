@@ -45,7 +45,7 @@ object HomeScreen : Screen {
         val scope = rememberCoroutineScope()
 
         val mainState = koinInject<MainState>()
-        val screen by mainState.screen.collectAsState()
+        mainState.navigator = navigator
         val editPath by mainState.isEditPath.collectAsState()
 
         val fileFilterState = koinInject<FileFilterState>()
@@ -105,12 +105,6 @@ object HomeScreen : Screen {
                     }
                 }
                 FileScreen(snackbarHostState)
-            }
-        }
-
-        LaunchedEffect(screen) {
-            if (screen != null) {
-                navigator.push(screen!!)
             }
         }
 

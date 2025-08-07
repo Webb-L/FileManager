@@ -185,10 +185,9 @@ class DeviceScreen : Screen {
                 TopAppBar(
                     title = { Text("设备") },
                     navigationIcon = {
-                        IconButton({
-                            mainState.updateScreen(null)
-                            navigator.pop()
-                        }) {
+                        IconButton(
+                            navigator::pop
+                        ) {
                             Icon(Icons.AutoMirrored.Default.ArrowBack, null)
                         }
                     },

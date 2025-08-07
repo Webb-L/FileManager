@@ -108,10 +108,9 @@ class FileShareHistoryScreen : Screen {
                 TopAppBar(
                     title = { Text("分享历史") },
                     navigationIcon = {
-                        IconButton({
-                            mainState.updateScreen(null)
-                            navigator.pop()
-                        }) {
+                        IconButton(
+                            navigator::pop
+                        ) {
                             Icon(Icons.AutoMirrored.Default.ArrowBack, null)
                         }
                     },
