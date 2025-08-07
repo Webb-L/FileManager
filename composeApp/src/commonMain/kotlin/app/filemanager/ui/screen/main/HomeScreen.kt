@@ -61,10 +61,12 @@ object HomeScreen : Screen {
         val isWarningOperationDialog by fileOperationState.isWarningOperationDialog.collectAsState()
 
         val deviceState = koinInject<DeviceState>()
+        
+        var showSearchDialog by remember { mutableStateOf(false) }
 
         val snackbarHostState = remember { SnackbarHostState() }
         Scaffold(
-            topBar = { HomeTopBar() },
+            topBar = { HomeTopBar { showSearchDialog = true } },
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = { HomeBottomBar(snackbarHostState) },
             floatingActionButton = {
@@ -92,18 +94,6 @@ object HomeScreen : Screen {
                             MaterialBannerDeviceShare(device)
                         }
                     }
-                if (isSearchText) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextField(
-                            searchText,
-                            label = { Text("搜索") },
-                            onValueChange = fileFilterState::updateSearchText
-                        )
-                    }
-                }
                 FileScreen(snackbarHostState)
             }
         }
@@ -144,16 +134,28 @@ object HomeScreen : Screen {
         if (isWarningOperationDialog) {
             FileWarningOperationDialog()
         }
+
+        if (showSearchDialog) {
+            SearchDialog(
+                searchText = searchText,
+                onDismiss = { 
+                    showSearchDialog = false
+                    fileFilterState.updateSearch(false)
+                },
+                onConfirm = { query ->
+                    showSearchDialog = false
+                    fileFilterState.updateSearchText(query)
+                    fileFilterState.updateSearch(true)
+                }
+            )
+        }
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun HomeTopBar() {
+    fun HomeTopBar(onSearchClick: () -> Unit = {}) {
         val mainState = koinInject<MainState>()
         val expandDrawer by mainState.isExpandDrawer.collectAsState()
-
-        val fileFilterState = koinInject<FileFilterState>()
-        val isSearchText by fileFilterState.isSearchText.collectAsState()
 
         TopAppBar(
             title = { AppBarPath() },
@@ -172,7 +174,7 @@ object HomeScreen : Screen {
                 IconButton({ mainState.updateEditPath(true) }) {
                     Icon(Icons.Default.Edit, null)
                 }
-                IconButton({ fileFilterState.updateSearch(!isSearchText) }) {
+                IconButton(onSearchClick) {
                     Icon(Icons.Default.Search, null)
                 }
             }
@@ -371,4 +373,42 @@ object HomeScreen : Screen {
             )
         }
     }
+}
+
+@Composable
+fun SearchDialog(
+    searchText: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var currentSearchText by remember(searchText) { mutableStateOf(searchText) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("搜索文件")
+        },
+        text = {
+            OutlinedTextField(
+                value = currentSearchText,
+                onValueChange = { currentSearchText = it },
+                label = { Text("输入搜索关键词") },
+                placeholder = { Text("文件名或扩展名") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(currentSearchText) }
+            ) {
+                Text("搜索")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }
