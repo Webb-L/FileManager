@@ -4,6 +4,11 @@
 	<uses-permission android:name="android.permission.INTERNET"/>
 	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 	<uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
+	<uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+	<uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
+	<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+	<uses-permission android:name="android.permission.WAKE_LOCK"/>
+	<uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
 
 	<application
 			android:name=".AndroidApp"
@@ -32,6 +37,12 @@
 					android:name="android.support.FILE_PROVIDER_PATHS"
 					android:resource="@xml/provider_paths" />
 		</provider>
+		
+		<service
+				android:name=".service.BackgroundService"
+				android:enabled="true"
+				android:exported="false"
+				android:foregroundServiceType="dataSync" />
 	</application>
 
 </manifest>

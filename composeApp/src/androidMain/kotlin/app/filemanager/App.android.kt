@@ -1,7 +1,9 @@
 package app.filemanager
 
+import android.Manifest
 import android.app.Application
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -13,13 +15,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import app.filemanager.service.rpc.startRpcServer
+import app.filemanager.service.BackgroundService
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import java.io.File
 
 
@@ -32,10 +34,6 @@ class AndroidApp : Application() {
     override fun onCreate() {
         super.onCreate()
         INSTANCE = this
-
-        GlobalScope.launch(Dispatchers.IO) {
-            startRpcServer()
-        }
     }
 }
 
@@ -46,18 +44,65 @@ class AppActivity : ComponentActivity() {
         }
     }
 
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            startBackgroundService()
+        } else {
+            Toast.makeText(this, "需要通知权限以保持后台运行", Toast.LENGTH_LONG).show()
+            // 即使没有通知权限也尝试启动服务
+            startBackgroundService()
+        }
+    }
+
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         activity = this@AppActivity
+        
         if (!Environment.isExternalStorageManager()) {
             startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
         }
+        
+        checkAndRequestNotificationPermission()
+        
         onBackPressedDispatcher.addCallback(this, backPressedCallback)
         enableEdgeToEdge()
         setContent {
             App()
         }
+    }
+
+    private fun checkAndRequestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13+ (API 33+) 需要运行时请求通知权限
+            when {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    // 权限已授予
+                    startBackgroundService()
+                }
+                shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) -> {
+                    // 显示权限说明
+                    Toast.makeText(this, "需要通知权限以显示后台运行状态", Toast.LENGTH_LONG).show()
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                else -> {
+                    // 直接请求权限
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        } else {
+            // Android 12 及以下版本不需要运行时权限
+            startBackgroundService()
+        }
+    }
+
+    private fun startBackgroundService() {
+        BackgroundService.start(this)
     }
 
     companion object {
