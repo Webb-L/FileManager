@@ -41,9 +41,40 @@ import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.*
 import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.utils.WindowSizeClass
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+
+// 通用的设备状态更新函数
+private fun updateDeviceStateAndConnect(
+    deviceState: DeviceState, 
+    scope: CoroutineScope, 
+    device: SocketDevice, 
+    connectType: app.filemanager.service.data.ConnectType, 
+    shouldConnect: Boolean = false
+) {
+    // 通用的设备状态更新逻辑
+    fun updateDeviceConnectType(deviceId: String, newConnectType: app.filemanager.service.data.ConnectType) {
+        val updatedDevices = deviceState.socketDevices.map { 
+            if (it.id == deviceId) it.withCopy(connectType = newConnectType) else it 
+        }
+        deviceState.socketDevices.clear()
+        deviceState.socketDevices.addAll(updatedDevices)
+    }
+    
+    updateDeviceConnectType(device.id, connectType)
+    
+    if (shouldConnect) {
+        scope.launch {
+            try {
+                deviceState.connect(device)
+            } catch (e: Exception) {
+                updateDeviceConnectType(device.id, Fail)
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -542,9 +573,8 @@ private fun AppDrawerDevice() {
                                 .clip(RoundedCornerShape(25.dp))
                                 .clickable {
                                     if (device.client?.disconnect() == true) {
-                                        deviceState.socketDevices[index] = device.withCopy(
-                                            connectType = UnConnect
-                                        )
+                                        // 安全地更新设备状态，避免索引越界
+                                        updateDeviceStateAndConnect(deviceState, scope, device, UnConnect)
                                         deviceState.devices.remove(deviceState.devices.firstOrNull { it.id == device.id })
                                     }
                                 }
@@ -565,10 +595,8 @@ private fun AppDrawerDevice() {
                 onClick = {
                     when (device.connectType) {
                         UnConnect, Fail, Rejected -> {
-                            deviceState.socketDevices[index] = device.withCopy(
-                                connectType = Loading
-                            )
-                            deviceState.connect(device)
+                            // 连接设备并更新状态
+                            updateDeviceStateAndConnect(deviceState, scope, device, Loading, shouldConnect = true)
                         }
 
                         New -> {
@@ -582,7 +610,9 @@ private fun AppDrawerDevice() {
                         }
 
                         Loading -> {
-                            // TODO 断开连接
+                            // 取消连接中的状态
+                            device.client?.disconnect()
+                            updateDeviceStateAndConnect(deviceState, scope, device, UnConnect)
                         }
                     }
                 },
@@ -681,6 +711,7 @@ fun DeviceConnectNewDialog(
 ) {
     val database = koinInject<FileManagerDatabase>()
     val deviceState = koinInject<DeviceState>()
+    val scope = rememberCoroutineScope()
 
     val onConnect: (Boolean) -> Unit = { isAuto ->
         database.deviceConnectQueries.insert(
@@ -689,16 +720,9 @@ fun DeviceConnectNewDialog(
             category = DeviceCategory.CLIENT,
             -1
         )
-        val index = deviceState.socketDevices.indexOfFirst { it.id == socketDevice.id }
-        if (index >= 0) {
-            deviceState.socketDevices[index] = socketDevice.withCopy(
-                connectType = Loading
-            )
-            deviceState.connect(socketDevice)
-            onCancel()
-        } else {
-            onCancel()
-        }
+        // 连接设备并更新状态
+        updateDeviceStateAndConnect(deviceState, scope, socketDevice, Loading, shouldConnect = true)
+        onCancel()
     }
 
     AlertDialog(

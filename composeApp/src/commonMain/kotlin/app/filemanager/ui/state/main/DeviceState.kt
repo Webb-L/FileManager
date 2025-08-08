@@ -157,7 +157,11 @@ class DeviceState : KoinComponent {
                     }
                     if (it?.connectionType == DeviceConnectType.AUTO_CONNECT) {
                         device.connectType = ConnectType.Loading
-                        connect(device)
+                        try {
+                            connect(device)
+                        } catch (e: Exception) {
+                            device.connectType = ConnectType.Fail
+                        }
                     }
                 }
 
@@ -167,15 +171,9 @@ class DeviceState : KoinComponent {
         }
     }
 
-    fun connect(connectDevice: SocketDevice) {
-        mainScope.launch {
-            try {
-                val rpcClientManager = RpcClientManager()
-                rpcClientManager.connect(connectDevice)
-            } catch (e: Exception) {
-                println(e)
-            }
-        }
+    suspend fun connect(connectDevice: SocketDevice) {
+        val rpcClientManager = RpcClientManager()
+        rpcClientManager.connect(connectDevice)
     }
 
 
@@ -248,7 +246,7 @@ class DeviceState : KoinComponent {
         mainScope.launch {
             try {
                 val rpcClientManager = RpcShareClientManager()
-                withContext(Dispatchers.Default){
+                withContext(Dispatchers.Default) {
                     rpcClientManager.share(device)
                 }
             } catch (e: Exception) {
