@@ -2,6 +2,7 @@ package app.filemanager.ui.screen.device
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -21,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceType
+import app.filemanager.data.main.Local
 import app.filemanager.data.main.Share
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.exception.EmptyDataException
@@ -74,6 +76,7 @@ class DeviceScreen : Screen {
 
         var devices by remember { mutableStateOf(emptyList<DbDevice>()) }
         var showEditDialog by remember { mutableStateOf(false) }
+        var showDeleteDialog by remember { mutableStateOf(false) }
         var selectedDevice by remember { mutableStateOf<DbDevice?>(null) }
         var editedName by remember { mutableStateOf("") }
         val deviceTypes = listOf(
@@ -103,6 +106,51 @@ class DeviceScreen : Screen {
 
         LaunchedEffect(Unit) {
             refreshDevices()
+        }
+
+        // 删除确认对话框
+        if (showDeleteDialog && selectedDevice != null) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                title = { Text("确认删除") },
+                text = { Text("确定要删除设备 \"${selectedDevice!!.name}\" 吗？") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            // 从数据库删除设备
+                            database.deviceQueries.deleteById(selectedDevice!!.id)
+                            
+                            // 从socketDevices列表移除
+                            deviceState.socketDevices.removeAll { it.id == selectedDevice!!.id }
+                            
+                            // 从devices列表移除
+                            deviceState.devices.removeAll { it.id == selectedDevice!!.id }
+                            
+                            // 从shares列表移除
+                            deviceState.shares.removeAll { it.id == selectedDevice!!.id }
+                            
+                            // 如果当前桌面显示的是该设备，切换到本地
+                            if (deskType is Device && (deskType as Device).id == selectedDevice!!.id) {
+                                fileState.updateDesk(FileProtocol.Local, Local())
+                            }
+                            if (deskType is Share && (deskType as Share).id == selectedDevice!!.id) {
+                                fileState.updateDesk(FileProtocol.Local, Local())
+                            }
+                            
+                            refreshDevices()
+                            showDeleteDialog = false
+                            selectedDevice = null
+                        }
+                    ) {
+                        Text("删除")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("取消")
+                    }
+                }
+            )
         }
 
         // 编辑设备名称对话框
@@ -234,6 +282,10 @@ class DeviceScreen : Screen {
                                 selectedDevice = device
                                 editedName = device.name
                                 showEditDialog = true
+                            },
+                            onDeleteClick = {
+                                selectedDevice = device
+                                showDeleteDialog = true
                             }
                         )
                     }
@@ -308,7 +360,8 @@ class DeviceScreen : Screen {
     @Composable
     private fun DeviceListItem(
         device: DbDevice,
-        onEditClick: () -> Unit
+        onEditClick: () -> Unit,
+        onDeleteClick: () -> Unit
     ) {
         ListItem(
             headlineContent = { Text(device.name) },
@@ -326,8 +379,13 @@ class DeviceScreen : Screen {
                 }
             },
             trailingContent = {
-                IconButton(onClick = onEditClick) {
-                    Icon(Icons.Default.Edit, contentDescription = "编辑设备名称")
+                Row {
+                    IconButton(onClick = onEditClick) {
+                        Icon(Icons.Default.Edit, contentDescription = "编辑设备名称")
+                    }
+                    IconButton(onClick = onDeleteClick) {
+                        Icon(Icons.Default.Delete, contentDescription = "删除设备")
+                    }
                 }
             },
             modifier = Modifier.clickable(onClick = onEditClick)
