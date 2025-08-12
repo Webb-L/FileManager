@@ -96,13 +96,6 @@ class DeviceServiceImpl() : DeviceService, KoinComponent {
                     while (deviceState.connectionRequest[device.id]!!.first == WAITING) {
                         delay(300L)
                     }
-                    // TODO 往Device添加数据
-                    database.deviceConnectQueries.insert(
-                        id = device.id,
-                        connectionType = deviceState.connectionRequest[device.id]?.first ?: WAITING,
-                        category = DeviceCategory.SERVER,
-                        -1
-                    )
                     when (deviceState.connectionRequest[device.id]!!.first) {
                         AUTO_CONNECT, APPROVED -> {}
                         else -> throw Exception()

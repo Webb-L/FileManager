@@ -1,11 +1,7 @@
 package app.filemanager.ui.screen.device
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -119,6 +115,7 @@ class DeviceScreen : Screen {
                         onClick = {
                             // 从数据库删除设备
                             database.deviceQueries.deleteById(selectedDevice!!.id)
+                            database.deviceConnectQueries.deleteById(selectedDevice!!.id)
                             
                             // 从socketDevices列表移除
                             deviceState.socketDevices.removeAll { it.id == selectedDevice!!.id }

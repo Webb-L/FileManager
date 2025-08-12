@@ -64,6 +64,11 @@ SET
     roleId = COALESCE(?, -1)
 WHERE id = ? AND category = ?;
 
+-- 根据设备ID删除设备连接记录
+deleteById:
+DELETE FROM DeviceConnect
+WHERE id = ?;
+
 -- 根据设备名称模糊匹配和类别查询设备连接记录，同时获取角色名称和设备信息
 queryByNameLikeAndCategory:
 SELECT

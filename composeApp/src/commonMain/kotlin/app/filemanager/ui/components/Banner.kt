@@ -1,5 +1,6 @@
 package app.filemanager.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -12,16 +13,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import app.filemanager.data.file.FileFilterType
 import app.filemanager.data.file.FileSimpleInfo
+import app.filemanager.data.main.DeviceCategory
 import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceConnectType.*
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
+import app.filemanager.ui.state.device.DeviceRoleState
 import app.filemanager.ui.state.file.FileShareStatus
-import kotlinx.datetime.Clock
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.PathUtils
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.datetime.*
 import org.koin.compose.koinInject
 
@@ -171,9 +174,14 @@ fun MaterialBannerDeviceShare(socketDevice: SocketDevice) {
  */
 @Composable
 fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
+    val database = koinInject<FileManagerDatabase>()
     val deviceState = koinInject<DeviceState>()
+    val roleState = koinInject<DeviceRoleState>()
+    val scope = rememberCoroutineScope()
 
     var expanded by remember { mutableStateOf(false) }
+    var showRoleDialog by remember { mutableStateOf(false) }
+    var pendingConnectionType by remember { mutableStateOf(APPROVED) }
 
     val remainingConnectionTime =
         (CONNECT_TIMEOUT + ((deviceState.connectionRequest[socketDevice.id]!!.second - System.currentTimeMillis()) / 1000L)).toInt()
@@ -199,13 +207,36 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
         if (minutes == 0) "${seconds}秒" else "${minutes}分${seconds}秒"
     }
 
+    fun handleConnectionRequest(connectionType: DeviceConnectType) {
+        scope.launch {
+            // 检查设备是否有设置roleId
+            val deviceConnect = database.deviceConnectQueries.queryByIdAndCategory(
+                socketDevice.id,
+                DeviceCategory.SERVER
+            ).executeAsOneOrNull()
+
+            if (deviceConnect == null || deviceConnect.roleId == -1L) {
+                // 设备首次连接或未设置角色，需要选择角色
+                pendingConnectionType = connectionType
+                showRoleDialog = true
+            } else {
+                // roleId已设置，直接执行连接
+                deviceState.connectionRequest[socketDevice.id] =
+                    Pair(connectionType, deviceState.connectionRequest[socketDevice.id]!!.second)
+                if (connectionType == AUTO_CONNECT) {
+                    expanded = false
+                }
+            }
+        }
+    }
+
+    fun handleAgree() = handleConnectionRequest(APPROVED)
+    fun handleAutoConnect() = handleConnectionRequest(AUTO_CONNECT)
+
     MaterialBanner(
         message = "${socketDevice.name} 请求和您创建连接。\n${timeText} 后将会自动拒绝。",
         actionLabel = "同意",
-        onActionClick = {
-            deviceState.connectionRequest[socketDevice.id] =
-                Pair(APPROVED, deviceState.connectionRequest[socketDevice.id]!!.second)
-        },
+        onActionClick = { handleAgree() },
         menu = {
             Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
                 IconButton({ expanded = true }) {
@@ -222,13 +253,7 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
                 ) {
                     DropdownMenuItem(
                         text = { Text("自动同意") },
-                        onClick = {
-                            deviceState.connectionRequest[socketDevice.id] = Pair(
-                                AUTO_CONNECT,
-                                deviceState.connectionRequest[socketDevice.id]!!.second
-                            )
-                            expanded = false
-                        }
+                        onClick = { handleAutoConnect() }
                     )
                     DropdownMenuItem(
                         text = { Text("自动拒绝") },
@@ -254,6 +279,78 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
             }
         }
     )
+
+    // 角色选择弹窗
+    if (showRoleDialog) {
+        var selectedRole by remember { mutableStateOf("") }
+
+        AlertDialog(
+            title = { Text("选择设备角色") },
+            text = {
+                Column {
+                    Text("请为设备 \"${socketDevice.name}\" 选择一个角色：")
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    roleState.roles.forEach { role ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedRole = role.name },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedRole == role.name,
+                                onClick = { selectedRole = role.name }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(role.name)
+                        }
+                    }
+                }
+            },
+            onDismissRequest = {
+                showRoleDialog = false
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            // 找到选中的角色ID
+                            val selectedRoleId = roleState.roles.find { it.name == selectedRole }?.id ?: -1
+
+                            // 更新设备连接记录的角色ID
+                            database.deviceConnectQueries.updateNameConnectTypeRoleIdByIdAndCategory(
+                                pendingConnectionType,
+                                selectedRoleId,
+                                socketDevice.id,
+                                DeviceCategory.SERVER
+                            )
+
+                            // 执行相应的连接操作
+                            deviceState.connectionRequest[socketDevice.id] =
+                                Pair(pendingConnectionType, deviceState.connectionRequest[socketDevice.id]!!.second)
+
+                            showRoleDialog = false
+                        }
+                    },
+                    enabled = selectedRole.isNotEmpty()
+                ) {
+                    Text("确认")
+                }
+            },
+            dismissButton = {
+                TextButton({
+                    deviceState.connectionRequest[socketDevice.id] = Pair(
+                        REJECTED,
+                        deviceState.connectionRequest[socketDevice.id]!!.second
+                    )
+                    showRoleDialog = false
+                }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
 }
 
 @Composable
