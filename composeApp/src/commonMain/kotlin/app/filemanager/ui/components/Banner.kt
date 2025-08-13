@@ -19,6 +19,7 @@ import app.filemanager.data.main.DeviceConnectType.*
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
+import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.ui.state.device.DeviceRoleState
 import app.filemanager.ui.state.file.FileShareStatus
 import app.filemanager.ui.state.main.DeviceState
@@ -177,6 +178,7 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
     val database = koinInject<FileManagerDatabase>()
     val deviceState = koinInject<DeviceState>()
     val roleState = koinInject<DeviceRoleState>()
+    val deviceCertificateState = koinInject<DeviceCertificateState>()
     val scope = rememberCoroutineScope()
 
     var expanded by remember { mutableStateOf(false) }
@@ -319,11 +321,11 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
                             val selectedRoleId = roleState.roles.find { it.name == selectedRole }?.id ?: -1
 
                             // 更新设备连接记录的角色ID
-                            database.deviceConnectQueries.updateNameConnectTypeRoleIdByIdAndCategory(
-                                pendingConnectionType,
-                                selectedRoleId,
+                            database.deviceConnectQueries.insert(
                                 socketDevice.id,
-                                DeviceCategory.SERVER
+                                pendingConnectionType,
+                                DeviceCategory.SERVER,
+                                selectedRoleId
                             )
 
                             // 执行相应的连接操作

@@ -96,11 +96,18 @@ class DeviceServiceImpl() : DeviceService, KoinComponent {
                     while (deviceState.connectionRequest[device.id]!!.first == WAITING) {
                         delay(300L)
                     }
+                    var roleId: Long
                     when (deviceState.connectionRequest[device.id]!!.first) {
-                        AUTO_CONNECT, APPROVED -> {}
+                        AUTO_CONNECT, APPROVED -> {
+                            roleId = (database.deviceConnectQueries.queryRoleIdByIdAndCategory(
+                                device.id,
+                                DeviceCategory.SERVER
+                            ).executeAsOneOrNull()?:-1)
+                        }
+
                         else -> throw Exception()
                     }
-                    deviceCertificateState.permissions[randomString] = -1
+                    deviceCertificateState.permissions[randomString] = roleId
                     return@withTimeout Pair(APPROVED, randomString)
                 }
             } catch (e: Exception) {

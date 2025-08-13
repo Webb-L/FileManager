@@ -125,6 +125,8 @@ class DeviceScreen : Screen {
                             
                             // 从shares列表移除
                             deviceState.shares.removeAll { it.id == selectedDevice!!.id }
+
+                            // TODO 如果设备有链接需要移除否则会出现权限越级漏洞。
                             
                             // 如果当前桌面显示的是该设备，切换到本地
                             if (deskType is Device && (deskType as Device).id == selectedDevice!!.id) {

@@ -192,7 +192,7 @@ class DeviceSettingsScreen() : Screen {
     ) {
         var expanded by remember { mutableStateOf(false) }
 
-        Card(
+        Box(
             modifier = Modifier.fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
                 .clickable(onClick = onClick),
@@ -276,7 +276,6 @@ class DeviceSettingsScreen() : Screen {
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
