@@ -12,7 +12,6 @@ import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.ui.state.main.DeviceState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
-import kotlinx.datetime.Clock
 import kotlinx.rpc.annotations.Rpc
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -40,7 +39,11 @@ class DeviceServiceImpl() : DeviceService, KoinComponent {
                         return Pair(REJECTED, "")
                     }
                     if (queriedDevice.connectionType == AUTO_CONNECT) {
-                        deviceCertificateState.permissions[randomString] = queriedDevice.roleId
+                        deviceCertificateState.setDeviceTokenAndPermission(
+                            device.id,
+                            randomString,
+                            queriedDevice.roleId
+                        )
                         return Pair(APPROVED, randomString)
                     }
                     database.deviceConnectQueries.updateConnectionTypeByIdAndCategory(
@@ -66,7 +69,11 @@ class DeviceServiceImpl() : DeviceService, KoinComponent {
                             }
                             when (deviceState.connectionRequest[device.id]!!.first) {
                                 AUTO_CONNECT, APPROVED -> {
-                                    deviceCertificateState.permissions[randomString] = queriedDevice.roleId
+                                    deviceCertificateState.setDeviceTokenAndPermission(
+                                        device.id,
+                                        randomString,
+                                        queriedDevice.roleId
+                                    )
                                     return@withTimeout Pair(APPROVED, randomString)
                                 }
 
@@ -102,12 +109,16 @@ class DeviceServiceImpl() : DeviceService, KoinComponent {
                             roleId = (database.deviceConnectQueries.queryRoleIdByIdAndCategory(
                                 device.id,
                                 DeviceCategory.SERVER
-                            ).executeAsOneOrNull()?:-1)
+                            ).executeAsOneOrNull() ?: -1)
                         }
 
                         else -> throw Exception()
                     }
-                    deviceCertificateState.permissions[randomString] = roleId
+                    deviceCertificateState.setDeviceTokenAndPermission(
+                        device.id,
+                        randomString,
+                        roleId
+                    )
                     return@withTimeout Pair(APPROVED, randomString)
                 }
             } catch (e: Exception) {

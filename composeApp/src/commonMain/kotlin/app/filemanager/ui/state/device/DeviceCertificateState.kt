@@ -3,7 +3,63 @@ package app.filemanager.ui.state.device
 import app.filemanager.db.FileManagerDatabase
 
 class DeviceCertificateState(private val database: FileManagerDatabase) {
-    val permissions = mutableMapOf<String, Long>()
+    // Map<连接的token, 角色id>
+    private val permissions = mutableMapOf<String, Long>()
+
+    // Map<设备ID, 连接token>
+    private val deviceTokens = mutableMapOf<String, String>()
+
+    /**
+     * 设置设备权限
+     * @param deviceId 设备ID
+     * @param roleId 角色ID
+     */
+    fun setDevicePermission(deviceId: String, roleId: Long) {
+        deviceTokens[deviceId]?.let { token ->
+            permissions[token] = roleId
+        }
+    }
+
+    /**
+     * 设置设备token和权限
+     * @param deviceId 设备ID
+     * @param token 连接token
+     * @param roleId 角色ID
+     */
+    fun setDeviceTokenAndPermission(deviceId: String, token: String, roleId: Long) {
+        deviceTokens[deviceId] = token
+        permissions[token] = roleId
+    }
+
+    /**
+     * 移除设备权限
+     * @param deviceId 设备ID
+     */
+    fun removeDevicePermission(deviceId: String) {
+        deviceTokens[deviceId]?.let { token ->
+            permissions.remove(token)
+        }
+    }
+
+    /**
+     * 设置设备token
+     * @param deviceId 设备ID
+     * @param token 连接token
+     */
+    fun setDeviceToken(deviceId: String, token: String) {
+        deviceTokens[deviceId] = token
+    }
+
+    /**
+     * 移除设备token
+     * @param deviceId 设备ID
+     */
+    fun removeDeviceToken(deviceId: String) {
+        deviceTokens[deviceId]?.let { token ->
+            permissions.remove(token)
+        }
+        deviceTokens.remove(deviceId)
+    }
 
     fun checkPermission(token: String, path: String, permission: String): Boolean {
         if (!permissions.contains(token)) {

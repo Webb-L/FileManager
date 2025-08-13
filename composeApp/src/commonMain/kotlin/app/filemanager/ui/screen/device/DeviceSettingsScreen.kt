@@ -26,6 +26,7 @@ import app.filemanager.data.main.DeviceType.*
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.ui.components.EditableExposedDropdownMenu
 import app.filemanager.ui.components.GridList
+import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.ui.state.device.DeviceRoleState
 import app.filemanager.ui.state.device.DeviceSettingsState
 import app.filemanager.ui.state.main.MainState
@@ -57,6 +58,7 @@ class DeviceSettingsScreen() : Screen {
         val navigator = LocalNavigator.currentOrThrow
         val mainState = koinInject<MainState>()
         val deviceSettingsState = koinInject<DeviceSettingsState>()
+        val deviceCertificateState = koinInject<DeviceCertificateState>()
         val scope = rememberCoroutineScope()
 
         var isShowSearch by remember { mutableStateOf(false) }
@@ -178,7 +180,16 @@ class DeviceSettingsScreen() : Screen {
                 EditDeviceDialog(
                     device = updateDevice!!.second,
                     onDismissRequest = { updateDevice = null },
-                    onSaveChange = { deviceSettingsState.updateDevice(updateDevice!!.first, it) }
+                    onSaveChange = {
+                        // 获取原来的roleId用于比较
+                        val oldRoleId = deviceSettingsState.devices[updateDevice!!.first].roleId
+                        val roleIdChanged = oldRoleId != it.roleId
+                        deviceSettingsState.updateDevice(updateDevice!!.first, it)
+                        if (roleIdChanged) {
+                            deviceCertificateState.setDevicePermission(it.id, it.roleId)
+                        }
+                        updateDevice = null
+                    }
                 )
             }
         }

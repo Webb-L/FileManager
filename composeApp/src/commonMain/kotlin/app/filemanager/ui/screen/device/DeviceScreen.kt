@@ -23,6 +23,7 @@ import app.filemanager.data.main.Share
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.ui.components.GridList
+import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.MainState
@@ -62,6 +63,7 @@ class DeviceScreen : Screen {
         val deviceState = koinInject<DeviceState>()
         val fileState = koinInject<FileState>()
         val database = koinInject<FileManagerDatabase>()
+        val deviceCertificateState = koinInject<DeviceCertificateState>()
 
         val deskType by fileState.deskType.collectAsState()
 
@@ -113,20 +115,23 @@ class DeviceScreen : Screen {
                 confirmButton = {
                     TextButton(
                         onClick = {
+                            val deviceId = selectedDevice!!.id
+
                             // 从数据库删除设备
-                            database.deviceQueries.deleteById(selectedDevice!!.id)
-                            database.deviceConnectQueries.deleteById(selectedDevice!!.id)
-                            
+                            database.deviceQueries.deleteById(deviceId)
+                            database.deviceConnectQueries.deleteById(deviceId)
+
+                            // TODO: 添加断开连接逻辑
                             // 从socketDevices列表移除
-                            deviceState.socketDevices.removeAll { it.id == selectedDevice!!.id }
-                            
+                            deviceState.socketDevices.removeAll { it.id == deviceId }
+
                             // 从devices列表移除
-                            deviceState.devices.removeAll { it.id == selectedDevice!!.id }
+                            deviceState.devices.removeAll { it.id == deviceId }
                             
                             // 从shares列表移除
-                            deviceState.shares.removeAll { it.id == selectedDevice!!.id }
+                            deviceState.shares.removeAll { it.id == deviceId }
 
-                            // TODO 如果设备有链接需要移除否则会出现权限越级漏洞。
+                            deviceCertificateState.removeDeviceToken(selectedDevice!!.id)
                             
                             // 如果当前桌面显示的是该设备，切换到本地
                             if (deskType is Device && (deskType as Device).id == selectedDevice!!.id) {
