@@ -19,6 +19,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.launch
+import kotlinx.html.Entities
 import kotlinx.rpc.annotations.Rpc
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -181,8 +182,16 @@ class FileServiceImpl() : FileService, KoinComponent {
         }
 
         return WebSocketResult(
-            value = names.map {
-                val rename = FileUtils.deleteFile(it)
+            value = names.map {path->
+                if (deviceCertificateState.checkPermission(
+                        token,
+                        path,
+                        "remove"
+                    )
+                ) {
+                    return@map AuthorityException("对方没有为你设置权限").toSocketResult()
+                }
+                val rename = FileUtils.deleteFile(path)
                 if (rename.isFailure) {
                     val exceptionOrNull = rename.exceptionOrNull() ?: EmptyDataException()
                     WebSocketResult(

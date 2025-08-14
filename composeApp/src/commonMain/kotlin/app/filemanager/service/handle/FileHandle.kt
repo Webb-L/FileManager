@@ -56,8 +56,8 @@ class FileHandle(private val rpc: RpcClientManager) : KoinComponent {
 
         // 获取列表中的第一个元素并判断其是否成功
         val firstResult = webSocketResults.first()
-        if (firstResult.isSuccess) {
-            replyCallback(Result.success(firstResult.value ?: false))
+        if (firstResult.isSuccess && firstResult.value == true) {
+            replyCallback(Result.success(firstResult.value))
         } else {
             replyCallback(Result.failure(firstResult.deSerializable()))
         }
@@ -120,13 +120,26 @@ class FileHandle(private val rpc: RpcClientManager) : KoinComponent {
             rpc.token,
             paths
         )
+        if (result.isSuccess) {
+            val webSocketResults = result.value.orEmpty()
 
-        if (!result.isSuccess) {
-            replyCallback(Result.failure(result.deSerializable()))
+            if (webSocketResults.isEmpty()) {
+                replyCallback(Result.failure(Exception("删除失败")))
+                return
+            }
+
+            for (socketResult in webSocketResults) {
+                if (!socketResult.isSuccess) {
+                    replyCallback(Result.failure(socketResult.deSerializable()))
+                    return
+                }
+            }
+
+            replyCallback(Result.success(webSocketResults.map { it.value ?: false }))
             return
         }
 
-        replyCallback(Result.success(result.value.orEmpty().map { it.value ?: false }))
+        replyCallback(Result.failure(result.deSerializable()))
     }
 
     suspend fun writeBytes(

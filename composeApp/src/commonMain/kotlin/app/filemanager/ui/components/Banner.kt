@@ -218,27 +218,45 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
             ).executeAsOneOrNull()
 
             if (deviceConnect == null || deviceConnect.roleId == -1L) {
-                // 设备首次连接或未设置角色，需要选择角色
-                pendingConnectionType = connectionType
-                showRoleDialog = true
+                if (connectionType == PERMANENTLY_BANNED) {
+                    database.deviceConnectQueries.insert(
+                        socketDevice.id,
+                        connectionType,
+                        DeviceCategory.SERVER,
+                        -1L
+                    )
+                    deviceState.connectionRequest[socketDevice.id] = Pair(
+                        connectionType,
+                        deviceState.connectionRequest[socketDevice.id]!!.second
+                    )
+                    expanded = false
+                } else {
+                    // 设备首次连接或未设置角色，需要选择角色
+                    pendingConnectionType = connectionType
+                    showRoleDialog = true
+                }
             } else {
                 // roleId已设置，直接执行连接
                 deviceState.connectionRequest[socketDevice.id] =
                     Pair(connectionType, deviceState.connectionRequest[socketDevice.id]!!.second)
-                if (connectionType == AUTO_CONNECT) {
+                if (connectionType == AUTO_CONNECT || connectionType == PERMANENTLY_BANNED) {
+                    // 更新数据库中的连接状态
+                    database.deviceConnectQueries.updateNameConnectTypeRoleIdByIdAndCategory(
+                        connectionType,
+                        deviceConnect.roleId,
+                        socketDevice.id,
+                        DeviceCategory.SERVER
+                    )
                     expanded = false
                 }
             }
         }
     }
 
-    fun handleAgree() = handleConnectionRequest(APPROVED)
-    fun handleAutoConnect() = handleConnectionRequest(AUTO_CONNECT)
-
     MaterialBanner(
         message = "${socketDevice.name} 请求和您创建连接。\n${timeText} 后将会自动拒绝。",
         actionLabel = "同意",
-        onActionClick = { handleAgree() },
+        onActionClick = { handleConnectionRequest(APPROVED) },
         menu = {
             Box(modifier = Modifier.wrapContentSize(Alignment.TopStart)) {
                 IconButton({ expanded = true }) {
@@ -255,17 +273,11 @@ fun MaterialBannerDeviceConnect(socketDevice: SocketDevice) {
                 ) {
                     DropdownMenuItem(
                         text = { Text("自动同意") },
-                        onClick = { handleAutoConnect() }
+                        onClick = { handleConnectionRequest(AUTO_CONNECT) }
                     )
                     DropdownMenuItem(
                         text = { Text("自动拒绝") },
-                        onClick = {
-                            deviceState.connectionRequest[socketDevice.id] = Pair(
-                                PERMANENTLY_BANNED,
-                                deviceState.connectionRequest[socketDevice.id]!!.second
-                            )
-                            expanded = false
-                        }
+                        onClick = { handleConnectionRequest(PERMANENTLY_BANNED) }
                     )
                     DropdownMenuItem(
                         text = { Text("拒绝") },

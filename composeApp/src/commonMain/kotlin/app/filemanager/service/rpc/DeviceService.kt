@@ -92,6 +92,17 @@ class DeviceServiceImpl() : DeviceService, KoinComponent {
         } else {
             deviceState.connectionRequest[device.id] = Pair(WAITING, System.currentTimeMillis())
             if (deviceState.socketDevices.firstOrNull { it.id == device.id } == null) {
+                val deviceData = database.deviceQueries.queryById(device.id).executeAsOneOrNull()
+                if (deviceData == null) {
+                    database.deviceQueries.insert(
+                        id = device.id,
+                        name = device.name,
+                        host = device.host,
+                        port = device.port.toLong(),
+                        type = device.type
+                    )
+                }
+
                 deviceState.socketDevices.add(
                     device.withCopy(
                         connectType = ConnectType.New

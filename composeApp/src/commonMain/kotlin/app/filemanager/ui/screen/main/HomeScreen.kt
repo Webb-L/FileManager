@@ -61,7 +61,7 @@ object HomeScreen : Screen {
         val isWarningOperationDialog by fileOperationState.isWarningOperationDialog.collectAsState()
 
         val deviceState = koinInject<DeviceState>()
-        
+
         var showSearchDialog by remember { mutableStateOf(false) }
 
         val snackbarHostState = remember { SnackbarHostState() }
@@ -70,7 +70,7 @@ object HomeScreen : Screen {
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = { HomeBottomBar(snackbarHostState) },
             floatingActionButton = {
-                if (fileState.checkedFileSimpleInfo.isEmpty() && deskType is Device) {
+                if (fileState.checkedFileSimpleInfo.isEmpty() && deskType !is Share) {
                     ExtendedFloatingActionButton({ fileState.updateCreateFolder(true) }) {
                         Icon(Icons.Filled.Add, null)
                         Spacer(Modifier.width(8.dp))
@@ -107,14 +107,17 @@ object HomeScreen : Screen {
                 fileState.updateCreateFolder(false)
                 if (it.isEmpty()) return@TextFieldDialog
                 scope.launch(Dispatchers.Default) {
-                    val result = fileState.createFolder(path, it)
-                    if (result.isFailure) {
-                        snackbarHostState.showSnackbar(
-                            message = result.exceptionOrNull()?.message ?: "创建失败",
-                            withDismissAction = true,
-                            duration = SnackbarDuration.Short
-                        )
-                    }
+                    fileState.createFolder(path, it)
+                        .onSuccess {
+                            fileState.updateFileAndFolder()
+                        }
+                        .onFailure { throwable ->
+                            snackbarHostState.showSnackbar(
+                                message = throwable.message ?: "创建失败",
+                                withDismissAction = true,
+                                duration = SnackbarDuration.Short
+                            )
+                        }
                 }
             }
         }
@@ -138,7 +141,7 @@ object HomeScreen : Screen {
         if (showSearchDialog) {
             SearchDialog(
                 searchText = searchText,
-                onDismiss = { 
+                onDismiss = {
                     showSearchDialog = false
                     fileFilterState.updateSearch(false)
                 },

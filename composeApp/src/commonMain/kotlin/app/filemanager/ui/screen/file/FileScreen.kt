@@ -124,8 +124,17 @@ fun FileScreen(snackbarHostState: SnackbarHostState) {
             }
             scope.launch(Dispatchers.Default) {
                 fileState.rename(path, fileInfo!!.name, it)
-                fileFilterState.updateFilerKey()
-                fileState.updateFileInfo(null)
+                    .onSuccess {
+                        fileFilterState.updateFilerKey()
+                        fileState.updateFileInfo(null)
+                    }
+                    .onFailure { throwable ->
+                        snackbarHostState.showSnackbar(
+                            message = throwable.message ?: "创建失败",
+                            withDismissAction = true,
+                            duration = SnackbarDuration.Short
+                        )
+                    }
             }
         }
     }

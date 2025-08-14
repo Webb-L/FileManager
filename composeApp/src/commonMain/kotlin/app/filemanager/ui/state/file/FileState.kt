@@ -98,9 +98,9 @@ class FileState : KoinComponent {
         }
 
         var isReturn = false
+        var result: Result<List<FileSimpleInfo>> = Result.success(emptyList())
         if (_deskType.value is Device) {
             val device = _deskType.value as Device
-            var result: Result<List<FileSimpleInfo>> = Result.success(emptyList())
             device.getFileList(path) {
                 result = it
                 isReturn = true
@@ -114,7 +114,6 @@ class FileState : KoinComponent {
 
         if (_deskType.value is Share) {
             val share = _deskType.value as Share
-            var result: Result<List<FileSimpleInfo>> = Result.success(emptyList())
             share.getFileList(path) {
                 result = it
                 isReturn = true
@@ -187,7 +186,6 @@ class FileState : KoinComponent {
                 delay(100L)
             }
 
-            updateFileAndFolder()
             return result
         }
 
@@ -211,7 +209,6 @@ class FileState : KoinComponent {
             while (!isReturn) {
                 delay(100L)
             }
-            updateFileAndFolder()
             return result
         }
 
