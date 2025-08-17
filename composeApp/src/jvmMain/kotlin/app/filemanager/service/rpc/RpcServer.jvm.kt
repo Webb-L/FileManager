@@ -17,7 +17,6 @@ import io.ktor.server.netty.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sse.*
-import kotlinx.datetime.Clock
 import kotlinx.rpc.krpc.ktor.server.Krpc
 import kotlinx.rpc.krpc.ktor.server.rpc
 import kotlinx.rpc.krpc.serialization.protobuf.protobuf
@@ -30,7 +29,6 @@ import java.net.Inet4Address
 import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.NetworkInterface
-import kotlin.collections.set
 
 @OptIn(ExperimentalSerializationApi::class)
 actual suspend fun startRpcServer() {
@@ -65,8 +63,7 @@ actual suspend fun startRpcServer() {
                         protobuf()
                     }
                 }
-
-                registerService<DeviceService> { DeviceServiceImpl() }
+                registerService<DeviceService> { DeviceServiceImpl(this) }
                 registerService<BookmarkService> { BookmarkServiceImpl() }
                 registerService<FileService> { FileServiceImpl() }
                 registerService<PathService> { PathServiceImpl() }

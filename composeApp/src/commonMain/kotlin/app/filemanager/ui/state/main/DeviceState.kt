@@ -60,6 +60,9 @@ class DeviceState : KoinComponent {
 
     val socketDevices = mutableStateListOf<SocketDevice>()
 
+    // 存储远程设备连接服务器的RPC路由映射，key为设备ID，value为对应的KrpcRoute
+    val remoteDeviceConnections = mutableMapOf<String, kotlinx.rpc.krpc.ktor.server.KrpcRoute>()
+
     private val _loadingDevices: MutableStateFlow<Boolean> = MutableStateFlow(true)
     val loadingDevices: StateFlow<Boolean> = _loadingDevices
     fun updateLoadingDevices(value: Boolean) {

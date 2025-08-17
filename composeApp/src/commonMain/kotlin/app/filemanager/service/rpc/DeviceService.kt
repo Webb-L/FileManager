@@ -10,6 +10,7 @@ import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
 import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.ui.state.main.DeviceState
+import io.ktor.websocket.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import kotlinx.rpc.annotations.Rpc
@@ -21,7 +22,7 @@ interface DeviceService {
     suspend fun connect(device: SocketDevice): Pair<DeviceConnectType, String>
 }
 
-class DeviceServiceImpl() : DeviceService, KoinComponent {
+class DeviceServiceImpl(private val route: kotlinx.rpc.krpc.ktor.server.KrpcRoute) : DeviceService, KoinComponent {
     private val database by inject<FileManagerDatabase>()
     private val deviceState by inject<DeviceState>()
     private val deviceCertificateState by inject<DeviceCertificateState>()
@@ -29,27 +30,28 @@ class DeviceServiceImpl() : DeviceService, KoinComponent {
     override suspend fun connect(device: SocketDevice): Pair<DeviceConnectType, String> {
         val queriedDevice =
             database.deviceConnectQueries.queryByIdAndCategory(device.id, DeviceCategory.SERVER).executeAsOneOrNull()
+        deviceState.remoteDeviceConnections[device.id] = route
 
         val randomString = 32.randomString()
         if (queriedDevice != null) {
             when (queriedDevice.connectionType) {
-                PERMANENTLY_BANNED,
-                AUTO_CONNECT -> {
+                PERMANENTLY_BANNED, AUTO_CONNECT -> {
                     if (queriedDevice.connectionType == PERMANENTLY_BANNED) {
+                        route.close()
                         return Pair(REJECTED, "")
                     }
                     if (queriedDevice.connectionType == AUTO_CONNECT) {
                         deviceCertificateState.setDeviceTokenAndPermission(
                             device.id,
                             randomString,
-                            queriedDevice.roleId
+                            queriedDevice.roleId,
                         )
                         return Pair(APPROVED, randomString)
                     }
                     database.deviceConnectQueries.updateConnectionTypeByIdAndCategory(
                         connectionType = queriedDevice.connectionType,
                         id = device.id,
-                        category = DeviceCategory.SERVER
+                        category = DeviceCategory.SERVER,
                     )
                 }
 
@@ -58,7 +60,7 @@ class DeviceServiceImpl() : DeviceService, KoinComponent {
                     if (deviceState.socketDevices.firstOrNull { it.id == device.id } == null) {
                         deviceState.socketDevices.add(
                             device.withCopy(
-                                connectType = ConnectType.UnConnect
+                                connectType = ConnectType.UnConnect,
                             )
                         )
                     }
@@ -68,20 +70,21 @@ class DeviceServiceImpl() : DeviceService, KoinComponent {
                                 delay(300L)
                             }
                             when (deviceState.connectionRequest[device.id]!!.first) {
-                                AUTO_CONNECT, APPROVED -> {
-                                    deviceCertificateState.setDeviceTokenAndPermission(
-                                        device.id,
-                                        randomString,
-                                        queriedDevice.roleId
-                                    )
-                                    return@withTimeout Pair(APPROVED, randomString)
-                                }
+                                AUTO_CONNECT, APPROVED -> {}
 
                                 else -> throw Exception()
                             }
+
+                            deviceCertificateState.setDeviceTokenAndPermission(
+                                device.id,
+                                randomString,
+                                queriedDevice.roleId,
+                            )
+                            return@withTimeout Pair(APPROVED, randomString)
                         }
                     } catch (e: Exception) {
                         deviceState.connectionRequest.remove(device.id)
+                        route.close()
                         Pair(REJECTED, "")
                     }
                 }
@@ -105,7 +108,7 @@ class DeviceServiceImpl() : DeviceService, KoinComponent {
 
                 deviceState.socketDevices.add(
                     device.withCopy(
-                        connectType = ConnectType.New
+                        connectType = ConnectType.New,
                     )
                 )
             }
@@ -119,7 +122,7 @@ class DeviceServiceImpl() : DeviceService, KoinComponent {
                         AUTO_CONNECT, APPROVED -> {
                             roleId = (database.deviceConnectQueries.queryRoleIdByIdAndCategory(
                                 device.id,
-                                DeviceCategory.SERVER
+                                DeviceCategory.SERVER,
                             ).executeAsOneOrNull() ?: -1)
                         }
 
@@ -128,16 +131,17 @@ class DeviceServiceImpl() : DeviceService, KoinComponent {
                     deviceCertificateState.setDeviceTokenAndPermission(
                         device.id,
                         randomString,
-                        roleId
+                        roleId,
                     )
                     return@withTimeout Pair(APPROVED, randomString)
                 }
             } catch (e: Exception) {
                 deviceState.connectionRequest.remove(device.id)
+                route.close()
                 Pair(REJECTED, "")
             }
         }
-
+        route.close()
         return Pair(REJECTED, "")
     }
 }

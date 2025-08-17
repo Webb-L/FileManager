@@ -30,9 +30,22 @@ import app.filemanager.ui.state.main.MainState
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
+import io.ktor.websocket.*
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import app.filemanager.db.Device as DbDevice
 
+/**
+ * 设备管理屏幕
+ * 提供设备列表的显示、搜索、编辑和删除功能
+ * 
+ * 主要功能：
+ * - 设备列表展示：根据设备类型筛选显示设备
+ * - 搜索功能：支持按设备名称搜索
+ * - 设备编辑：修改设备名称
+ * - 设备删除：删除设备及相关连接
+ * - 类型筛选：支持按设备类型（PC、iOS、Android、浏览器）筛选
+ */
 class DeviceScreen : Screen {
     /**
      * 这是一个用于显示和管理设备列表的可组合函数。它包括设备的展示、搜索功能、
@@ -67,16 +80,18 @@ class DeviceScreen : Screen {
 
         val deskType by fileState.deskType.collectAsState()
 
-        // 在DeviceScreen类中添加状态变量
-        var showSearchDialog by remember { mutableStateOf(false) }
-        var searchQuery by remember { mutableStateOf("") }
+        // 搜索相关状态
+        var showSearchDialog by remember { mutableStateOf(false) } // 是否显示搜索对话框
+        var searchQuery by remember { mutableStateOf("") } // 搜索查询字符串
 
-
-        var devices by remember { mutableStateOf(emptyList<DbDevice>()) }
-        var showEditDialog by remember { mutableStateOf(false) }
-        var showDeleteDialog by remember { mutableStateOf(false) }
-        var selectedDevice by remember { mutableStateOf<DbDevice?>(null) }
-        var editedName by remember { mutableStateOf("") }
+        // 设备列表和编辑相关状态
+        var devices by remember { mutableStateOf(emptyList<DbDevice>()) } // 当前显示的设备列表
+        var showEditDialog by remember { mutableStateOf(false) } // 是否显示编辑对话框
+        var showDeleteDialog by remember { mutableStateOf(false) } // 是否显示删除确认对话框
+        var selectedDevice by remember { mutableStateOf<DbDevice?>(null) } // 当前选中的设备
+        var editedName by remember { mutableStateOf("") } // 编辑中的设备名称
+        
+        // 设备类型筛选选项
         val deviceTypes = listOf(
             null to "全部",
             DeviceType.JVM to "PC",
@@ -84,9 +99,14 @@ class DeviceScreen : Screen {
             DeviceType.Android to "安卓",
             DeviceType.JS to "浏览器",
         )
-        var deviceType by remember { mutableStateOf<DeviceType?>(null) }
+        var deviceType by remember { mutableStateOf<DeviceType?>(null) } // 当前选择的设备类型筛选
 
-        // 刷新设备列表
+        val scope = rememberCoroutineScope()
+
+        /**
+         * 刷新设备列表
+         * 根据当前选择的设备类型和搜索查询条件从数据库查询设备列表
+         */
         fun refreshDevices() {
             val typesToQuery = if (deviceType == null) {
                 listOf(DeviceType.JVM, DeviceType.IOS, DeviceType.Android, DeviceType.JS)
@@ -102,58 +122,60 @@ class DeviceScreen : Screen {
             ).executeAsList()
         }
 
+        /**
+         * 删除设备的处理逻辑
+         * 从数据库、内存列表和远程连接中完全移除设备
+         * 如果当前桌面显示的是该设备，则切换到本地桌面
+         */
+        fun deleteDevice() {
+            selectedDevice?.let { device ->
+                val deviceId = device.id
+
+                // 从数据库删除设备
+                database.deviceQueries.deleteById(deviceId)
+                database.deviceConnectQueries.deleteById(deviceId)
+
+                // 从socketDevices列表移除
+                val deviceToRemove = deviceState.socketDevices.find { it.id == deviceId }
+                deviceToRemove?.let { deviceState.socketDevices.remove(it) }
+                scope.launch {
+                    deviceState.remoteDeviceConnections[deviceId]?.close()
+                    deviceState.remoteDeviceConnections.remove(deviceId)
+                }
+
+                // 从devices列表移除
+                deviceState.devices.removeAll { it.id == deviceId }
+
+                // TODO 删除数据
+                // 从shares列表移除
+                deviceState.shares.removeAll { it.id == deviceId }
+
+                deviceCertificateState.removeDeviceToken(device.id)
+
+                // 如果当前桌面显示的是该设备，切换到本地
+                if (deskType is Device && (deskType as Device).id == device.id) {
+                    fileState.updateDesk(FileProtocol.Local, Local())
+                }
+                if (deskType is Share && (deskType as Share).id == device.id) {
+                    fileState.updateDesk(FileProtocol.Local, Local())
+                }
+
+                refreshDevices()
+                showDeleteDialog = false
+                selectedDevice = null
+            }
+        }
+
         LaunchedEffect(Unit) {
             refreshDevices()
         }
 
         // 删除确认对话框
         if (showDeleteDialog && selectedDevice != null) {
-            AlertDialog(
-                onDismissRequest = { showDeleteDialog = false },
-                title = { Text("确认删除") },
-                text = { Text("确定要删除设备 \"${selectedDevice!!.name}\" 吗？") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            val deviceId = selectedDevice!!.id
-
-                            // 从数据库删除设备
-                            database.deviceQueries.deleteById(deviceId)
-                            database.deviceConnectQueries.deleteById(deviceId)
-
-                            // TODO: 添加断开连接逻辑
-                            // 从socketDevices列表移除
-                            deviceState.socketDevices.removeAll { it.id == deviceId }
-
-                            // 从devices列表移除
-                            deviceState.devices.removeAll { it.id == deviceId }
-                            
-                            // 从shares列表移除
-                            deviceState.shares.removeAll { it.id == deviceId }
-
-                            deviceCertificateState.removeDeviceToken(selectedDevice!!.id)
-                            
-                            // 如果当前桌面显示的是该设备，切换到本地
-                            if (deskType is Device && (deskType as Device).id == selectedDevice!!.id) {
-                                fileState.updateDesk(FileProtocol.Local, Local())
-                            }
-                            if (deskType is Share && (deskType as Share).id == selectedDevice!!.id) {
-                                fileState.updateDesk(FileProtocol.Local, Local())
-                            }
-                            
-                            refreshDevices()
-                            showDeleteDialog = false
-                            selectedDevice = null
-                        }
-                    ) {
-                        Text("删除")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteDialog = false }) {
-                        Text("取消")
-                    }
-                }
+            DeleteDeviceDialog(
+                selectedDevice = selectedDevice!!,
+                onConfirm = { deleteDevice() },
+                onDismiss = { showDeleteDialog = false }
             )
         }
 
@@ -298,7 +320,15 @@ class DeviceScreen : Screen {
         }
     }
 
-    // 添加搜索对话框组件
+    /**
+     * 搜索对话框组件
+     * 提供设备搜索功能，允许用户输入设备名称进行搜索
+     * 
+     * @param searchQuery 当前搜索查询字符串
+     * @param onSearchQueryChange 搜索查询变更回调
+     * @param onDismiss 关闭对话框回调
+     * @param onSearch 执行搜索回调
+     */
     @Composable
     private fun SearchDialog(
         searchQuery: String,
@@ -451,6 +481,37 @@ class DeviceScreen : Screen {
                     onClick = { onConfirm(selectedDevice) }
                 ) {
                     Text("确定")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
+    /**
+     * 删除设备确认对话框
+     * 显示删除确认对话框，确保用户确认删除操作
+     * 
+     * @param selectedDevice 要删除的设备
+     * @param onConfirm 确认删除回调
+     * @param onDismiss 取消删除回调
+     */
+    @Composable
+    private fun DeleteDeviceDialog(
+        selectedDevice: DbDevice,
+        onConfirm: () -> Unit,
+        onDismiss: () -> Unit
+    ) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("确认删除") },
+            text = { Text("确定要删除设备 \"${selectedDevice.name}\" 吗？") },
+            confirmButton = {
+                TextButton(onClick = onConfirm) {
+                    Text("删除")
                 }
             },
             dismissButton = {
