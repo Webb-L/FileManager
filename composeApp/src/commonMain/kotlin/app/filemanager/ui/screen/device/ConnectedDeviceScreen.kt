@@ -8,17 +8,19 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import app.filemanager.db.FileManagerDatabase
 import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.DeviceIcon
-import app.filemanager.service.data.SocketDevice
 import app.filemanager.ui.components.GridList
 import app.filemanager.ui.state.main.DeviceState
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import io.ktor.websocket.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import app.filemanager.db.Device as DatabaseDevice
 
 /**
  * 正在连接的设备屏幕
@@ -37,18 +39,29 @@ class ConnectedDeviceScreen : Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val deviceState = koinInject<DeviceState>()
+        val database = koinInject<FileManagerDatabase>()
         val scope = rememberCoroutineScope()
         
         // 连接设备相关状态
         var showDisconnectDialog by remember { mutableStateOf(false) } // 是否显示断开连接确认对话框
-        var selectedDevice by remember { mutableStateOf<SocketDevice?>(null) } // 当前选中的设备
+        var selectedDevice by remember { mutableStateOf<DatabaseDevice?>(null) } // 当前选中的设备
         var showDisconnectAllDialog by remember { mutableStateOf(false) } // 是否显示断开所有连接确认对话框
         
-        // 获取连接的设备列表
-        val connectedDevices by remember {
-            derivedStateOf {
-                deviceState.socketDevices.filter { device ->
-                    deviceState.remoteDeviceConnections.containsKey(device.id)
+        // 通过数据库获取连接的设备列表，而不是通过socketDevices
+        var connectedDevices by remember { mutableStateOf(emptyList<DatabaseDevice>()) }
+        
+        // 加载连接的设备数据
+        LaunchedEffect(deviceState.remoteDeviceConnections) {
+            scope.launch(Dispatchers.Default) {
+                val connectedDeviceIds = deviceState.remoteDeviceConnections.keys.toList()
+                if (connectedDeviceIds.isNotEmpty()) {
+                    // 通过数据库查询获取设备信息，避免依赖内存中的socketDevices
+                    val devices = connectedDeviceIds.mapNotNull { deviceId ->
+                        database.deviceQueries.queryById(deviceId).executeAsOneOrNull()
+                    }
+                    connectedDevices = devices
+                } else {
+                    connectedDevices = emptyList()
                 }
             }
         }
@@ -148,14 +161,14 @@ class ConnectedDeviceScreen : Screen {
     
     /**
      * 连接设备列表项
-     * 显示设备图标、名称和断开连接按钮
+     * 显示设备图标、名称、设备ID和断开连接按钮
      * 
      * @param device 连接的设备信息
      * @param onDisconnectClick 断开连接点击回调
      */
     @Composable
     private fun ConnectedDeviceListItem(
-        device: SocketDevice,
+        device: DatabaseDevice,
         onDisconnectClick: () -> Unit
     ) {
         ListItem(
@@ -186,7 +199,7 @@ class ConnectedDeviceScreen : Screen {
      */
     @Composable
     private fun DisconnectDeviceDialog(
-        selectedDevice: SocketDevice,
+        selectedDevice: DatabaseDevice,
         onConfirm: () -> Unit,
         onDismiss: () -> Unit
     ) {
