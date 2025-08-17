@@ -24,13 +24,14 @@ import app.filemanager.data.StatusEnum
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.toIcon
 import app.filemanager.data.main.*
-import app.filemanager.data.main.DeviceType.*
 import app.filemanager.db.FileManagerDatabase
+import app.filemanager.extensions.DeviceIcon
 import app.filemanager.service.data.ConnectType.*
 import app.filemanager.service.data.SocketDevice
 import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
 import app.filemanager.service.rpc.SocketClientIPEnum
 import app.filemanager.service.rpc.getAllIPAddresses
+import app.filemanager.ui.screen.device.ConnectedDeviceScreen
 import app.filemanager.ui.screen.device.DeviceScreen
 import app.filemanager.ui.screen.device.DeviceSettingsScreen
 import app.filemanager.ui.screen.file.FavoriteScreen
@@ -41,6 +42,7 @@ import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.*
 import app.filemanager.ui.state.main.DrawerState
 import app.filemanager.utils.WindowSizeClass
+import io.ktor.websocket.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -48,23 +50,23 @@ import org.koin.compose.koinInject
 
 // 通用的设备状态更新函数
 private fun updateDeviceStateAndConnect(
-    deviceState: DeviceState, 
-    scope: CoroutineScope, 
-    device: SocketDevice, 
-    connectType: app.filemanager.service.data.ConnectType, 
+    deviceState: DeviceState,
+    scope: CoroutineScope,
+    device: SocketDevice,
+    connectType: app.filemanager.service.data.ConnectType,
     shouldConnect: Boolean = false
 ) {
     // 通用的设备状态更新逻辑
     fun updateDeviceConnectType(deviceId: String, newConnectType: app.filemanager.service.data.ConnectType) {
-        val updatedDevices = deviceState.socketDevices.map { 
-            if (it.id == deviceId) it.withCopy(connectType = newConnectType) else it 
+        val updatedDevices = deviceState.socketDevices.map {
+            if (it.id == deviceId) it.withCopy(connectType = newConnectType) else it
         }
         deviceState.socketDevices.clear()
         deviceState.socketDevices.addAll(updatedDevices)
     }
-    
+
     updateDeviceConnectType(device.id, connectType)
-    
+
     if (shouldConnect) {
         scope.launch {
             try {
@@ -136,6 +138,11 @@ fun AppDrawer() {
             item { HorizontalDivider() }
             item { AppDrawerDevice() }
             item { HorizontalDivider() }
+            // 展示当前连接设备ui和Task一样
+            if (deviceState.remoteDeviceConnections.keys.isNotEmpty()) {
+                item { AppDrawerConnectedDevice() }
+                item { HorizontalDivider() }
+            }
             item { AppDrawerShare() }
 // TODO 3.0版本
 //            item { HorizontalDivider() }
@@ -557,12 +564,7 @@ private fun AppDrawerDevice() {
                         return@NavigationDrawerItem
                     }
 
-                    when (device.type) {
-                        Android -> Icon(Icons.Default.PhoneAndroid, null)
-                        IOS -> Icon(Icons.Default.PhoneIphone, null)
-                        JVM -> Icon(Icons.Default.Devices, null)
-                        JS -> Icon(Icons.Default.Javascript, null)
-                    }
+                    device.type.DeviceIcon()
                 },
                 badge = {
                     when (device.connectType) {
@@ -656,12 +658,7 @@ private fun AppDrawerShare() {
         for ((index, share) in deviceState.shares.withIndex()) {
             NavigationDrawerItem(
                 icon = {
-                    when (share.type) {
-                        Android -> Icon(Icons.Default.PhoneAndroid, null)
-                        IOS -> Icon(Icons.Default.PhoneIphone, null)
-                        JVM -> Icon(Icons.Default.Devices, null)
-                        JS -> Icon(Icons.Default.Javascript, null)
-                    }
+                    share.type.DeviceIcon()
                 },
                 label = { Text(share.name) },
                 selected = false,
@@ -701,6 +698,91 @@ private fun AppDrawerHeader(title: String, actions: @Composable () -> Unit) {
         Text(title)
         Spacer(Modifier.weight(1f))
         actions()
+    }
+}
+
+@Composable
+private fun AppDrawerConnectedDevice() {
+    val mainState = koinInject<MainState>()
+    val deviceState = koinInject<DeviceState>()
+    val scope = rememberCoroutineScope()
+
+    // 获取连接的设备列表
+    val connectedDevices by remember {
+        derivedStateOf {
+            deviceState.socketDevices.filter { device ->
+                deviceState.remoteDeviceConnections.containsKey(device.id)
+            }
+        }
+    }
+
+    AppDrawerItem("连接设备", actions = {}) {
+        if (connectedDevices.size > 1) {
+            NavigationDrawerItem(
+                icon = { Icon(Icons.Default.Cable, null) },
+                label = {
+                    Column {
+                        Text(connectedDevices.first().name)
+                        Text(
+                            "查看更多(${connectedDevices.size})",
+                            style = typography.bodySmall
+                        )
+                    }
+                },
+                selected = false,
+                onClick = {
+                    if (mainState.windowSize == WindowSizeClass.Compact) {
+                        mainState.updateExpandDrawer(false)
+                    }
+                    mainState.navigator?.push(ConnectedDeviceScreen())
+                },
+                badge = {
+                    Icon(Icons.Default.ExpandLess, null, Modifier.rotate(90f))
+                },
+                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+            )
+            return@AppDrawerItem
+        }
+
+        val device = connectedDevices.first()
+        NavigationDrawerItem(
+            icon = { device.type.DeviceIcon() },
+            label = {
+                Column {
+                    Text(device.name)
+                    Row {
+                        Text(
+                            "已连接",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = typography.bodySmall
+                        )
+                    }
+                }
+            },
+            selected = false,
+            onClick = {
+                if (mainState.windowSize == WindowSizeClass.Compact) {
+                    mainState.updateExpandDrawer(false)
+                }
+                mainState.navigator?.push(ConnectedDeviceScreen())
+            },
+            badge = {
+                Icon(
+                    Icons.Default.Close,
+                    "断开连接",
+                    Modifier
+                        .clip(RoundedCornerShape(25.dp))
+                        .clickable {
+                            scope.launch {
+                                deviceState.remoteDeviceConnections[device.id]?.close()
+                                deviceState.remoteDeviceConnections.remove(device.id)
+                            }
+                        }
+                )
+            },
+            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+        )
     }
 }
 

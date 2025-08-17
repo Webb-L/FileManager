@@ -24,6 +24,7 @@ import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceConnectType.*
 import app.filemanager.data.main.DeviceType.*
 import app.filemanager.exception.EmptyDataException
+import app.filemanager.extensions.DeviceIcon
 import app.filemanager.ui.components.EditableExposedDropdownMenu
 import app.filemanager.ui.components.GridList
 import app.filemanager.ui.state.device.DeviceCertificateState
@@ -215,13 +216,7 @@ class DeviceSettingsScreen() : Screen {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        val icon = when (device.type) {
-                            Android -> Icons.Default.PhoneAndroid
-                            IOS -> Icons.Default.PhoneIphone
-                            JVM -> Icons.Default.Devices
-                            JS -> Icons.Default.Javascript
-                        }
-                        Icon(icon, null, modifier = Modifier.size(48.dp))
+                        device.type.DeviceIcon(modifier = Modifier.size(48.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
                             Text(
@@ -332,13 +327,7 @@ class DeviceSettingsScreen() : Screen {
                 )
             },
             leadingContent = {
-                val icon = when (device.type) {
-                    Android -> Icons.Default.PhoneAndroid
-                    IOS -> Icons.Default.PhoneIphone
-                    JVM -> Icons.Default.Devices
-                    JS -> Icons.Default.Javascript
-                }
-                Icon(icon, null)
+                device.type.DeviceIcon()
             },
             supportingContent = {
                 Row(verticalAlignment = Alignment.CenterVertically) {

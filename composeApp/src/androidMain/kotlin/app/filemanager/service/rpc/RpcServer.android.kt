@@ -16,9 +16,6 @@ import io.ktor.server.engine.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sse.*
-import kotlinx.datetime.Clock
-import kotlin.time.TimeSource
-import kotlinx.html.Entities
 import org.koin.java.KoinJavaComponent.inject
 import kotlinx.rpc.krpc.ktor.server.Krpc
 import kotlinx.rpc.krpc.ktor.server.rpc
@@ -62,7 +59,7 @@ actual suspend fun startRpcServer() {
                     }
                 }
 
-                registerService<DeviceService> { DeviceServiceImpl() }
+                registerService<DeviceService> { DeviceServiceImpl(this) }
                 registerService<BookmarkService> { BookmarkServiceImpl() }
                 registerService<FileService> { FileServiceImpl() }
                 registerService<PathService> { PathServiceImpl() }

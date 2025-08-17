@@ -16,6 +16,7 @@ import app.filemanager.data.main.DeviceType
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.db.deviceReceiveShare.SelectAll
 import app.filemanager.exception.EmptyDataException
+import app.filemanager.extensions.DeviceIcon
 import app.filemanager.ui.components.FileSelector
 import app.filemanager.ui.components.GridList
 import app.filemanager.ui.state.main.MainState
@@ -141,12 +142,7 @@ class FileShareSettingsScreen() : Screen {
                 }
             },
             leadingContent = {
-                when (device.type) {
-                    DeviceType.Android -> Icon(Icons.Default.PhoneAndroid, null)
-                    DeviceType.IOS -> Icon(Icons.Default.PhoneIphone, null)
-                    DeviceType.JVM -> Icon(Icons.Default.Devices, null)
-                    DeviceType.JS -> Icon(Icons.Default.Javascript, null)
-                }
+                device.type.DeviceIcon()
             },
             trailingContent = {
                 IconButton(
