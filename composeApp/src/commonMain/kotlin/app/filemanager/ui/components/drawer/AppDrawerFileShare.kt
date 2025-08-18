@@ -24,9 +24,17 @@ fun AppDrawerFileShare() {
     val fileShareState = koinInject<FileShareState>()
     val httpShareFileServer = HttpShareFileServer.getInstance(fileShareState)
     val scope = rememberCoroutineScope()
+    
+    // 使用共享状态
+    val isServerRunning by fileShareState.isHttpServerRunning.collectAsState()
+    
+    // 初始化状态
+    LaunchedEffect(Unit) {
+        fileShareState.updateHttpServerRunning(httpShareFileServer.isRunning())
+    }
 
     // 只有在服务运行时才显示
-    if (!httpShareFileServer.isRunning()) return
+    if (!isServerRunning) return
 
     // 关闭服务确认对话框状态
     var showStopServiceDialog by remember { mutableStateOf(false) }
@@ -85,12 +93,11 @@ fun AppDrawerFileShare() {
                             fileShareState.authorizedLinkShareDevices.clear()
                             fileShareState.pendingLinkShareDevices.clear()
                             fileShareState.rejectedLinkShareDevices.clear()
+                            // 更新共享状态
+                            fileShareState.updateHttpServerRunning(false)
                         }
                         showStopServiceDialog = false
                     },
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
                 ) {
                     Text("关闭服务")
                 }

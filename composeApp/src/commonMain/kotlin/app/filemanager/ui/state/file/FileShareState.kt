@@ -45,6 +45,13 @@ class FileShareState {
     fun updateAutoApprove(value: Boolean) {
         _autoApprove.value = value
     }
+
+    // HTTP服务运行状态
+    private val _isHttpServerRunning: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val isHttpServerRunning: StateFlow<Boolean> = _isHttpServerRunning
+    fun updateHttpServerRunning(isRunning: Boolean) {
+        _isHttpServerRunning.value = isRunning
+    }
 }
 
 

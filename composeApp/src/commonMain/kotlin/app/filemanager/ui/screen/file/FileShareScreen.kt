@@ -20,6 +20,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.MaterialTheme.colorScheme
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -640,6 +641,24 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
         }
 
         var isRunning by remember { mutableStateOf(httpShareFileServer.isRunning()) }
+        
+        // 添加一个状态来跟踪是否正在关闭中
+        var isClosing by remember { mutableStateOf(false) }
+
+        // 监听共享状态变化
+        val sharedServerRunning by fileShareState.isHttpServerRunning.collectAsState()
+        
+        // 初始化状态
+        LaunchedEffect(Unit) {
+            fileShareState.updateHttpServerRunning(httpShareFileServer.isRunning())
+        }
+        
+        // 同步本地状态与共享状态
+        LaunchedEffect(sharedServerRunning) {
+            if (!isClosing) {
+                isRunning = sharedServerRunning
+            }
+        }
 
         val qrCodeColor = colorScheme.primary.toArgb()
         val qrCodeBackground = colorScheme.background.toArgb()
@@ -647,9 +666,6 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
         var imageRequest by remember { mutableStateOf<ImageRequest?>(null) }
 
         val scope = rememberCoroutineScope()
-
-        // 添加一个状态来跟踪是否正在关闭中
-        var isClosing by remember { mutableStateOf(false) }
 
         LaunchedEffect(url) {
             imageRequest = ImageRequest(
@@ -782,6 +798,8 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
                                 } else {
                                     httpShareFileServer.start()
                                 }
+                                // 更新共享状态
+                                fileShareState.updateHttpServerRunning(httpShareFileServer.isRunning())
                                 isRunning = httpShareFileServer.isRunning()
                             }
                         },
