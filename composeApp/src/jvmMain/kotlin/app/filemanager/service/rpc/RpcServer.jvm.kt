@@ -7,6 +7,10 @@ import app.filemanager.data.main.DeviceConnectType.*
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
+import app.filemanager.service.routes.bookmarkRoutes
+import app.filemanager.service.routes.deviceRoutes
+import app.filemanager.service.routes.fileRoutes
+import app.filemanager.service.routes.pathRoutes
 import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
 import app.filemanager.ui.state.file.FileShareStatus
 import app.filemanager.ui.state.main.DeviceState
@@ -56,6 +60,11 @@ actual suspend fun startRpcServer() {
 
                 call.respondBytes { ProtoBuf.encodeToByteArray(socketDevice) }
             }
+
+            deviceRoutes()
+            bookmarkRoutes()
+            pathRoutes()
+            fileRoutes()
 
             rpc {
                 rpcConfig {
@@ -108,11 +117,13 @@ fun Application.configureShareSse() {
                         close()
                         return@sse
                     }
+
                     PERMANENTLY_BANNED -> {
                         send(event = FileShareStatus.ERROR.toString(), data = "拒绝访问")
                         close()
                         return@sse
                     }
+
                     else -> {}
                 }
                 println(deviceReceiveShare)
