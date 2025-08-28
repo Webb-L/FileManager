@@ -30,6 +30,11 @@ class PathRouteClient(
                     header("Authorization", "Bearer $token")
                 }
             }
+
+            if (!response.status.isSuccess()) {
+                throw Exception(response.bodyAsText())
+            }
+
             Result.success(response.body())
         } catch (e: Exception) {
             Result.failure(e)
@@ -47,6 +52,10 @@ class PathRouteClient(
                     header("Authorization", "Bearer $token")
                 }
                 setBody(request)
+            }
+
+            if (!response.status.isSuccess()) {
+                throw Exception(response.bodyAsText())
             }
 
             val responseBody = response.body<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>()
@@ -77,6 +86,10 @@ class PathRouteClient(
                         header("Authorization", "Bearer $token")
                     }
                     setBody(request)
+                }
+
+                if (!response.status.isSuccess()) {
+                    throw Exception(response.bodyAsText())
                 }
 
                 val responseText = response.bodyAsText()
@@ -111,8 +124,8 @@ class PathRouteClient(
                         }
                     }
                 }
-            } catch (_: Exception) {
-                // 流结束或错误，不抛出异常
+            } catch (e: Exception) {
+                emit(Result.failure(e))
             }
         }
     }

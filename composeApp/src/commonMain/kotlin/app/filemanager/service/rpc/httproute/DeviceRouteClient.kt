@@ -24,6 +24,10 @@ class DeviceRouteClient(
                 accept(ContentType.Application.ProtoBuf)
                 setBody(request)
             }
+
+            if (!response.status.isSuccess()) {
+                throw Exception(response.bodyAsText())
+            }
             
             // 如果服务器没有设置正确的 Content-Type，手动解析
             val responseBody = if (response.contentType()?.match(ContentType.Application.ProtoBuf) == true) {

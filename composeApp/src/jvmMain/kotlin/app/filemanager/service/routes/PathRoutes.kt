@@ -124,35 +124,33 @@ fun Route.pathRoutes() {
                 }
                 
                 val fileAndFolder = request.path.getFileAndFolder()
-                
-                val result = if (fileAndFolder.isFailure) {
-                    emptyMap()
-                } else {
-                    mutableMapOf<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>().apply {
-                        fileAndFolder.getOrNull()?.forEach { fileSimpleInfo ->
-                            val key = if (fileSimpleInfo.protocol == FileProtocol.Local)
-                                Pair(FileProtocol.Device, settings.getString("deviceId", ""))
-                            else
-                                Pair(fileSimpleInfo.protocol, fileSimpleInfo.protocolId)
+                if (fileAndFolder.isFailure) {
+                    call.respond(HttpStatusCode.InternalServerError, fileAndFolder.exceptionOrNull()?.message ?: "获取文件列表失败")
+                    return@post
+                }
 
-                            if (!containsKey(key)) {
-                                put(key, mutableListOf(fileSimpleInfo.apply {
-                                    this.path = this.path.replace(request.path, "")
-                                    this.protocol = FileProtocol.Local
-                                    this.protocolId = ""
-                                }))
-                            } else {
-                                get(key)?.add(fileSimpleInfo.apply {
-                                    this.path = this.path.replace(request.path, "")
-                                    this.protocol = FileProtocol.Local
-                                    this.protocolId = ""
-                                })
-                            }
+                call.respondProtobuf(mutableMapOf<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>().apply {
+                    fileAndFolder.getOrNull()?.forEach { fileSimpleInfo ->
+                        val key = if (fileSimpleInfo.protocol == FileProtocol.Local)
+                            Pair(FileProtocol.Device, settings.getString("deviceId", ""))
+                        else
+                            Pair(fileSimpleInfo.protocol, fileSimpleInfo.protocolId)
+
+                        if (!containsKey(key)) {
+                            put(key, mutableListOf(fileSimpleInfo.apply {
+                                this.path = this.path.replace(request.path, "")
+                                this.protocol = FileProtocol.Local
+                                this.protocolId = ""
+                            }))
+                        } else {
+                            get(key)?.add(fileSimpleInfo.apply {
+                                this.path = this.path.replace(request.path, "")
+                                this.protocol = FileProtocol.Local
+                                this.protocolId = ""
+                            })
                         }
                     }
-                }
-                
-                call.respondProtobuf(result)
+                })
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, "获取文件列表失败: ${e.message}")
             }

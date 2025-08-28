@@ -6,6 +6,7 @@ import app.filemanager.service.data.*
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 
 class FileRouteClient(
@@ -13,7 +14,6 @@ class FileRouteClient(
     private val token: String = "",
     private val httpClient: HttpClient
 ) {
-
     suspend fun renames(request: RenameRequest): Result<List<Result<Boolean>>> {
         return try {
             val response = httpClient.post("$baseUrl/api/files/rename") {
@@ -23,6 +23,11 @@ class FileRouteClient(
                 }
                 setBody(request)
             }
+
+            if (!response.status.isSuccess()) {
+                throw Exception(response.bodyAsText())
+            }
+
             Result.success(response.body<List<SerializableResult<Boolean>>>().map { result -> result.toResult() })
         } catch (e: Exception) {
             Result.failure(e)
@@ -38,6 +43,11 @@ class FileRouteClient(
                 }
                 setBody(request)
             }
+
+            if (!response.status.isSuccess()) {
+                throw Exception(response.bodyAsText())
+            }
+
             Result.success(response.body<List<SerializableResult<Boolean>>>().map { result -> result.toResult() })
         } catch (e: Exception) {
             Result.failure(e)
@@ -53,6 +63,11 @@ class FileRouteClient(
                 }
                 setBody(request)
             }
+
+            if (!response.status.isSuccess()) {
+                throw Exception(response.bodyAsText())
+            }
+
             Result.success(response.body())
         } catch (e: Exception) {
             Result.failure(e)
@@ -68,6 +83,11 @@ class FileRouteClient(
                 }
                 setBody(request)
             }
+
+            if (!response.status.isSuccess()) {
+                throw Exception(response.bodyAsText())
+            }
+
             Result.success(response.body<List<SerializableResult<Boolean>>>().map { result -> result.toResult() })
         } catch (e: Exception) {
             Result.failure(e)
@@ -83,6 +103,11 @@ class FileRouteClient(
                 }
                 setBody(request)
             }
+
+            if (!response.status.isSuccess()) {
+                throw Exception(response.bodyAsText())
+            }
+
             Result.success(response.body())
         } catch (e: Exception) {
             Result.failure(e)
@@ -98,6 +123,11 @@ class FileRouteClient(
                 }
                 setBody(request)
             }
+
+            if (!response.status.isSuccess()) {
+                throw Exception(response.bodyAsText())
+            }
+
             Result.success(response.body())
         } catch (e: Exception) {
             Result.failure(e)
@@ -114,6 +144,11 @@ class FileRouteClient(
                 }
                 setBody(request)
             }
+
+            if (!response.status.isSuccess()) {
+                throw Exception(response.bodyAsText())
+            }
+
             Result.success(response.body())
         } catch (e: Exception) {
             Result.failure(e)
@@ -129,6 +164,11 @@ class FileRouteClient(
                 }
                 setBody(request)
             }
+
+            if (!response.status.isSuccess()) {
+                throw Exception(response.bodyAsText())
+            }
+
             Result.success(response.body())
         } catch (e: Exception) {
             Result.failure(e)
@@ -144,6 +184,11 @@ class FileRouteClient(
                 }
                 setBody(request)
             }
+
+            if (!response.status.isSuccess()) {
+                throw Exception(response.bodyAsText())
+            }
+
             Result.success(response.body())
         } catch (e: Exception) {
             Result.failure(e)
@@ -159,6 +204,11 @@ class FileRouteClient(
                 }
                 setBody(request)
             }
+
+            if (!response.status.isSuccess()) {
+                throw Exception(response.bodyAsText())
+            }
+
             Result.success(response.body<List<SerializableResult<Boolean>>>().map { result -> result.toResult() })
         } catch (e: Exception) {
             Result.failure(e)

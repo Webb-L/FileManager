@@ -4,6 +4,8 @@ import app.filemanager.data.main.DrawerBookmark
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 
 class BookmarkRouteClient(
     private val baseUrl: String,
@@ -18,6 +20,11 @@ class BookmarkRouteClient(
                     header("Authorization", "Bearer $token")
                 }
             }
+
+            if (!response.status.isSuccess()) {
+                throw Exception(response.bodyAsText())
+            }
+
             Result.success(response.body())
         } catch (e: Exception) {
             Result.failure(e)
