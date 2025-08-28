@@ -144,7 +144,7 @@ fun AppDrawerDevice() {
         }
     ) {
         if (!isExpandDevice) return@AppDrawerItem
-        for ((index, device) in deviceState.socketDevices.sortedByDescending { it.client != null }.withIndex()) {
+        for ((index, device) in deviceState.socketDevices.sortedByDescending { it.httpClient != null }.withIndex()) {
             NavigationDrawerItem(
                 icon = {
                     if (device.connectType == Loading) {
@@ -162,7 +162,7 @@ fun AppDrawerDevice() {
                             Modifier
                                 .clip(RoundedCornerShape(25.dp))
                                 .clickable {
-                                    if (device.client?.disconnect() == true) {
+                                    if (device.httpClient?.disconnect() == true) {
                                         // 安全地更新设备状态，避免索引越界
                                         updateDeviceStateAndConnect(deviceState, scope, device, UnConnect)
                                         deviceState.devices.remove(deviceState.devices.firstOrNull { it.id == device.id })
@@ -201,7 +201,7 @@ fun AppDrawerDevice() {
 
                         Loading -> {
                             // 取消连接中的状态
-                            device.client?.disconnect()
+                            device.httpClient?.disconnect()
                             updateDeviceStateAndConnect(deviceState, scope, device, UnConnect)
                         }
                     }

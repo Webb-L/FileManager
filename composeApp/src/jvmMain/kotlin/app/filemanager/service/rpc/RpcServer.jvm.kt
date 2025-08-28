@@ -11,7 +11,7 @@ import app.filemanager.service.routes.bookmarkRoutes
 import app.filemanager.service.routes.deviceRoutes
 import app.filemanager.service.routes.fileRoutes
 import app.filemanager.service.routes.pathRoutes
-import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
+import app.filemanager.service.rpc.HttpRouteClientManager.Companion.PORT
 import app.filemanager.ui.state.file.FileShareStatus
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.utils.PathUtils
@@ -72,10 +72,6 @@ actual suspend fun startRpcServer() {
                         protobuf()
                     }
                 }
-                registerService<DeviceService> { DeviceServiceImpl(this) }
-                registerService<BookmarkService> { BookmarkServiceImpl() }
-                registerService<FileService> { FileServiceImpl() }
-                registerService<PathService> { PathServiceImpl() }
 
                 registerService<ShareService> { ShareServiceImpl() }
             }

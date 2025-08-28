@@ -53,6 +53,18 @@ internal actual object FileUtils {
         }
     }
 
+    actual fun createFolder(path: String, name: String): Result<Boolean> {
+        val file = File(path, name)
+        if (file.exists()) return Result.success(true)
+        return try {
+            Result.success(file.mkdir())
+        } catch (e: SecurityException) {
+            Result.failure(AuthorityException("没有权限"))
+        } catch (e: Exception) {
+            Result.failure(AuthorityException(e.message))
+        }
+    }
+
     actual fun rename(path: String, oldName: String, newName: String): Result<Boolean> {
         val oldFile = File(path, oldName)
         val newFile = File(path, newName)
@@ -198,6 +210,20 @@ internal actual object FileUtils {
     actual fun createFile(path: String): Result<Boolean> {
         try {
             val file = File(path)
+
+            if (!file.exists()) {
+                file.createNewFile()
+            }
+
+            return Result.success(file.exists())
+        } catch (e: Exception) {
+            return Result.failure(Exception(e.message))
+        }
+    }
+
+    actual fun createFile(path: String, name: String): Result<Boolean> {
+        try {
+            val file = File(path, name)
 
             if (!file.exists()) {
                 file.createNewFile()

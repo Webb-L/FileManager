@@ -64,6 +64,16 @@ internal expect object FileUtils {
     fun createFolder(path: String): Result<Boolean>
 
     /**
+     * 在指定路径下创建文件夹。
+     *
+     * @param path 指定父路径。
+     * @param name 新文件夹的名称。
+     * @return 返回一个包含操作结果的Result对象。如果文件夹创建成功，返回Result.success(true)，
+     * 如果创建失败，返回Result.failure或Result.success(false)。
+     */
+    fun createFolder(path: String, name: String): Result<Boolean>
+
+    /**
      * 重命名指定路径下的文件或文件夹。
      *
      * @param path 要操作的目标路径。
@@ -120,4 +130,13 @@ internal expect object FileUtils {
      * @return 如果文件创建成功返回 Result 包含 true，否则返回 Result 包含 false 并附带失败的错误信息。
      */
     fun createFile(path: String): Result<Boolean>
+
+    /**
+     * 在指定路径下创建文件。
+     *
+     * @param path 文件的父路径，表示需要创建文件的位置。
+     * @param name 新文件的名称。
+     * @return 如果文件创建成功返回 Result 包含 true，否则返回 Result 包含 false 并附带失败的错误信息。
+     */
+    fun createFile(path: String, name: String): Result<Boolean>
 }

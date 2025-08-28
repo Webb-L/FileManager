@@ -1,17 +1,26 @@
 package app.filemanager.ui.components.drawer
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import app.filemanager.data.file.FileProtocol
-import app.filemanager.data.main.*
+import app.filemanager.data.main.Device
+import app.filemanager.data.main.DrawerBookmarkType
 import app.filemanager.ui.screen.file.FavoriteScreen
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DrawerState
@@ -82,7 +91,6 @@ fun AppDrawerBookmark() {
                 selected = !isFavorite && path == bookmark.path,
                 onClick = {
                     scope.launch(Dispatchers.Default) {
-                        fileState.updateDesk(FileProtocol.Local, Local())
                         fileState.updatePath(bookmark.path)
                     }
                     if (mainState.windowSize == WindowSizeClass.Compact) {

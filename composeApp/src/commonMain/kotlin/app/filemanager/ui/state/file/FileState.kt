@@ -11,6 +11,8 @@ import app.filemanager.exception.EmptyDataException
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.pathLevel
 import app.filemanager.extensions.replaceLast
+import app.filemanager.service.data.CreateInfo
+import app.filemanager.service.data.RenameInfo
 import app.filemanager.ui.state.file.FileOperationType.*
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.DrawerState
@@ -155,7 +157,7 @@ class FileState : KoinComponent {
             val device = _deskType.value as Device
             val temp = mutableListOf<PathInfo>()
             device.getRootPaths {
-                temp.addAll(it)
+                temp.addAll(it.getOrDefault(listOf()))
                 isReturn = true
             }
             while (!isReturn) {
@@ -177,8 +179,13 @@ class FileState : KoinComponent {
         if (_deskType.value is Device) {
             val device = _deskType.value as Device
             var result: Result<Boolean> = Result.success(false)
-            device.rename(path, oldName, newName) {
-                result = it
+            device.renames(listOf(RenameInfo(path, oldName, newName))) {
+                val results = it.getOrDefault(listOf())
+                result = if (results.isNotEmpty()) {
+                    results.first()
+                } else {
+                    Result.failure(Exception("重命名失败"))
+                }
                 isReturn = true
             }
 
@@ -201,8 +208,13 @@ class FileState : KoinComponent {
         if (_deskType.value is Device) {
             val device = _deskType.value as Device
             var result: Result<Boolean> = Result.success(false)
-            device.createFolder(path, name) {
-                result = it
+            device.createFolders(listOf(CreateInfo(path, name))) {
+                val results = it.getOrDefault(listOf())
+                result = if (results.isNotEmpty()) {
+                    results.first()
+                } else {
+                    Result.failure(Exception("创建文件夹失败"))
+                }
                 isReturn = true
             }
 
@@ -212,7 +224,7 @@ class FileState : KoinComponent {
             return result
         }
 
-        return Result.failure(Exception("创建失败"))
+        return Result.failure(Exception("创建文件夹失败"))
     }
 
     suspend fun getSizeInfo(fileSimpleInfo: FileSimpleInfo, pathInfo: PathInfo): Result<FileSizeInfo> {
@@ -330,9 +342,12 @@ class FileState : KoinComponent {
 
             var result: Result<Boolean> = Result.success(false)
             if (fileInfos.size == 1) {
-                device.deleteFile(listOf(fileInfos.first().path)) {
-                    if (it.isSuccess) {
-                        result = Result.success((it.getOrNull() ?: listOf()).first())
+                device.deletes(listOf(fileInfos.first().path)) {
+                    val results = it.getOrDefault(listOf())
+                    result = if (results.isNotEmpty()) {
+                        results.first()
+                    } else {
+                        Result.failure(Exception("删除失败"))
                     }
                     isReturn = true
                 }
@@ -352,17 +367,17 @@ class FileState : KoinComponent {
                 .sortedWith(compareBy<FileSimpleInfo> { it.isDirectory }
                     .thenByDescending { it.path.pathLevel() }).chunked(30)) {
                 isReturn = false
-                device.deleteFile(fileInfo.map { it.path }) {
+                device.deletes(fileInfo.map { it.path }) {
                     if (it.isSuccess) {
-                        for (item in it.getOrNull() ?: listOf()) {
-                            if (item) {
+                        for (item in it.getOrDefault(listOf())) {
+                            if (item.getOrDefault(false)) {
                                 successCount++
                             } else {
                                 failureCount++
                             }
                         }
                     } else {
-                        failureCount++
+                        failureCount += fileInfo.size
                     }
                     task.values["progressCur"] = (successCount + failureCount).toString()
                     isReturn = true
@@ -431,7 +446,7 @@ class FileState : KoinComponent {
                 return Result.failure(EmptyDataException())
             }
 
-            device.copyFile(task,srcFileSimpleInfo, destFileSimpleInfo) {
+            device.copyFile(task, srcFileSimpleInfo, destFileSimpleInfo) {
                 result = it
                 isReturn = true
             }

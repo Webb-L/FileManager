@@ -6,7 +6,7 @@ import app.filemanager.service.data.ConnectType
 import androidx.compose.runtime.snapshotFlow
 import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.service.data.SocketDevice
-import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
+import app.filemanager.service.rpc.HttpRouteClientManager.Companion.PORT
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import app.filemanager.db.FileManagerDatabase

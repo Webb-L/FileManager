@@ -7,7 +7,7 @@ import app.filemanager.db.FileManagerDatabase
 import app.filemanager.extensions.pathLevel
 import app.filemanager.getSocketDevice
 import app.filemanager.service.data.SocketDevice
-import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
+import app.filemanager.service.rpc.HttpRouteClientManager.Companion.MAX_LENGTH
 import app.filemanager.ui.state.file.FileShareStatus
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DeviceState

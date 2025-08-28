@@ -57,6 +57,8 @@ kotlin {
 
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.websockets)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.protobuf)
             implementation(libs.ktor.server.html.builder)
             implementation(libs.ktor.http)
 

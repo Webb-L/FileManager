@@ -6,7 +6,7 @@ import app.filemanager.service.data.*
 import app.filemanager.service.plugins.ProtobufRequest
 import app.filemanager.service.plugins.receiveProtobuf
 import app.filemanager.service.plugins.respondProtobuf
-import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
+import app.filemanager.service.rpc.HttpRouteClientManager.Companion.MAX_LENGTH
 import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.utils.FileUtils
 import io.ktor.http.*
@@ -58,7 +58,7 @@ fun Route.fileRoutes(): KoinComponent {
                             }
 
                             FileUtils.rename(renameInfo.path, renameInfo.oldName, renameInfo.newName)
-                                .getOrDefault(false)
+                                .toSerializableResult()
                         }
                         call.respondProtobuf(results)
                     } catch (e: Exception) {
@@ -70,25 +70,24 @@ fun Route.fileRoutes(): KoinComponent {
                     try {
                         val request = call.receiveProtobuf<CreateFolderRequest>()
 
-                        if (request.names.isEmpty()) {
+                        if (request.infos.isEmpty()) {
                             call.respond(HttpStatusCode.BadRequest, "文件夹名称不能为空")
                             return@post
                         }
 
-                        val results = request.names.map { path ->
+                        val results = request.infos.map { info ->
                             val token = call.getAuthToken()
                             if (token != null && deviceCertificateState.checkPermission(
                                     token,
-                                    path,
+                                    info.path,
                                     "write"
                                 )
                             ) {
-                                return@map false
+                                return@map SerializableResult.failure("没有权限")
                             }
-                            FileUtils.createFolder(path).getOrDefault(false)
+                            FileUtils.createFolder(info.path, info.name).toSerializableResult()
                         }
 
-                        println(results)
                         call.respondProtobuf(results)
                     } catch (e: Exception) {
                         call.respond(HttpStatusCode.InternalServerError, "创建文件夹失败: ${e.message}")
@@ -126,12 +125,12 @@ fun Route.fileRoutes(): KoinComponent {
                     try {
                         val request = call.receiveProtobuf<DeleteRequest>()
 
-                        if (request.names.isEmpty()) {
+                        if (request.paths.isEmpty()) {
                             call.respond(HttpStatusCode.BadRequest, "删除路径不能为空")
                             return@post
                         }
 
-                        val results = request.names.map { path ->
+                        val results = request.paths.map { path ->
                             val token = call.getAuthToken()
                             if (token != null && deviceCertificateState.checkPermission(
                                     token,
@@ -142,7 +141,7 @@ fun Route.fileRoutes(): KoinComponent {
                                 return@map false
                             }
 
-                            FileUtils.deleteFile(path).getOrDefault(false)
+                            FileUtils.deleteFile(path).toSerializableResult()
                         }
                         call.respondProtobuf(results)
                     } catch (e: Exception) {
@@ -393,23 +392,23 @@ fun Route.fileRoutes(): KoinComponent {
                     try {
                         val request = call.receiveProtobuf<CreateFileRequest>()
 
-                        if (request.paths.isEmpty()) {
-                            call.respond(HttpStatusCode.BadRequest, "文件路径不能为空")
+                        if (request.infos.isEmpty()) {
+                            call.respond(HttpStatusCode.BadRequest, "文件名称不能为空")
                             return@post
                         }
 
-                        val results = request.paths.map { path ->
+                        val results = request.infos.map { info ->
                             val token = call.getAuthToken()
                             if (token != null && deviceCertificateState.checkPermission(
                                     token,
-                                    path,
+                                    info.path,
                                     "write"
                                 )
                             ) {
-                                return@map false
+                                return@map SerializableResult.failure("没有权限")
                             }
 
-                            FileUtils.createFile(path).getOrDefault(false)
+                            FileUtils.createFile(info.path, info.name).toSerializableResult()
                         }
                         call.respondProtobuf(results)
                     } catch (e: Exception) {

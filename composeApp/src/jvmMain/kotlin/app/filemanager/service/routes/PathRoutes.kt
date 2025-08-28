@@ -31,9 +31,6 @@ data class ListRequest(
     val path: String
 )
 
-@Serializable
-class RootPathsRequest
-
 @OptIn(ExperimentalSerializationApi::class, ExperimentalEncodingApi::class)
 fun Route.pathRoutes() {
     val settings = createSettings()
@@ -120,8 +117,6 @@ fun Route.pathRoutes() {
             try {
                 val request = call.receiveProtobuf<ListRequest>()
 
-                println(request.path)
-                
                 // 直接实现list逻辑，返回文件映射
                 if (request.path.isEmpty()) {
                     call.respond(HttpStatusCode.BadRequest, "路径不能为空")
@@ -165,8 +160,6 @@ fun Route.pathRoutes() {
         
         post("/rootPaths") {
             try {
-                call.receiveProtobuf<RootPathsRequest>()
-                
                 // 直接实现rootPaths逻辑，返回路径列表
                 val rootPaths = PathUtils.getRootPaths()
                 val result = if (rootPaths.isFailure) {

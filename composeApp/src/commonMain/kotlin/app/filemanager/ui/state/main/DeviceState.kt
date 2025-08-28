@@ -11,8 +11,8 @@ import app.filemanager.extensions.getSubnetIps
 import app.filemanager.getSocketDevice
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.SocketDevice
-import app.filemanager.service.rpc.RpcClientManager
-import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
+import app.filemanager.service.rpc.HttpRouteClientManager
+import app.filemanager.service.rpc.HttpRouteClientManager.Companion.PORT
 import app.filemanager.service.rpc.RpcShareClientManager
 import app.filemanager.ui.state.file.FileShareState
 import app.filemanager.ui.state.file.FileShareStatus
@@ -175,8 +175,8 @@ class DeviceState : KoinComponent {
     }
 
     suspend fun connect(connectDevice: SocketDevice) {
-        val rpcClientManager = RpcClientManager()
-        rpcClientManager.connect(connectDevice)
+        val httpRouteClientManager = HttpRouteClientManager()
+        httpRouteClientManager.connect(connectDevice)
     }
 
 

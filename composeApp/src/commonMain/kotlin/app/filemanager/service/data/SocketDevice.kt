@@ -3,8 +3,8 @@ package app.filemanager.service.data
 import app.filemanager.data.main.Device
 import app.filemanager.data.main.DeviceType
 import app.filemanager.data.main.Share
-import app.filemanager.service.rpc.RpcClientManager
-import app.filemanager.service.rpc.RpcClientManager.Companion.PORT
+import app.filemanager.service.rpc.HttpRouteClientManager
+import app.filemanager.service.rpc.HttpRouteClientManager.Companion.PORT
 import app.filemanager.service.rpc.RpcShareClientManager
 import app.filemanager.utils.serializer.SocketDeviceSerializer
 import kotlinx.serialization.Serializable
@@ -33,13 +33,13 @@ data class SocketDevice(
     var token: String = ""
 ) {
     @Transient
-    var client: RpcClientManager? = null
+    var httpClient: HttpRouteClientManager? = null
 
     fun toDevice(includeHost: Boolean = true): Device {
         return Device(
             id = id,
             name = name,
-            host = if (includeHost) mutableMapOf(host to client!!) else mutableMapOf(),
+            host = if (includeHost && httpClient != null) mutableMapOf(host to httpClient!!) else mutableMapOf(),
             type = type,
             token = token
         )
@@ -62,10 +62,10 @@ data class SocketDevice(
         type: DeviceType = this.type,
         connectType: ConnectType = this.connectType,
         token: String = this.token,
-        client: RpcClientManager? = this.client
+        httpClient: HttpRouteClientManager? = this.httpClient
     ): SocketDevice {
         return SocketDevice(id, name, host, port, type, connectType, token).apply {
-            this.client = client
+            this.httpClient = httpClient
         }
     }
 }

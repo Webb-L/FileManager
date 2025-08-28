@@ -4,8 +4,8 @@ import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.data.file.PathInfo
-import app.filemanager.service.data.ConnectType
-import app.filemanager.service.rpc.RpcClientManager
+import app.filemanager.service.data.*
+import app.filemanager.service.rpc.HttpRouteClientManager
 import app.filemanager.service.rpc.RpcShareClientManager
 import app.filemanager.ui.state.file.FileState
 import app.filemanager.ui.state.main.DeviceState
@@ -114,7 +114,7 @@ enum class DeviceCategory(type: String) {
 data class Device(
     val id: String,
     override val name: String,
-    val host: MutableMap<String, RpcClientManager>,
+    val host: MutableMap<String, HttpRouteClientManager>,
     val type: DeviceType,
     val token: String
 ) : DiskBase(), KoinComponent {
@@ -122,11 +122,12 @@ data class Device(
     private val fileState: FileState by inject()
     private val deviceState: DeviceState by inject()
 
-    private fun getConnect(): RpcClientManager {
+    private fun getConnect(): HttpRouteClientManager {
         return host.values.first()
     }
 
     private fun handleError() {
+        println("sdfsfafsafasfsdfs")
         deviceState.devices.remove(this)
         deviceState.socketDevices.indexOfFirst { it.id == id }.takeIf { it != -1 }?.let { index ->
             deviceState.socketDevices[index] = deviceState.socketDevices[index].withCopy(
@@ -137,9 +138,9 @@ data class Device(
     }
 
 
-    suspend fun getRootPaths(replyCallback: (List<PathInfo>) -> Unit) {
+    suspend fun getRootPaths(replyCallback: (Result<List<PathInfo>>) -> Unit) {
         try {
-            getConnect().pathHandle.getRootPaths(id, replyCallback)
+            replyCallback(getConnect().pathRouteClient.getRootPaths())
         } catch (e: Exception) {
             handleError()
         }
@@ -147,7 +148,7 @@ data class Device(
 
     suspend fun getFileList(path: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
         try {
-            getConnect().pathHandle.getList(path, id, replyCallback)
+            replyCallback(getConnect().pathRouteClient.listPath(ListRequest(path)))
         } catch (e: Exception) {
             handleError()
         }
@@ -155,7 +156,11 @@ data class Device(
 
     suspend fun getTraversePath(path: String, replyCallback: (Result<List<FileSimpleInfo>>) -> Unit) {
         try {
-            getConnect().pathHandle.getTraversePath(path, id, replyCallback)
+            val fileSimpleInfos = mutableListOf<FileSimpleInfo>()
+            getConnect().pathRouteClient.traversePath(TraversePathRequest(path)).collect { result ->
+                fileSimpleInfos.addAll(result.getOrDefault(listOf()))
+            }
+            replyCallback(Result.success(fileSimpleInfos))
         } catch (e: Exception) {
             handleError()
         }
@@ -163,23 +168,23 @@ data class Device(
 
     suspend fun getBookmark(replyCallback: (Result<List<DrawerBookmark>>) -> Unit) {
         try {
-            getConnect().bookmarkHandle.getBookmark(id, replyCallback)
+            replyCallback(getConnect().bookmarkRouteClient.getBookmarks())
         } catch (e: Exception) {
             handleError()
         }
     }
 
-    suspend fun rename(path: String, oldName: String, newName: String, replyCallback: (Result<Boolean>) -> Unit) {
+    suspend fun renames(renameInfos: List<RenameInfo>, replyCallback: (Result<List<Result<Boolean>>>) -> Unit) {
         try {
-            getConnect().fileHandle.rename(id, path, oldName, newName, replyCallback)
+            replyCallback(getConnect().fileRouteClient.renames(RenameRequest(renameInfos)))
         } catch (e: Exception) {
             handleError()
         }
     }
 
-    suspend fun createFolder(path: String, name: String, replyCallback: (Result<Boolean>) -> Unit) {
+    suspend fun createFolders(paths: List<CreateInfo>, replyCallback: (Result<List<Result<Boolean>>>) -> Unit) {
         try {
-            getConnect().fileHandle.createFolder(id, path, name, replyCallback)
+            replyCallback(getConnect().fileRouteClient.createFolders(CreateFolderRequest(paths)))
         } catch (e: Exception) {
             handleError()
         }
@@ -192,18 +197,26 @@ data class Device(
         replyCallback: (Result<FileSizeInfo>) -> Unit
     ) {
         try {
-            getConnect().fileHandle.getFileSizeInfo(id, fileSimpleInfo, totalSpace, freeSpace, replyCallback)
+            replyCallback(
+                getConnect().fileRouteClient.getSizeInfo(
+                    GetSizeInfoRequest(
+                        totalSpace,
+                        freeSpace,
+                        fileSimpleInfo
+                    )
+                )
+            )
         } catch (e: Exception) {
             handleError()
         }
     }
 
-    suspend fun deleteFile(
+    suspend fun deletes(
         paths: List<String>,
-        replyCallback: (Result<List<Boolean>>) -> Unit
+        replyCallback: (Result<List<Result<Boolean>>>) -> Unit
     ) {
         try {
-            getConnect().fileHandle.deleteFile(id, paths, replyCallback)
+            replyCallback(getConnect().fileRouteClient.deletes(DeleteRequest(paths)))
         } catch (e: Exception) {
             handleError()
         }
@@ -215,7 +228,7 @@ data class Device(
 //        replyCallback: (Result<Boolean>) -> Unit
 //    ) {
 //        try {
-//            getConnect().fileHandle.writeBytes(id, srcPath, destPath, replyCallback)
+//            getConnect().fileRouteClient.writeBytes(id, srcPath, destPath, replyCallback)
 //        } catch (e: Exception) {
 //            handleError()
 //        }
@@ -227,8 +240,9 @@ data class Device(
         destFileSimpleInfo: FileSimpleInfo,
         replyCallback: (Result<Boolean>) -> Unit
     ) {
+        // TODO
         try {
-            getConnect().pathHandle.copyFile(task,id, srcFileSimpleInfo, destFileSimpleInfo, replyCallback)
+//            getConnect().pathRouteClient.copyFile(task, id, srcFileSimpleInfo, destFileSimpleInfo, replyCallback)
         } catch (e: Exception) {
             handleError()
         }
@@ -236,7 +250,7 @@ data class Device(
 
     suspend fun getFile(path: String, replyCallback: (Result<FileSimpleInfo>) -> Unit) {
         try {
-            getConnect().fileHandle.getFile(id, path, replyCallback)
+            replyCallback(getConnect().fileRouteClient.getFileByPath(GetFileByPathRequest(path)))
         } catch (e: Exception) {
             handleError()
         }

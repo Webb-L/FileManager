@@ -84,7 +84,7 @@ class FileShareScreen(private val _files: List<FileSimpleInfo>) : Screen {
 
         val snackbarHostState = remember { SnackbarHostState() }
 
-        val socketDevices = deviceState.socketDevices.sortedBy { it.client != null }
+        val socketDevices = deviceState.socketDevices.sortedBy { it.httpClient != null }
 
         /* 链接方式分享 */
         var isExpandLinkShare by remember { mutableStateOf(true) }

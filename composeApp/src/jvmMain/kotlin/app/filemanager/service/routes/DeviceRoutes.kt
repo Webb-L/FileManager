@@ -10,7 +10,7 @@ import app.filemanager.service.data.DeviceConnectResponse
 import app.filemanager.service.plugins.ProtobufRequest
 import app.filemanager.service.plugins.receiveProtobuf
 import app.filemanager.service.plugins.respondProtobuf
-import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
+import app.filemanager.service.rpc.HttpRouteClientManager.Companion.CONNECT_TIMEOUT
 import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.ui.state.main.DeviceState
 import io.ktor.http.*

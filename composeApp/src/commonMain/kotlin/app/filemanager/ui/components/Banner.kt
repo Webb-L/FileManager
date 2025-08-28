@@ -18,7 +18,7 @@ import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.data.main.DeviceConnectType.*
 import app.filemanager.db.FileManagerDatabase
 import app.filemanager.service.data.SocketDevice
-import app.filemanager.service.rpc.RpcClientManager.Companion.CONNECT_TIMEOUT
+import app.filemanager.service.rpc.HttpRouteClientManager.Companion.CONNECT_TIMEOUT
 import app.filemanager.ui.state.device.DeviceCertificateState
 import app.filemanager.ui.state.device.DeviceRoleState
 import app.filemanager.ui.state.file.FileShareStatus

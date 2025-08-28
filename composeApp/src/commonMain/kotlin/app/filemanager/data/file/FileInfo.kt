@@ -1,7 +1,7 @@
 package app.filemanager.data.file
 
 import app.filemanager.extensions.pathLevel
-import app.filemanager.service.rpc.RpcClientManager.Companion.MAX_LENGTH
+import app.filemanager.service.rpc.HttpRouteClientManager.Companion.MAX_LENGTH
 import app.filemanager.ui.state.main.Task
 import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils

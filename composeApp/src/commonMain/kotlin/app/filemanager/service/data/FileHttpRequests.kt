@@ -11,7 +11,7 @@ data class RenameRequest(
 
 @Serializable
 data class CreateFolderRequest(
-    val names: List<String>
+    val infos: List<CreateInfo>
 )
 
 @Serializable
@@ -23,7 +23,7 @@ data class GetSizeInfoRequest(
 
 @Serializable
 data class DeleteRequest(
-    val names: List<String>
+    val paths: List<String>
 )
 
 @Serializable
@@ -61,7 +61,7 @@ data class GetFileByPathAndNameRequest(
 
 @Serializable
 data class CreateFileRequest(
-    val paths: List<String>
+    val infos: List<CreateInfo>
 )
 
 @Serializable
@@ -73,4 +73,14 @@ data class DeviceConnectRequest(
 data class DeviceConnectResponse(
     val connectType: DeviceConnectType,
     val token: String
+)
+
+@Serializable
+data class TraversePathRequest(
+    val path: String
+)
+
+@Serializable
+data class ListRequest(
+    val path: String
 )
