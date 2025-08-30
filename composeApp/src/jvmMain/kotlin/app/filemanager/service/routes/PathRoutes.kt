@@ -5,6 +5,7 @@ import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.extensions.getFileAndFolder
 import app.filemanager.extensions.respondProtobuf
+import app.filemanager.service.data.toSerializableResult
 import app.filemanager.service.plugins.ProtobufRequest
 import app.filemanager.service.plugins.receiveProtobuf
 import app.filemanager.utils.PathUtils
@@ -34,20 +35,20 @@ data class ListRequest(
 @OptIn(ExperimentalSerializationApi::class, ExperimentalEncodingApi::class)
 fun Route.pathRoutes() {
     val settings = createSettings()
-    
+
     route("/api/paths") {
         install(ProtobufRequest)
-        
+
         post("/traverse") {
             try {
                 val request = call.receiveProtobuf<TraversePathRequest>()
-                
+
                 // 设置SSE响应头
                 call.response.headers.append(HttpHeaders.ContentType, "text/event-stream")
                 call.response.headers.append(HttpHeaders.CacheControl, "no-cache")
                 call.response.headers.append(HttpHeaders.Connection, "keep-alive")
                 call.response.headers.append("Access-Control-Allow-Origin", "*")
-                
+
                 // 直接实现traversePath逻辑，返回文件映射
                 var isFirst = false
                 val traverseFlow = channelFlow {
@@ -93,14 +94,14 @@ fun Route.pathRoutes() {
                         }
                     }
                 }
-                
+
                 // 使用respondTextWriter手动实现SSE响应
                 call.respondTextWriter(ContentType.Text.EventStream) {
                     traverseFlow.collect { result ->
                         val responseBytes = ProtoBuf.encodeToByteArray(result)
                         // 使用Base64编码确保数据传输完整性
                         val data = Base64.encode(responseBytes)
-                        
+
                         write("event: traverseResult\n")
                         write("data: $data\n")
                         write("\n")
@@ -111,7 +112,7 @@ fun Route.pathRoutes() {
                 call.respond(HttpStatusCode.InternalServerError, "遍历路径失败: ${e.message}")
             }
         }
-        
+
         // POST端点需要ProtobufRequest插件
         post("/list") {
             try {
@@ -122,14 +123,14 @@ fun Route.pathRoutes() {
                     call.respond(HttpStatusCode.BadRequest, "路径不能为空")
                     return@post
                 }
-                
+
                 val fileAndFolder = request.path.getFileAndFolder()
                 if (fileAndFolder.isFailure) {
-                    call.respond(HttpStatusCode.InternalServerError, fileAndFolder.exceptionOrNull()?.message ?: "获取文件列表失败")
+                    call.respondProtobuf(fileAndFolder.toSerializableResult())
                     return@post
                 }
 
-                call.respondProtobuf(mutableMapOf<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>().apply {
+                call.respondProtobuf(Result.success(mutableMapOf<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>().apply {
                     fileAndFolder.getOrNull()?.forEach { fileSimpleInfo ->
                         val key = if (fileSimpleInfo.protocol == FileProtocol.Local)
                             Pair(FileProtocol.Device, settings.getString("deviceId", ""))
@@ -150,12 +151,12 @@ fun Route.pathRoutes() {
                             })
                         }
                     }
-                })
+                }).toSerializableResult())
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, "获取文件列表失败: ${e.message}")
             }
         }
-        
+
         post("/rootPaths") {
             try {
                 // 直接实现rootPaths逻辑，返回路径列表
@@ -165,7 +166,7 @@ fun Route.pathRoutes() {
                 } else {
                     rootPaths.getOrNull() ?: emptyList()
                 }
-                
+
                 call.respondProtobuf(result)
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, "获取根路径失败: ${e.message}")

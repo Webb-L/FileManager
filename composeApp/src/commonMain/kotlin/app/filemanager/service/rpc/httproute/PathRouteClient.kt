@@ -4,7 +4,9 @@ import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.PathInfo
 import app.filemanager.service.data.ListRequest
+import app.filemanager.service.data.SerializableResult
 import app.filemanager.service.data.TraversePathRequest
+import app.filemanager.service.data.toResult
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -58,8 +60,13 @@ class PathRouteClient(
                 throw Exception(response.bodyAsText())
             }
 
-            val responseBody = response.body<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>()
-            responseBody.forEach { (protocol, fileInfos) ->
+            val responseBody =
+                response.body<SerializableResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>>()
+                    .toResult()
+            if (responseBody.isFailure) {
+                throw responseBody.exceptionOrNull()!!
+            }
+            responseBody.getOrDefault(mapOf()).forEach { (protocol, fileInfos) ->
                 for (info in fileInfos) {
                     fileSimpleInfos.add(info.apply {
                         this.protocol = protocol.first
