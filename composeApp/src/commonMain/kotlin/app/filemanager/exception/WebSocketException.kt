@@ -13,7 +13,7 @@ class ParameterErrorException(override val message: String = "参数错误") : E
 data class AuthorityException(override val message: String?) : Exception(message)
 
 @Serializable
-class EmptyDataException : Exception()
+class EmptyDataException(override val message: String = "没有数据") : Exception()
 
 fun Exception.toSocketResult(): WebSocketResult<Nothing> = WebSocketResult(
     message,
