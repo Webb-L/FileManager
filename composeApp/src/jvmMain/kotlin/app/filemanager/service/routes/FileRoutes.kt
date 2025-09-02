@@ -264,7 +264,7 @@ fun Route.fileRoutes(): KoinComponent {
                                 call.respond(HttpStatusCode.InternalServerError, "读取的数据超出安全限制")
                                 return@post
                             }
-                            call.respondProtobuf(data)
+                            call.respondBytes(data)
                         } else {
                             call.respond(
                                 HttpStatusCode.InternalServerError,

@@ -16,8 +16,7 @@ fun Route.bookmarkRoutes() {
         
         get {
             try {
-                val bookmarks = PathUtils.getBookmarks()
-                call.respondProtobuf(bookmarks)
+                call.respondProtobuf(PathUtils.getBookmarks())
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, "获取书签失败: ${e.message}")
             }

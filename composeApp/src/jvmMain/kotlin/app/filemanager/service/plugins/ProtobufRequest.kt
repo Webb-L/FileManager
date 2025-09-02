@@ -3,7 +3,6 @@ package app.filemanager.service.plugins
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.application.hooks.*
-import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -30,5 +29,5 @@ suspend inline fun <reified T> ApplicationCall.receiveProtobuf(): T {
 @OptIn(ExperimentalSerializationApi::class)
 suspend inline fun <reified T> ApplicationCall.respondProtobuf(value: T) {
     val responseBytes = ProtoBuf.encodeToByteArray(value)
-    respondBytes(responseBytes)
+    respondBytes(responseBytes, ContentType.Application.ProtoBuf)
 }
