@@ -240,9 +240,8 @@ data class Device(
         destFileSimpleInfo: FileSimpleInfo,
         replyCallback: (Result<Boolean>) -> Unit
     ) {
-        // TODO
         try {
-//            getConnect().pathRouteClient.copyFile(task, id, srcFileSimpleInfo, destFileSimpleInfo, replyCallback)
+            getConnect().pathRouteClient.copyFile(task, srcFileSimpleInfo, destFileSimpleInfo, replyCallback)
         } catch (e: Exception) {
             handleError()
         }

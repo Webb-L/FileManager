@@ -7,6 +7,8 @@ import app.filemanager.service.data.ListRequest
 import app.filemanager.service.data.SerializableResult
 import app.filemanager.service.data.TraversePathRequest
 import app.filemanager.service.data.toResult
+import app.filemanager.service.rpc.HttpRouteClientManager
+import app.filemanager.ui.state.main.Task
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -20,17 +22,12 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 class PathRouteClient(
-    private val baseUrl: String,
-    private val token: String = "",
-    private val httpClient: HttpClient
+    private val httpClient: HttpClient,
+    private val manager: HttpRouteClientManager
 ) {
     suspend fun getRootPaths(): Result<List<PathInfo>> {
         return try {
-            val response = httpClient.post("$baseUrl/api/paths/rootPaths") {
-                contentType(ContentType.Application.ProtoBuf)
-                if (token.isNotEmpty()) {
-                    header("Authorization", "Bearer $token")
-                }
+            val response = httpClient.post("/api/paths/rootPaths") {
             }
 
             if (!response.status.isSuccess()) {
@@ -48,11 +45,7 @@ class PathRouteClient(
         return try {
             val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
 
-            val response = httpClient.post("$baseUrl/api/paths/list") {
-                contentType(ContentType.Application.ProtoBuf)
-                if (token.isNotEmpty()) {
-                    header("Authorization", "Bearer $token")
-                }
+            val response = httpClient.post("/api/paths/list") {
                 setBody(request)
             }
 
@@ -87,11 +80,7 @@ class PathRouteClient(
     fun traversePath(request: TraversePathRequest): Flow<Result<List<FileSimpleInfo>>> {
         return flow {
             try {
-                val response = httpClient.post("$baseUrl/api/paths/traverse") {
-                    contentType(ContentType.Application.ProtoBuf)
-                    if (token.isNotEmpty()) {
-                        header("Authorization", "Bearer $token")
-                    }
+                val response = httpClient.post("/api/paths/traverse") {
                     setBody(request)
                 }
 
@@ -135,6 +124,15 @@ class PathRouteClient(
                 emit(Result.failure(e))
             }
         }
+    }
+
+    suspend fun copyFile(
+        task: Task,
+        srcFileSimpleInfo: FileSimpleInfo,
+        destFileSimpleInfo: FileSimpleInfo,
+        replyCallback: (Result<Boolean>) -> Unit
+    ) {
+
     }
 
 }

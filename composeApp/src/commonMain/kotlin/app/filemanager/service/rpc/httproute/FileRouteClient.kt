@@ -3,6 +3,7 @@ package app.filemanager.service.rpc.httproute
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.service.data.*
+import app.filemanager.service.rpc.HttpRouteClientManager
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -10,17 +11,12 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 
 class FileRouteClient(
-    private val baseUrl: String,
-    private val token: String = "",
-    private val httpClient: HttpClient
+    private val httpClient: HttpClient,
+    private val manager: HttpRouteClientManager
 ) {
     suspend fun renames(request: RenameRequest): Result<List<Result<Boolean>>> {
         return try {
-            val response = httpClient.post("$baseUrl/api/files/rename") {
-                contentType(ContentType.Application.ProtoBuf)
-                if (token.isNotEmpty()) {
-                    header("Authorization", "Bearer $token")
-                }
+            val response = httpClient.post("/api/files/rename") {
                 setBody(request)
             }
 
@@ -36,11 +32,7 @@ class FileRouteClient(
 
     suspend fun createFolders(request: CreateFolderRequest): Result<List<Result<Boolean>>> {
         return try {
-            val response = httpClient.post("$baseUrl/api/files/create-folder") {
-                contentType(ContentType.Application.ProtoBuf)
-                if (token.isNotEmpty()) {
-                    header("Authorization", "Bearer $token")
-                }
+            val response = httpClient.post("/api/files/create-folder") {
                 setBody(request)
             }
 
@@ -56,11 +48,7 @@ class FileRouteClient(
 
     suspend fun getSizeInfo(request: GetSizeInfoRequest): Result<FileSizeInfo> {
         return try {
-            val response = httpClient.post("$baseUrl/api/files/size-info") {
-                contentType(ContentType.Application.ProtoBuf)
-                if (token.isNotEmpty()) {
-                    header("Authorization", "Bearer $token")
-                }
+            val response = httpClient.post("/api/files/size-info") {
                 setBody(request)
             }
 
@@ -76,11 +64,7 @@ class FileRouteClient(
 
     suspend fun deletes(request: DeleteRequest): Result<List<Result<Boolean>>> {
         return try {
-            val response = httpClient.post("$baseUrl/api/files/delete") {
-                contentType(ContentType.Application.ProtoBuf)
-                if (token.isNotEmpty()) {
-                    header("Authorization", "Bearer $token")
-                }
+            val response = httpClient.post("/api/files/delete") {
                 setBody(request)
             }
 
@@ -96,11 +80,7 @@ class FileRouteClient(
 
     suspend fun writeBytes(request: WriteBytesRequest): Result<Boolean> {
         return try {
-            val response = httpClient.post("$baseUrl/api/files/write-bytes") {
-                contentType(ContentType.Application.ProtoBuf)
-                if (token.isNotEmpty()) {
-                    header("Authorization", "Bearer $token")
-                }
+            val response = httpClient.post("/api/files/write-bytes") {
                 setBody(request)
             }
 
@@ -116,11 +96,7 @@ class FileRouteClient(
 
     suspend fun readBytes(request: ReadBytesRequest): Result<ByteArray> {
         return try {
-            val response = httpClient.post("$baseUrl/api/files/read-bytes") {
-                contentType(ContentType.Application.ProtoBuf)
-                if (token.isNotEmpty()) {
-                    header("Authorization", "Bearer $token")
-                }
+            val response = httpClient.post("/api/files/read-bytes") {
                 setBody(request)
             }
 
@@ -137,11 +113,7 @@ class FileRouteClient(
     // TODO api 待定
     suspend fun readFile(request: ReadFileChunksRequest): Result<Map<String, Any>> {
         return try {
-            val response = httpClient.post("$baseUrl/api/files/read-file") {
-                contentType(ContentType.Application.ProtoBuf)
-                if (token.isNotEmpty()) {
-                    header("Authorization", "Bearer $token")
-                }
+            val response = httpClient.post("/api/files/read-file") {
                 setBody(request)
             }
 
@@ -157,11 +129,7 @@ class FileRouteClient(
 
     suspend fun getFileByPath(request: GetFileByPathRequest): Result<FileSimpleInfo> {
         return try {
-            val response = httpClient.post("$baseUrl/api/files/get-file-by-path") {
-                contentType(ContentType.Application.ProtoBuf)
-                if (token.isNotEmpty()) {
-                    header("Authorization", "Bearer $token")
-                }
+            val response = httpClient.post("/api/files/get-file-by-path") {
                 setBody(request)
             }
 
@@ -177,11 +145,7 @@ class FileRouteClient(
 
     suspend fun getFileByPathAndName(request: GetFileByPathAndNameRequest): Result<FileSimpleInfo> {
         return try {
-            val response = httpClient.post("$baseUrl/api/files/get-file-by-path-and-name") {
-                contentType(ContentType.Application.ProtoBuf)
-                if (token.isNotEmpty()) {
-                    header("Authorization", "Bearer $token")
-                }
+            val response = httpClient.post("/api/files/get-file-by-path-and-name") {
                 setBody(request)
             }
 
@@ -197,11 +161,7 @@ class FileRouteClient(
 
     suspend fun createFiles(request: CreateFileRequest): Result<List<Result<Boolean>>> {
         return try {
-            val response = httpClient.post("$baseUrl/api/files/create-file") {
-                contentType(ContentType.Application.ProtoBuf)
-                if (token.isNotEmpty()) {
-                    header("Authorization", "Bearer $token")
-                }
+            val response = httpClient.post("/api/files/create-file") {
                 setBody(request)
             }
 
