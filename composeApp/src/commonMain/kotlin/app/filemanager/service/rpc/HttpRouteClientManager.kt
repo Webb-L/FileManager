@@ -102,9 +102,9 @@ class HttpRouteClientManager : KoinComponent {
         /**
          * 表示最大分片长度的常量，用于定义在数据传输过程中每个分片的最大长度。
          * 此值用于确保分片在网络传输时的稳定性和效率，避免超出可接受的大小限制。
-         * 常量默认为 1024 * 8。
+         * 常量默认为 1024 * 32。
          */
-        const val MAX_LENGTH = 1024 * 8 // 最大分片长度
+        const val MAX_LENGTH = 1024 * 32 // 最大分片长度
     }
 }
 

@@ -170,7 +170,7 @@ fun Route.fileRoutes(): KoinComponent {
                         }
 
                         // 限制单次写入的数据大小，防止内存溢出
-                        val maxBlockSize = MAX_LENGTH.toLong() * 4 // 最大32KB
+                        val maxBlockSize = MAX_LENGTH.toLong()
                         if (request.blockLength > maxBlockSize) {
                             call.respond(
                                 HttpStatusCode.BadRequest,
@@ -221,7 +221,7 @@ fun Route.fileRoutes(): KoinComponent {
                         }
 
                         // 限制单次读取的数据大小，防止内存溢出
-                        val maxBlockSize = MAX_LENGTH.toLong() * 4 // 最大32KB
+                        val maxBlockSize = MAX_LENGTH.toLong()
                         if (request.blockLength > maxBlockSize) {
                             call.respond(
                                 HttpStatusCode.BadRequest,
