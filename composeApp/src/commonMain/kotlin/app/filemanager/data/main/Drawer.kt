@@ -176,7 +176,7 @@ data class Device(
 
     suspend fun renames(renameInfos: List<RenameInfo>, replyCallback: (Result<List<Result<Boolean>>>) -> Unit) {
         try {
-            replyCallback(getConnect().fileRouteClient.renames(RenameRequest(renameInfos)))
+            replyCallback(getConnect().fileRouteClient.renames(renameInfos))
         } catch (e: Exception) {
             handleError()
         }
@@ -184,7 +184,7 @@ data class Device(
 
     suspend fun createFolders(paths: List<CreateInfo>, replyCallback: (Result<List<Result<Boolean>>>) -> Unit) {
         try {
-            replyCallback(getConnect().fileRouteClient.createFolders(CreateFolderRequest(paths)))
+            replyCallback(getConnect().fileRouteClient.createFolders(paths))
         } catch (e: Exception) {
             handleError()
         }
@@ -197,15 +197,7 @@ data class Device(
         replyCallback: (Result<FileSizeInfo>) -> Unit
     ) {
         try {
-            replyCallback(
-                getConnect().fileRouteClient.getSizeInfo(
-                    GetSizeInfoRequest(
-                        totalSpace,
-                        freeSpace,
-                        fileSimpleInfo
-                    )
-                )
-            )
+            replyCallback(getConnect().fileRouteClient.getSizeInfo(totalSpace, freeSpace, fileSimpleInfo))
         } catch (e: Exception) {
             handleError()
         }
@@ -216,7 +208,7 @@ data class Device(
         replyCallback: (Result<List<Result<Boolean>>>) -> Unit
     ) {
         try {
-            replyCallback(getConnect().fileRouteClient.deletes(DeleteRequest(paths)))
+            replyCallback(getConnect().fileRouteClient.deletes(paths))
         } catch (e: Exception) {
             handleError()
         }
@@ -249,7 +241,7 @@ data class Device(
 
     suspend fun getFile(path: String, replyCallback: (Result<FileSimpleInfo>) -> Unit) {
         try {
-            replyCallback(getConnect().fileRouteClient.getFileByPath(GetFileByPathRequest(path)))
+            replyCallback(getConnect().fileRouteClient.getFileByPath(path))
         } catch (e: Exception) {
             handleError()
         }

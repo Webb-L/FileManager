@@ -14,10 +14,10 @@ class FileRouteClient(
     private val httpClient: HttpClient,
     private val manager: HttpRouteClientManager
 ) {
-    suspend fun renames(request: RenameRequest): Result<List<Result<Boolean>>> {
+    suspend fun renames(renameInfos: List<RenameInfo>): Result<List<Result<Boolean>>> {
         return try {
             val response = httpClient.post("/api/files/rename") {
-                setBody(request)
+                setBody(RenameRequest(renameInfos))
             }
 
             if (!response.status.isSuccess()) {
@@ -30,10 +30,10 @@ class FileRouteClient(
         }
     }
 
-    suspend fun createFolders(request: CreateFolderRequest): Result<List<Result<Boolean>>> {
+    suspend fun createFolders(infos: List<CreateInfo>): Result<List<Result<Boolean>>> {
         return try {
             val response = httpClient.post("/api/files/create-folder") {
-                setBody(request)
+                setBody(CreateFolderRequest(infos))
             }
 
             if (!response.status.isSuccess()) {
@@ -46,10 +46,10 @@ class FileRouteClient(
         }
     }
 
-    suspend fun getSizeInfo(request: GetSizeInfoRequest): Result<FileSizeInfo> {
+    suspend fun getSizeInfo(totalSpace: Long, freeSpace: Long, fileSimpleInfo: FileSimpleInfo): Result<FileSizeInfo> {
         return try {
             val response = httpClient.post("/api/files/size-info") {
-                setBody(request)
+                setBody(GetSizeInfoRequest(totalSpace, freeSpace, fileSimpleInfo))
             }
 
             if (!response.status.isSuccess()) {
@@ -62,10 +62,10 @@ class FileRouteClient(
         }
     }
 
-    suspend fun deletes(request: DeleteRequest): Result<List<Result<Boolean>>> {
+    suspend fun deletes(paths: List<String>): Result<List<Result<Boolean>>> {
         return try {
             val response = httpClient.post("/api/files/delete") {
-                setBody(request)
+                setBody(DeleteRequest(paths))
             }
 
             if (!response.status.isSuccess()) {
@@ -78,10 +78,24 @@ class FileRouteClient(
         }
     }
 
-    suspend fun writeBytes(request: WriteBytesRequest): Result<Boolean> {
+    suspend fun writeBytes(
+        fileSize: Long,
+        blockIndex: Long,
+        blockLength: Long,
+        path: String,
+        byteArray: ByteArray
+    ): Result<Boolean> {
         return try {
             val response = httpClient.post("/api/files/write-bytes") {
-                setBody(request)
+                setBody(
+                    WriteBytesRequest(
+                        fileSize = fileSize,
+                        blockIndex = blockIndex,
+                        blockLength = blockLength,
+                        path = path,
+                        byteArray = byteArray
+                    )
+                )
             }
 
             if (!response.status.isSuccess()) {
@@ -94,10 +108,10 @@ class FileRouteClient(
         }
     }
 
-    suspend fun readBytes(request: ReadBytesRequest): Result<ByteArray> {
+    suspend fun readBytes(path: String, blockIndex: Long, blockLength: Long): Result<ByteArray> {
         return try {
             val response = httpClient.post("/api/files/read-bytes") {
-                setBody(request)
+                setBody(ReadBytesRequest(path, blockIndex, blockLength))
             }
 
             if (!response.status.isSuccess()) {
@@ -111,10 +125,10 @@ class FileRouteClient(
     }
 
     // TODO api 待定
-    suspend fun readFile(request: ReadFileChunksRequest): Result<Map<String, Any>> {
+    suspend fun readFile(path: String, chunkSize: Long): Result<Map<String, Any>> {
         return try {
             val response = httpClient.post("/api/files/read-file") {
-                setBody(request)
+                setBody(ReadFileChunksRequest(path, chunkSize))
             }
 
             if (!response.status.isSuccess()) {
@@ -127,10 +141,10 @@ class FileRouteClient(
         }
     }
 
-    suspend fun getFileByPath(request: GetFileByPathRequest): Result<FileSimpleInfo> {
+    suspend fun getFileByPath(path: String): Result<FileSimpleInfo> {
         return try {
             val response = httpClient.post("/api/files/get-file-by-path") {
-                setBody(request)
+                setBody(GetFileByPathRequest(path))
             }
 
             if (!response.status.isSuccess()) {
@@ -143,10 +157,10 @@ class FileRouteClient(
         }
     }
 
-    suspend fun getFileByPathAndName(request: GetFileByPathAndNameRequest): Result<FileSimpleInfo> {
+    suspend fun getFileByPathAndName(path: String, name: String): Result<FileSimpleInfo> {
         return try {
             val response = httpClient.post("/api/files/get-file-by-path-and-name") {
-                setBody(request)
+                setBody(GetFileByPathAndNameRequest(path, name))
             }
 
             if (!response.status.isSuccess()) {
@@ -159,10 +173,10 @@ class FileRouteClient(
         }
     }
 
-    suspend fun createFiles(request: CreateFileRequest): Result<List<Result<Boolean>>> {
+    suspend fun createFiles(infos: List<CreateInfo>): Result<List<Result<Boolean>>> {
         return try {
             val response = httpClient.post("/api/files/create-file") {
-                setBody(request)
+                setBody(CreateFileRequest(infos))
             }
 
             if (!response.status.isSuccess()) {

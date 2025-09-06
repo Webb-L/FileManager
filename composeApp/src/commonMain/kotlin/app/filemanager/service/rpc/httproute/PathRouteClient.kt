@@ -217,23 +217,19 @@ class PathRouteClient(
                 task.values["progressMax"] = "1"
                 val result = if (srcFileSimpleInfo.isDirectory)
                     fileService.createFolders(
-                        CreateFolderRequest(
-                            listOf(
-                                CreateInfo(
-                                    destFileSimpleInfo.path,
-                                    destFileSimpleInfo.name,
-                                )
+                        listOf(
+                            CreateInfo(
+                                destFileSimpleInfo.path,
+                                destFileSimpleInfo.name,
                             )
                         )
                     )
                 else
                     fileService.createFiles(
-                        CreateFileRequest(
-                            listOf(
-                                CreateInfo(
-                                    destFileSimpleInfo.path,
-                                    destFileSimpleInfo.name,
-                                )
+                        listOf(
+                            CreateInfo(
+                                destFileSimpleInfo.path,
+                                destFileSimpleInfo.name,
                             )
                         )
                     )
@@ -290,12 +286,10 @@ class PathRouteClient(
                 }
 
                 val createFolder = fileService.createFolders(
-                    CreateFolderRequest(
-                        listOf(
-                            CreateInfo(
-                                destFileSimpleInfo.path,
-                                destFileSimpleInfo.name,
-                            )
+                    listOf(
+                        CreateInfo(
+                            destFileSimpleInfo.path,
+                            destFileSimpleInfo.name,
                         )
                     )
                 )
@@ -356,7 +350,7 @@ class PathRouteClient(
                         }
 
                         if (destFileSimpleInfo.protocol == FileProtocol.Device) {
-                            val result = fileService.createFolders(CreateFolderRequest(paths))
+                            val result = fileService.createFolders(paths)
                             if (result.isSuccess) {
                                 result.getOrDefault(listOf()).forEach { item ->
                                     when {
@@ -434,7 +428,7 @@ class PathRouteClient(
                     )
                 )
                 manager.fileRouteClient
-                    .createFiles(createFileRequest)
+                    .createFiles(createFileRequest.infos)
                     .onSuccess {
                         if (it.isNotEmpty()) {
                             replyCallback(it.first())
@@ -452,13 +446,11 @@ class PathRouteClient(
                     val result = result.getOrNull() ?: Pair(0L, byteArrayOf())
                     mainScope.launch(Dispatchers.Default) {
                         manager.fileRouteClient.writeBytes(
-                            WriteBytesRequest(
-                                fileSimpleInfo.size,
-                                result.first,
-                                length,
-                                destFileSimpleInfoPath,
-                                result.second
-                            )
+                            fileSize = fileSimpleInfo.size,
+                            blockIndex = result.first,
+                            blockLength = length,
+                            path = destFileSimpleInfoPath,
+                            byteArray = result.second
                         )
                             .onSuccess {
                                 length--
@@ -496,11 +488,9 @@ class PathRouteClient(
             var isSuccess = true
             repeat(ceil(srcFileSimpleInfo.size / MAX_LENGTH.toFloat()).toInt()) { index ->
                 manager.fileRouteClient.readBytes(
-                    ReadBytesRequest(
-                        srcFileSimpleInfoPath,
-                        index.toLong(),
-                        MAX_LENGTH.toLong()
-                    )
+                    srcFileSimpleInfoPath,
+                    index.toLong(),
+                    MAX_LENGTH.toLong()
                 )
                     .onSuccess {
                         FileUtils.writeBytes(
@@ -541,7 +531,7 @@ class PathRouteClient(
                         )
                     )
                 )
-                destFileService.createFiles(createFileRequest)
+                destFileService.createFiles(createFileRequest.infos)
                     .onSuccess {
                         if (it.isNotEmpty()) {
                             replyCallback(it.first())
@@ -557,21 +547,17 @@ class PathRouteClient(
             var isSuccess = true
             repeat(ceil(srcFileSimpleInfo.size / MAX_LENGTH.toFloat()).toInt()) { index ->
                 manager.fileRouteClient.readBytes(
-                    ReadBytesRequest(
-                        srcFileSimpleInfoPath,
-                        index.toLong(),
-                        MAX_LENGTH.toLong()
-                    )
+                    srcFileSimpleInfoPath,
+                    index.toLong(),
+                    MAX_LENGTH.toLong()
                 )
                     .onSuccess {
                         destFileService.writeBytes(
-                            WriteBytesRequest(
-                                fileSimpleInfo.size,
-                                index.toLong(),
-                                length,
-                                destFileSimpleInfoPath,
-                                it
-                            )
+                            fileSize = fileSimpleInfo.size,
+                            blockIndex = index.toLong(),
+                            blockLength = length,
+                            path = destFileSimpleInfoPath,
+                            byteArray = it
                         )
                             .onSuccess { }
                             .onFailure {
