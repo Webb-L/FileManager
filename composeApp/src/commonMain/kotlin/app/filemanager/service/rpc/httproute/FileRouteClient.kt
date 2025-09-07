@@ -108,10 +108,10 @@ class FileRouteClient(
         }
     }
 
-    suspend fun readBytes(path: String, blockIndex: Long, blockLength: Long): Result<ByteArray> {
+    suspend fun readBytes(path: String, startOffset: Long, endOffset: Long): Result<ByteArray> {
         return try {
             val response = httpClient.post("/api/files/read-bytes") {
-                setBody(ReadBytesRequest(path, blockIndex, blockLength))
+                setBody(ReadBytesRequest(path, startOffset, endOffset))
             }
 
             if (!response.status.isSuccess()) {

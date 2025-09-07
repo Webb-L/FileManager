@@ -139,7 +139,7 @@ data class FileSimpleInfo(
             return FileUtils.createFile(destPath)
         }
 
-        var length = ceil(size / MAX_LENGTH.toFloat()).toInt()
+        var length = getChunkCount()
         var isSuccess = true
         FileUtils.readFileChunks(path, MAX_LENGTH.toLong()) {
             if (it.isSuccess) {
@@ -160,6 +160,31 @@ data class FileSimpleInfo(
             }
         }
         return Result.success(isSuccess && length <= 0)
+    }
+
+    /**
+     * 计算文件传输需要的分片数量
+     * Calculate the number of chunks needed for file transfer
+     * 
+     * @param chunkSize 分片大小，默认使用 MAX_LENGTH
+     * @return 分片数量
+     */
+    fun getChunkCount(chunkSize: Int = MAX_LENGTH): Int {
+        return if (size <= 0) 0 else ceil(size / chunkSize.toFloat()).toInt()
+    }
+
+    /**
+     * 计算指定分片索引的偏移量范围
+     * Calculate the offset range for a specific chunk index
+     * 
+     * @param chunkIndex 分片索引（从0开始）
+     * @param chunkSize 分片大小，默认使用 MAX_LENGTH
+     * @return Pair(startOffset, endOffset) - 起始偏移量和结束偏移量
+     */
+    fun getChunkOffsets(chunkIndex: Int, chunkSize: Int = MAX_LENGTH): Pair<Long, Long> {
+        val startOffset = chunkIndex * chunkSize.toLong()
+        val endOffset = minOf((chunkIndex + 1) * chunkSize.toLong(), size)
+        return Pair(startOffset, endOffset)
     }
 
     suspend fun copyToFile(

@@ -38,8 +38,8 @@ data class WriteBytesRequest(
 @Serializable
 data class ReadBytesRequest(
     val path: String,
-    val blockIndex: Long,
-    val blockLength: Long
+    val startOffset: Long,
+    val endOffset: Long
 )
 
 @Serializable

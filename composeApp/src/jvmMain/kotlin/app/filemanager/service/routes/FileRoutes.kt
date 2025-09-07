@@ -215,14 +215,15 @@ fun Route.fileRoutes(): KoinComponent {
                             return@post
                         }
 
-                        if (request.blockIndex < 0L || request.blockLength < 0L || request.path.isEmpty()) {
+                        if (request.startOffset < 0L || request.endOffset < 0L || request.path.isEmpty() || request.startOffset > request.endOffset) {
                             call.respond(HttpStatusCode.BadRequest, "读取参数无效")
                             return@post
                         }
 
                         // 限制单次读取的数据大小，防止内存溢出
                         val maxBlockSize = MAX_LENGTH.toLong()
-                        if (request.blockLength > maxBlockSize) {
+                        val requestSize = request.endOffset - request.startOffset
+                        if (requestSize > maxBlockSize) {
                             call.respond(
                                 HttpStatusCode.BadRequest,
                                 "单次读取数据过大，最大支持 ${maxBlockSize / 1024}KB"
@@ -230,38 +231,17 @@ fun Route.fileRoutes(): KoinComponent {
                             return@post
                         }
 
-                        val file = java.io.File(request.path)
-                        if (!file.exists()) {
-                            call.respond(HttpStatusCode.NotFound, "文件不存在")
-                            return@post
-                        }
-
-                        val fileSize = file.length()
-                        val offset = request.blockIndex * MAX_LENGTH.toLong()
-                        // 限制实际读取长度，防止内存溢出
-                        val length = minOf(request.blockLength, maxBlockSize, fileSize - offset)
-
-                        if (offset >= fileSize) {
-                            call.respond(HttpStatusCode.BadRequest, "偏移量超出文件大小")
-                            return@post
-                        }
-
-                        if (length <= 0) {
-                            call.respond(HttpStatusCode.BadRequest, "无效的读取长度")
-                            return@post
-                        }
-
                         val readResult = FileUtils.readFileRange(
                             request.path,
-                            offset,
-                            offset + length - 1
+                            request.startOffset,
+                            request.endOffset
                         )
 
                         if (readResult.isSuccess) {
                             val data = readResult.getOrNull() ?: byteArrayOf()
-                            // 额外检查返回的数据大小
-                            if (data.size > maxBlockSize.toInt()) {
-                                call.respond(HttpStatusCode.InternalServerError, "读取的数据超出安全限制")
+                            // 额外检查返回的数据大小是否合理
+                            if (data.size > requestSize.toInt()) {
+                                call.respond(HttpStatusCode.InternalServerError, "读取的数据超出请求范围")
                                 return@post
                             }
                             call.respondBytes(data)

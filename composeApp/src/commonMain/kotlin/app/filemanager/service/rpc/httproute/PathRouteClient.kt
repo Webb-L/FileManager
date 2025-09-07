@@ -164,7 +164,6 @@ class PathRouteClient(
 
         val list = mutableListOf<FileSimpleInfo>()
 
-
         // 获取本地所有的文件和文件夹
         if (srcFileSimpleInfo.protocol == FileProtocol.Local) {
             task.values["progressMax"] = "1"
@@ -300,7 +299,7 @@ class PathRouteClient(
                 } else {
                     val results = createFolder.getOrDefault(listOf())
                     if (results.isNotEmpty()) {
-                        if (results.first().isSuccess == false) {
+                        if (!results.first().isSuccess) {
                             task.result[destFileSimpleInfo.path] = results.first().exceptionOrNull()?.message.orEmpty()
                             replyCallback(Result.failure(results.first().exceptionOrNull() ?: Exception()))
                             return
@@ -376,7 +375,7 @@ class PathRouteClient(
                                     if (result.getOrNull() == true) {
                                         successCount++
                                     } else {
-                                        println(file.path)
+                                        println("file.path = ${file.path}")
                                         failureCount++
                                     }
                                 }
@@ -486,11 +485,12 @@ class PathRouteClient(
             }
 
             var isSuccess = true
-            repeat(ceil(srcFileSimpleInfo.size / MAX_LENGTH.toFloat()).toInt()) { index ->
+            repeat(fileSimpleInfo.getChunkCount()) { index ->
+                val offsets = fileSimpleInfo.getChunkOffsets(index)
                 manager.fileRouteClient.readBytes(
                     srcFileSimpleInfoPath,
-                    index.toLong(),
-                    MAX_LENGTH.toLong()
+                    offsets.first,
+                    offsets.second
                 )
                     .onSuccess {
                         FileUtils.writeBytes(
@@ -498,9 +498,12 @@ class PathRouteClient(
                             fileSize = fileSimpleInfo.size,
                             data = it,
                             offset = index * MAX_LENGTH.toLong()
-                        )
+                        ).onFailure {
+                            isSuccess = false
+                        }
                     }
                     .onFailure {
+                        println("readBytes = $it")
                         isSuccess = false
                     }
             }
@@ -545,11 +548,12 @@ class PathRouteClient(
 
 
             var isSuccess = true
-            repeat(ceil(srcFileSimpleInfo.size / MAX_LENGTH.toFloat()).toInt()) { index ->
+            repeat(fileSimpleInfo.getChunkCount()) { index ->
+                val offsets = fileSimpleInfo.getChunkOffsets(index)
                 manager.fileRouteClient.readBytes(
                     srcFileSimpleInfoPath,
-                    index.toLong(),
-                    MAX_LENGTH.toLong()
+                    offsets.first,
+                    offsets.second
                 )
                     .onSuccess {
                         destFileService.writeBytes(

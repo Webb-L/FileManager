@@ -19,6 +19,7 @@ import io.ktor.serialization.kotlinx.protobuf.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import app.filemanager.network.createNoProxyHttpClient
 
 class HttpRouteClientManager : KoinComponent {
     private val deviceState by inject<DeviceState>()
@@ -32,7 +33,7 @@ class HttpRouteClientManager : KoinComponent {
     // 共享的 HttpClient 实例
     @OptIn(ExperimentalSerializationApi::class)
     private fun createHttpClient(baseUrl: String, token: String = ""): HttpClient {
-        return HttpClient {
+        return createNoProxyHttpClient {
             install(ContentNegotiation) {
                 protobuf()
             }
