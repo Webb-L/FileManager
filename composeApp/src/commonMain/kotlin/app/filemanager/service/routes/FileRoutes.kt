@@ -273,18 +273,18 @@ fun Route.fileRoutes(): KoinComponent {
                             return@post
                         }
 
-                        // 获取文件信息但不读取内容
-                        val file = java.io.File(request.path)
-                        if (!file.exists()) {
+                        // 使用多平台 FileUtils 获取文件信息，而不是 java.io.File
+                        val fileInfoResult = FileUtils.getFile(request.path)
+                        if (fileInfoResult.isFailure) {
                             call.respond(HttpStatusCode.NotFound, "文件不存在")
                             return@post
                         }
 
-                        val fileSize = file.length()
-                        val chunkSize = minOf(request.chunkSize, 1024 * 1024) // 限制最大1MB
-                        val totalChunks = (fileSize + chunkSize - 1) / chunkSize
+                        val fileSize = fileInfoResult.getOrNull()?.size ?: 0L
+                        val chunkSize = minOf(request.chunkSize, 1024L * 1024L) // 限制最大1MB
+                        val totalChunks = if (chunkSize > 0) (fileSize + chunkSize - 1) / chunkSize else 0L
 
-                        // 返回文件元数据而不是实际内容
+                        // 返回文件元数据
                         val metadata = mapOf(
                             "fileSize" to fileSize,
                             "chunkSize" to chunkSize,
@@ -399,3 +399,4 @@ fun Route.fileRoutes(): KoinComponent {
         }
     }
 }
+

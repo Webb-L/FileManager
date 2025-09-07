@@ -163,3 +163,4 @@ fun Route.deviceRoutes(): KoinComponent {
         }
     }
 }
+

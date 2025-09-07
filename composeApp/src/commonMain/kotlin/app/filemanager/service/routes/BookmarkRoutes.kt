@@ -1,7 +1,7 @@
 package app.filemanager.service.routes
 
-import app.filemanager.extensions.respondProtobuf
 import app.filemanager.service.plugins.PermissionCheck
+import app.filemanager.service.plugins.respondProtobuf
 import app.filemanager.utils.PathUtils
 import io.ktor.http.*
 import io.ktor.server.response.*
@@ -13,7 +13,7 @@ fun Route.bookmarkRoutes() {
             resource = "bookmark"
             action = "read"
         }
-        
+
         get {
             try {
                 call.respondProtobuf(PathUtils.getBookmarks())
@@ -23,3 +23,4 @@ fun Route.bookmarkRoutes() {
         }
     }
 }
+

@@ -4,10 +4,10 @@ import app.filemanager.createSettings
 import app.filemanager.data.file.FileProtocol
 import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.extensions.getFileAndFolder
-import app.filemanager.extensions.respondProtobuf
 import app.filemanager.service.data.toSerializableResult
 import app.filemanager.service.plugins.ProtobufRequest
 import app.filemanager.service.plugins.receiveProtobuf
+import app.filemanager.service.plugins.respondProtobuf
 import app.filemanager.utils.PathUtils
 import io.ktor.http.*
 import io.ktor.server.response.*
@@ -174,3 +174,4 @@ fun Route.pathRoutes() {
         }
     }
 }
+

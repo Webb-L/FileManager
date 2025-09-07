@@ -23,7 +23,7 @@ val ProtobufRequest = createRouteScopedPlugin("ProtobufRequest") {
 @OptIn(ExperimentalSerializationApi::class)
 suspend inline fun <reified T> ApplicationCall.receiveProtobuf(): T {
     val requestBody = receive<ByteArray>()
-    return ProtoBuf.decodeFromByteArray<T>(requestBody)
+    return ProtoBuf.decodeFromByteArray(requestBody)
 }
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -31,3 +31,4 @@ suspend inline fun <reified T> ApplicationCall.respondProtobuf(value: T) {
     val responseBytes = ProtoBuf.encodeToByteArray(value)
     respondBytes(responseBytes, ContentType.Application.ProtoBuf)
 }
+
