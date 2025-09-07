@@ -4,6 +4,7 @@ import app.filemanager.data.file.FileSimpleInfo
 import app.filemanager.data.file.FileSizeInfo
 import app.filemanager.service.data.*
 import app.filemanager.service.rpc.HttpRouteClientManager
+import app.filemanager.utils.CryptoProtoBuf
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -17,14 +18,15 @@ class FileRouteClient(
     suspend fun renames(renameInfos: List<RenameInfo>): Result<List<Result<Boolean>>> {
         return try {
             val response = httpClient.post("/api/files/rename") {
-                setBody(RenameRequest(renameInfos))
+                setBody(CryptoProtoBuf.encode(RenameRequest(renameInfos)))
             }
 
             if (!response.status.isSuccess()) {
                 throw Exception(response.bodyAsText())
             }
 
-            Result.success(response.body<List<SerializableResult<Boolean>>>().map { result -> result.toResult() })
+            val bytes = response.body<ByteArray>()
+            Result.success(CryptoProtoBuf.decode<List<SerializableResult<Boolean>>>(bytes).map { result -> result.toResult() })
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -33,14 +35,15 @@ class FileRouteClient(
     suspend fun createFolders(infos: List<CreateInfo>): Result<List<Result<Boolean>>> {
         return try {
             val response = httpClient.post("/api/files/create-folder") {
-                setBody(CreateFolderRequest(infos))
+                setBody(CryptoProtoBuf.encode(CreateFolderRequest(infos)))
             }
 
             if (!response.status.isSuccess()) {
                 throw Exception(response.bodyAsText())
             }
 
-            Result.success(response.body<List<SerializableResult<Boolean>>>().map { result -> result.toResult() })
+            val bytes = response.body<ByteArray>()
+            Result.success(CryptoProtoBuf.decode<List<SerializableResult<Boolean>>>(bytes).map { result -> result.toResult() })
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -49,14 +52,15 @@ class FileRouteClient(
     suspend fun getSizeInfo(totalSpace: Long, freeSpace: Long, fileSimpleInfo: FileSimpleInfo): Result<FileSizeInfo> {
         return try {
             val response = httpClient.post("/api/files/size-info") {
-                setBody(GetSizeInfoRequest(totalSpace, freeSpace, fileSimpleInfo))
+                setBody(CryptoProtoBuf.encode(GetSizeInfoRequest(totalSpace, freeSpace, fileSimpleInfo)))
             }
 
             if (!response.status.isSuccess()) {
                 throw Exception(response.bodyAsText())
             }
 
-            Result.success(response.body())
+            val bytes = response.body<ByteArray>()
+            Result.success(CryptoProtoBuf.decode(bytes))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -65,14 +69,15 @@ class FileRouteClient(
     suspend fun deletes(paths: List<String>): Result<List<Result<Boolean>>> {
         return try {
             val response = httpClient.post("/api/files/delete") {
-                setBody(DeleteRequest(paths))
+                setBody(CryptoProtoBuf.encode(DeleteRequest(paths)))
             }
 
             if (!response.status.isSuccess()) {
                 throw Exception(response.bodyAsText())
             }
 
-            Result.success(response.body<List<SerializableResult<Boolean>>>().map { result -> result.toResult() })
+            val bytes = response.body<ByteArray>()
+            Result.success(CryptoProtoBuf.decode<List<SerializableResult<Boolean>>>(bytes).map { result -> result.toResult() })
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -88,12 +93,14 @@ class FileRouteClient(
         return try {
             val response = httpClient.post("/api/files/write-bytes") {
                 setBody(
-                    WriteBytesRequest(
-                        fileSize = fileSize,
-                        blockIndex = blockIndex,
-                        blockLength = blockLength,
-                        path = path,
-                        byteArray = byteArray
+                    CryptoProtoBuf.encode(
+                        WriteBytesRequest(
+                            fileSize = fileSize,
+                            blockIndex = blockIndex,
+                            blockLength = blockLength,
+                            path = path,
+                            byteArray = byteArray
+                        )
                     )
                 )
             }
@@ -102,7 +109,8 @@ class FileRouteClient(
                 throw Exception(response.bodyAsText())
             }
 
-            Result.success(response.body())
+            val bytes = response.body<ByteArray>()
+            Result.success(CryptoProtoBuf.decode(bytes))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -111,14 +119,15 @@ class FileRouteClient(
     suspend fun readBytes(path: String, startOffset: Long, endOffset: Long): Result<ByteArray> {
         return try {
             val response = httpClient.post("/api/files/read-bytes") {
-                setBody(ReadBytesRequest(path, startOffset, endOffset))
+                setBody(CryptoProtoBuf.encode(ReadBytesRequest(path, startOffset, endOffset)))
             }
 
             if (!response.status.isSuccess()) {
                 throw Exception(response.bodyAsText())
             }
 
-            Result.success(response.body())
+            val bytes = response.body<ByteArray>()
+            Result.success(CryptoProtoBuf.decode(bytes))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -128,14 +137,15 @@ class FileRouteClient(
     suspend fun readFile(path: String, chunkSize: Long): Result<Map<String, Any>> {
         return try {
             val response = httpClient.post("/api/files/read-file") {
-                setBody(ReadFileChunksRequest(path, chunkSize))
+                setBody(CryptoProtoBuf.encode(ReadFileChunksRequest(path, chunkSize)))
             }
 
             if (!response.status.isSuccess()) {
                 throw Exception(response.bodyAsText())
             }
 
-            Result.success(response.body())
+            val bytes = response.body<ByteArray>()
+            Result.success(CryptoProtoBuf.decode(bytes))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -144,14 +154,15 @@ class FileRouteClient(
     suspend fun getFileByPath(path: String): Result<FileSimpleInfo> {
         return try {
             val response = httpClient.post("/api/files/get-file-by-path") {
-                setBody(GetFileByPathRequest(path))
+                setBody(CryptoProtoBuf.encode(GetFileByPathRequest(path)))
             }
 
             if (!response.status.isSuccess()) {
                 throw Exception(response.bodyAsText())
             }
 
-            Result.success(response.body())
+            val bytes = response.body<ByteArray>()
+            Result.success(CryptoProtoBuf.decode(bytes))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -160,14 +171,15 @@ class FileRouteClient(
     suspend fun getFileByPathAndName(path: String, name: String): Result<FileSimpleInfo> {
         return try {
             val response = httpClient.post("/api/files/get-file-by-path-and-name") {
-                setBody(GetFileByPathAndNameRequest(path, name))
+                setBody(CryptoProtoBuf.encode(GetFileByPathAndNameRequest(path, name)))
             }
 
             if (!response.status.isSuccess()) {
                 throw Exception(response.bodyAsText())
             }
 
-            Result.success(response.body())
+            val bytes = response.body<ByteArray>()
+            Result.success(CryptoProtoBuf.decode(bytes))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -176,14 +188,15 @@ class FileRouteClient(
     suspend fun createFiles(infos: List<CreateInfo>): Result<List<Result<Boolean>>> {
         return try {
             val response = httpClient.post("/api/files/create-file") {
-                setBody(CreateFileRequest(infos))
+                setBody(CryptoProtoBuf.encode(CreateFileRequest(infos)))
             }
 
             if (!response.status.isSuccess()) {
                 throw Exception(response.bodyAsText())
             }
 
-            Result.success(response.body<List<SerializableResult<Boolean>>>().map { result -> result.toResult() })
+            val bytes = response.body<ByteArray>()
+            Result.success(CryptoProtoBuf.decode<List<SerializableResult<Boolean>>>(bytes).map { result -> result.toResult() })
         } catch (e: Exception) {
             Result.failure(e)
         }

@@ -1,6 +1,7 @@
 package app.filemanager.service.rpc.httproute
 
 import app.filemanager.data.main.DrawerBookmark
+import app.filemanager.utils.CryptoProtoBuf
 import app.filemanager.service.rpc.HttpRouteClientManager
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -21,7 +22,8 @@ class BookmarkRouteClient(
                 throw Exception(response.bodyAsText())
             }
 
-            Result.success(response.body())
+            val bytes = response.body<ByteArray>()
+            Result.success(CryptoProtoBuf.decode(bytes))
         } catch (e: Exception) {
             Result.failure(e)
         }

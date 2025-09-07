@@ -244,7 +244,8 @@ fun Route.fileRoutes(): KoinComponent {
                                 call.respond(HttpStatusCode.InternalServerError, "读取的数据超出请求范围")
                                 return@post
                             }
-                            call.respondBytes(data)
+                            // 加密后的 Protobuf 字节数组响应
+                            call.respondProtobuf(data)
                         } else {
                             call.respond(
                                 HttpStatusCode.InternalServerError,
@@ -399,4 +400,3 @@ fun Route.fileRoutes(): KoinComponent {
         }
     }
 }
-

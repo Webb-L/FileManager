@@ -10,6 +10,7 @@ import app.filemanager.service.rpc.HttpRouteClientManager.Companion.MAX_LENGTH
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.Task
 import app.filemanager.utils.FileUtils
+import app.filemanager.utils.CryptoProtoBuf
 import app.filemanager.utils.PathUtils
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -38,14 +39,14 @@ class PathRouteClient(
 
     suspend fun getRootPaths(): Result<List<PathInfo>> {
         return try {
-            val response = httpClient.post("/api/paths/rootPaths") {
-            }
+            val response = httpClient.post("/api/paths/rootPaths") { }
 
             if (!response.status.isSuccess()) {
                 throw Exception(response.bodyAsText())
             }
 
-            Result.success(response.body())
+            val bytes = response.body<ByteArray>()
+            Result.success(CryptoProtoBuf.decode(bytes))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -57,16 +58,16 @@ class PathRouteClient(
             val fileSimpleInfos: MutableList<FileSimpleInfo> = mutableListOf()
 
             val response = httpClient.post("/api/paths/list") {
-                setBody(request)
+                setBody(CryptoProtoBuf.encode(request))
             }
 
             if (!response.status.isSuccess()) {
                 throw Exception(response.bodyAsText())
             }
 
-            val responseBody =
-                response.body<SerializableResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>>()
-                    .toResult()
+            val responseBody = CryptoProtoBuf.decode<SerializableResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>>(
+                response.body()
+            ).toResult()
             if (responseBody.isFailure) {
                 throw responseBody.exceptionOrNull()!!
             }
@@ -92,7 +93,7 @@ class PathRouteClient(
         return flow {
             try {
                 val response = httpClient.post("/api/paths/traverse") {
-                    setBody(request)
+                    setBody(CryptoProtoBuf.encode(request))
                 }
 
                 if (!response.status.isSuccess()) {
@@ -112,7 +113,7 @@ class PathRouteClient(
                                 val decodedBytes = Base64.decode(data)
                                 val responseBody = ProtoBuf.decodeFromByteArray(
                                     kotlinx.serialization.serializer<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>(),
-                                    decodedBytes
+                                    app.filemanager.utils.SymmetricCrypto.decrypt(decodedBytes)
                                 )
                                 responseBody.forEach { (protocol, fileInfos) ->
                                     for (info in fileInfos) {

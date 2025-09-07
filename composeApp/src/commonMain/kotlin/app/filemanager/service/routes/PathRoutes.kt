@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
+import app.filemanager.utils.SymmetricCrypto
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
 import kotlin.io.encoding.Base64
@@ -99,8 +100,8 @@ fun Route.pathRoutes() {
                 call.respondTextWriter(ContentType.Text.EventStream) {
                     traverseFlow.collect { result ->
                         val responseBytes = ProtoBuf.encodeToByteArray(result)
-                        // 使用Base64编码确保数据传输完整性
-                        val data = Base64.encode(responseBytes)
+                        // 加密并使用Base64编码确保数据传输完整性
+                        val data = Base64.encode(SymmetricCrypto.encrypt(responseBytes))
 
                         write("event: traverseResult\n")
                         write("data: $data\n")
@@ -174,4 +175,3 @@ fun Route.pathRoutes() {
         }
     }
 }
-
