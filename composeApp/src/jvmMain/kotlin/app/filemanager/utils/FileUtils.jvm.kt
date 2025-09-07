@@ -113,13 +113,13 @@ internal actual object FileUtils {
             }
 
             val fileLength = file.length()
-            if (start < 0 || end >= fileLength || start > end) {
+            if (start < 0 || end > fileLength || start > end) {
                 return Result.failure(Exception("无效的范围"))
             }
 
             file.inputStream().use { input ->
                 input.skip(start)
-                val buffer = ByteArray((end - start + 1).toInt())
+                val buffer = ByteArray((end - start).toInt())
                 val bytesRead = input.read(buffer)
                 return Result.success(buffer.copyOf(bytesRead))
             }
