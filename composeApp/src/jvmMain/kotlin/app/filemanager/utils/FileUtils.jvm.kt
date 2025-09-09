@@ -194,9 +194,12 @@ internal actual object FileUtils {
                 return Result.success(true)
             }
 
-            BufferedOutputStream(FileOutputStream(file, true)).use { output ->
-                output.write(data)
-                output.flush()
+            RandomAccessFile(file, "rw").use { raf ->
+                if (raf.length() < fileSize) {
+                    raf.setLength(fileSize)
+                }
+                raf.seek(offset)
+                raf.write(data)
             }
 
             return Result.success(true)

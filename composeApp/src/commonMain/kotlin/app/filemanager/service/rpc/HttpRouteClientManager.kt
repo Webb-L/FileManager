@@ -2,6 +2,7 @@ package app.filemanager.service.rpc
 
 import app.filemanager.data.main.DeviceConnectType
 import app.filemanager.db.FileManagerDatabase
+import app.filemanager.network.createNoProxyHttpClient
 import app.filemanager.service.data.ConnectType
 import app.filemanager.service.data.DeviceConnectRequest
 import app.filemanager.service.data.SocketDevice
@@ -19,7 +20,6 @@ import io.ktor.serialization.kotlinx.protobuf.*
 import kotlinx.serialization.ExperimentalSerializationApi
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import app.filemanager.network.createNoProxyHttpClient
 
 class HttpRouteClientManager : KoinComponent {
     private val deviceState by inject<DeviceState>()
@@ -103,9 +103,10 @@ class HttpRouteClientManager : KoinComponent {
         /**
          * 表示最大分片长度的常量，用于定义在数据传输过程中每个分片的最大长度。
          * 此值用于确保分片在网络传输时的稳定性和效率，避免超出可接受的大小限制。
-         * 常量默认为 1024 * 32。
+         * 常量默认为 1024 * 1024 !MB。
          */
-        const val MAX_LENGTH = 1024 * 32 // 最大分片长度
+        // 增大分片长度以降低请求开销、提升吞吐（按需再调大/调小）
+        const val MAX_LENGTH = 1024 * 1024 // 1MB 最大分片长度
     }
 }
 

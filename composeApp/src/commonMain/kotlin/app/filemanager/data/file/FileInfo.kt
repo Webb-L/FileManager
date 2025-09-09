@@ -1,6 +1,7 @@
 package app.filemanager.data.file
 
 import app.filemanager.extensions.pathLevel
+import app.filemanager.extensions.replaceLast
 import app.filemanager.service.rpc.HttpRouteClientManager.Companion.MAX_LENGTH
 import app.filemanager.ui.state.main.Task
 import app.filemanager.utils.FileUtils
@@ -165,7 +166,7 @@ data class FileSimpleInfo(
     /**
      * 计算文件传输需要的分片数量
      * Calculate the number of chunks needed for file transfer
-     * 
+     *
      * @param chunkSize 分片大小，默认使用 MAX_LENGTH
      * @return 分片数量
      */
@@ -176,7 +177,7 @@ data class FileSimpleInfo(
     /**
      * 计算指定分片索引的偏移量范围
      * Calculate the offset range for a specific chunk index
-     * 
+     *
      * @param chunkIndex 分片索引（从0开始）
      * @param chunkSize 分片大小，默认使用 MAX_LENGTH
      * @return Pair(startOffset, endOffset) - 起始偏移量和结束偏移量
@@ -270,6 +271,22 @@ data class FileSimpleInfo(
             delay(100L)
         }
         return Result.success(list.size == successCount && failureCount == 0)
+    }
+
+    /**
+     * 计算文件复制时的目标路径（不包含文件名）
+     * Calculate the destination directory path for file copying (excluding filename)
+     *
+     * @param srcBasePath 源文件的基础路径
+     * @param destBasePath 目标文件的基础路径
+     * @return 目标目录路径，末尾不包含文件名
+     */
+    fun getDestinationDirectoryPath(
+        srcBasePath: String,
+        destBasePath: String
+    ): String {
+        return path.replaceFirst(srcBasePath, destBasePath)
+            .replaceLast(name, "")
     }
 }
 

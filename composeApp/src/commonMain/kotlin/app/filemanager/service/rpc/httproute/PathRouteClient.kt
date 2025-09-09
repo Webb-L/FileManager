@@ -9,20 +9,19 @@ import app.filemanager.service.rpc.HttpRouteClientManager
 import app.filemanager.service.rpc.HttpRouteClientManager.Companion.MAX_LENGTH
 import app.filemanager.ui.state.main.DeviceState
 import app.filemanager.ui.state.main.Task
-import app.filemanager.utils.FileUtils
 import app.filemanager.utils.CryptoProtoBuf
+import app.filemanager.utils.FileUtils
 import app.filemanager.utils.PathUtils
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.protobuf.ProtoBuf
 import org.koin.core.component.KoinComponent
@@ -65,9 +64,10 @@ class PathRouteClient(
                 throw Exception(response.bodyAsText())
             }
 
-            val responseBody = CryptoProtoBuf.decode<SerializableResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>>(
-                response.body()
-            ).toResult()
+            val responseBody =
+                CryptoProtoBuf.decode<SerializableResult<Map<Pair<FileProtocol, String>, MutableList<FileSimpleInfo>>>>(
+                    response.body()
+                ).toResult()
             if (responseBody.isFailure) {
                 throw responseBody.exceptionOrNull()!!
             }
@@ -332,10 +332,8 @@ class PathRouteClient(
                     }
 
                     for (paths in fileSimpleInfos.map {
-                        CreateInfo(
-                            destFileSimpleInfo.path,
-                            it.path
-                        )
+                        val path = it.getDestinationDirectoryPath(srcFileSimpleInfo.path, destFileSimpleInfo.path)
+                        CreateInfo(path, it.name)
                     }.chunked(30)) {
                         if (destFileSimpleInfo.protocol == FileProtocol.Local) {
                             paths.forEach { path ->
@@ -376,7 +374,6 @@ class PathRouteClient(
                                     if (result.getOrNull() == true) {
                                         successCount++
                                     } else {
-                                        println("file.path = ${file.path}")
                                         failureCount++
                                     }
                                 }
@@ -402,13 +399,13 @@ class PathRouteClient(
     ) {
         val srcFileSimpleInfoPath =
             if (srcFileSimpleInfo.isDirectory)
-                "${srcFileSimpleInfo.path}${fileSimpleInfo.path}"
+                "${srcFileSimpleInfo.path}${fileSimpleInfo.path.replaceFirst(srcFileSimpleInfo.path, "")}"
             else
                 srcFileSimpleInfo.path
 
         val destFileSimpleInfoPath =
             if (srcFileSimpleInfo.isDirectory)
-                "${destFileSimpleInfo.path}${fileSimpleInfo.path}"
+                "${destFileSimpleInfo.path}${fileSimpleInfo.path.replaceFirst(srcFileSimpleInfo.path, "")}"
             else
                 destFileSimpleInfo.path
 
@@ -418,12 +415,14 @@ class PathRouteClient(
         // 本地 to 远程
         if (srcFileSimpleInfo.protocol == FileProtocol.Local && destFileSimpleInfo.protocol == FileProtocol.Device) {
             if (fileSimpleInfo.size == 0L) {
-                println("destFileSimpleInfoPath = $destFileSimpleInfoPath, ${destFileSimpleInfo.path}, ${destFileSimpleInfo.name}")
                 val createFileRequest = CreateFileRequest(
                     listOf(
                         CreateInfo(
-                            destFileSimpleInfo.path,
-                            destFileSimpleInfo.name,
+                            fileSimpleInfo.getDestinationDirectoryPath(
+                                srcFileSimpleInfo.path,
+                                destFileSimpleInfo.path,
+                            ),
+                            fileSimpleInfo.name,
                         )
                     )
                 )
@@ -448,7 +447,8 @@ class PathRouteClient(
                         manager.fileRouteClient.writeBytes(
                             fileSize = fileSimpleInfo.size,
                             blockIndex = result.first,
-                            blockLength = length,
+                            // 传实际字节长度，服务端会校验必须 <= MAX_LENGTH
+                            blockLength = result.second.size.toLong(),
                             path = destFileSimpleInfoPath,
                             byteArray = result.second
                         )
@@ -485,30 +485,37 @@ class PathRouteClient(
                 return
             }
 
-            var isSuccess = true
-            repeat(fileSimpleInfo.getChunkCount()) { index ->
-                val offsets = fileSimpleInfo.getChunkOffsets(index)
-                manager.fileRouteClient.readBytes(
-                    srcFileSimpleInfoPath,
-                    offsets.first,
-                    offsets.second
-                )
-                    .onSuccess {
-                        FileUtils.writeBytes(
-                            path = destFileSimpleInfoPath,
-                            fileSize = fileSimpleInfo.size,
-                            data = it,
-                            offset = index * MAX_LENGTH.toLong()
-                        ).onFailure {
-                            isSuccess = false
+            val chunkCount = fileSimpleInfo.getChunkCount()
+            // 控制并发数，避免占用过多内存/连接；可按需调大
+            val parallelism = minOf(16, chunkCount)
+            val semaphore = Semaphore(parallelism)
+
+            val allOk = coroutineScope {
+                (0 until chunkCount).map { index ->
+                    async(Dispatchers.Default) {
+                        semaphore.withPermit {
+                            val (startOffset, endOffset) = fileSimpleInfo.getChunkOffsets(index)
+                            val read = manager.fileRouteClient.readBytes(
+                                srcFileSimpleInfoPath,
+                                startOffset,
+                                endOffset
+                            )
+                            if (read.isFailure) return@withPermit false
+
+                            val bytes = read.getOrNull() ?: return@withPermit false
+                            val write = FileUtils.writeBytes(
+                                path = destFileSimpleInfoPath,
+                                fileSize = fileSimpleInfo.size,
+                                data = bytes,
+                                offset = startOffset
+                            )
+                            write.isSuccess && write.getOrDefault(false)
                         }
                     }
-                    .onFailure {
-                        println("readBytes = $it")
-                        isSuccess = false
-                    }
+                }.awaitAll().all { it }
             }
-            replyCallback(Result.success(isSuccess))
+
+            replyCallback(Result.success(allOk))
             return
         }
 
@@ -526,7 +533,6 @@ class PathRouteClient(
                 destFileService = socketDevice.httpClient!!.fileRouteClient
             }
             if (fileSimpleInfo.size == 0L) {
-                println("destFileSimpleInfoPath = $destFileSimpleInfoPath, ${destFileSimpleInfo.path}, ${destFileSimpleInfo.name}")
                 val createFileRequest = CreateFileRequest(
                     listOf(
                         CreateInfo(
@@ -548,32 +554,39 @@ class PathRouteClient(
             }
 
 
-            var isSuccess = true
-            repeat(fileSimpleInfo.getChunkCount()) { index ->
-                val offsets = fileSimpleInfo.getChunkOffsets(index)
-                manager.fileRouteClient.readBytes(
-                    srcFileSimpleInfoPath,
-                    offsets.first,
-                    offsets.second
-                )
-                    .onSuccess {
-                        destFileService.writeBytes(
-                            fileSize = fileSimpleInfo.size,
-                            blockIndex = index.toLong(),
-                            blockLength = length,
-                            path = destFileSimpleInfoPath,
-                            byteArray = it
-                        )
-                            .onSuccess { }
-                            .onFailure {
-                                isSuccess = false
-                            }
+            val chunkCount = fileSimpleInfo.getChunkCount()
+            val totalBlocks = chunkCount.toLong()
+            val parallelism = minOf(16, chunkCount)
+            val semaphore = Semaphore(parallelism)
+
+            val allOk = coroutineScope {
+                (0 until chunkCount).map { index ->
+                    async(Dispatchers.Default) {
+                        semaphore.withPermit {
+                            val (startOffset, endOffset) = fileSimpleInfo.getChunkOffsets(index)
+                            val read = manager.fileRouteClient.readBytes(
+                                srcFileSimpleInfoPath,
+                                startOffset,
+                                endOffset
+                            )
+                            if (read.isFailure) return@withPermit false
+
+                            val bytes = read.getOrNull() ?: return@withPermit false
+                            val write = destFileService.writeBytes(
+                                fileSize = fileSimpleInfo.size,
+                                blockIndex = index.toLong(),
+                                // 使用当前分片实际字节数
+                                blockLength = bytes.size.toLong(),
+                                path = destFileSimpleInfoPath,
+                                byteArray = bytes
+                            )
+                            write.isSuccess && write.getOrDefault(false)
+                        }
                     }
-                    .onFailure {
-                        isSuccess = false
-                    }
+                }.awaitAll().all { it }
             }
-            replyCallback(Result.success(isSuccess))
+
+            replyCallback(Result.success(allOk))
             return
         }
 
