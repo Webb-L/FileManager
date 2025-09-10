@@ -50,11 +50,11 @@ fun Route.fileRoutes(): KoinComponent {
                                     "rename"
                                 )
                             ) {
-                                return@map false
+                                return@map SerializableResult.failure("没有权限")
                             }
 
                             if (renameInfo.hasEmptyField()) {
-                                return@map false
+                                return@map SerializableResult.failure("重命名参数无效")
                             }
 
                             FileUtils.rename(renameInfo.path, renameInfo.oldName, renameInfo.newName)
@@ -138,7 +138,7 @@ fun Route.fileRoutes(): KoinComponent {
                                     "remove"
                                 )
                             ) {
-                                return@map false
+                                return@map SerializableResult.failure("没有权限")
                             }
 
                             FileUtils.deleteFile(path).toSerializableResult()

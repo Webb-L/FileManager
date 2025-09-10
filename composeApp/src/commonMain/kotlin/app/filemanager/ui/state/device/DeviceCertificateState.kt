@@ -62,6 +62,7 @@ class DeviceCertificateState(private val database: FileManagerDatabase) {
     }
 
     fun checkPermission(token: String, path: String, permission: String): Boolean {
+        println("permissions = $permissions, token = $token, path = $path")
         if (!permissions.contains(token)) {
             return true
         }
